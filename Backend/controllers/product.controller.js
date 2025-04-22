@@ -20,26 +20,26 @@ import asyncHandler from '../middleware/asyncHandler.js';
 */
 
 export const createProduct = asyncHandler(async (req, res) => {
-  const { title, description, price, category, subcategory, condition, stock } = req.body;
-  
   // Validate required fields
-  if (!title || !price || !category || !subcategory) {
+  if (!req.body.title || !req.body.price || !req.body.category || !req.body.subcategory) {
     res.status(400);
     throw new Error('Please include all required fields');
   }
 
-  const imagePaths = req.files?.map(file => file.path) || [];
-  
+  // Get image paths
+  const imagePaths = req.files?.map(file => `/uploads/${file.filename}`) || [];
+  // Create product
   const product = await Product.create({
-    title,
-    description,
-    price: parseFloat(price),
-    category,
-    subcategory,
-    condition: condition || 'good',
-    stock: parseInt(stock) || 1,
+    title: req.body.title,
+    description: req.body.description || '',
+    price: parseFloat(req.body.price),
+    category: req.body.category,
+    subcategory: req.body.subcategory,
+    condition: req.body.condition || 'good',
+    stock: parseInt(req.body.stock) || 1,
     images: imagePaths,
-    seller: req.user._id
+    seller: req.user._id, // This comes from the authenticated user
+    attributes: req.body.attributes || {}
   });
 
   res.status(201).json({

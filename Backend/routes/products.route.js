@@ -24,7 +24,7 @@ router.get("/:id", getProductById);
 
 // Protected routes - require authentication
 router.use(authenticateToken); // Apply authentication middleware to all routes below
-router.post("/", upload.array('images', 10), createProduct);
+router.post("/",authenticateToken, upload.array('images', 10), createProduct);
 router.put("/:id", updateProduct);
 router.delete("/:id", deleteProduct);
 router.patch("/:id/stock", updateStock);
