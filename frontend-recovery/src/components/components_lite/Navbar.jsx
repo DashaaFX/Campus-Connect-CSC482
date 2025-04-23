@@ -51,7 +51,7 @@
                 <Link to={"/Home"}>Home</Link>
               </li>
               <li>
-                <Link to={"/admin/products/create"}>Products</Link>
+                <Link to={"/admin/products"}>Products</Link>
               </li>
               <li>
                 <Link to={"/Creator"}>About</Link>

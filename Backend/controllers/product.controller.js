@@ -1,5 +1,7 @@
 import Product from '../models/product.model.js';
 import asyncHandler from '../middleware/asyncHandler.js';
+import { Category } from '../models/category.model.js';
+import { Subcategory } from '../models/subcategory.model.js';
 
 // @desc    Create a new product
 // @route   POST /api/products
@@ -19,69 +21,76 @@ import asyncHandler from '../middleware/asyncHandler.js';
 });
 */
 
+// Create product
 export const createProduct = asyncHandler(async (req, res) => {
-  // Validate required fields
-  if (!req.body.title || !req.body.price || !req.body.category || !req.body.subcategory) {
+  const { title, price, category, subcategory, condition, stock, description } = req.body;
+
+  if (!title || !price || !category || !subcategory) {
     res.status(400);
     throw new Error('Please include all required fields');
   }
 
-  // Get image paths
+  const validCategory = await Category.findById(category);
+  if (!validCategory) {
+    res.status(400);
+    throw new Error('Invalid category ID');
+  }
+
+  const validSubcategory = await Subcategory.findOne({ _id: subcategory, category });
+  if (!validSubcategory) {
+    res.status(400);
+    throw new Error('Invalid subcategory for the selected category');
+  }
+
   const imagePaths = req.files?.map(file => `/uploads/${file.filename}`) || [];
-  // Create product
+
   const product = await Product.create({
-    title: req.body.title,
-    description: req.body.description || '',
-    price: parseFloat(req.body.price),
-    category: req.body.category,
-    subcategory: req.body.subcategory,
-    condition: req.body.condition || 'good',
-    stock: parseInt(req.body.stock) || 1,
+    title,
+    description,
+    price: parseFloat(price),
+    category,
+    subcategory,
+    condition: condition || 'good',
+    stock: parseInt(stock) || 1,
     images: imagePaths,
-    seller: req.user._id, // This comes from the authenticated user
+    seller: req.user._id,
     attributes: req.body.attributes || {}
   });
 
-  res.status(201).json({
-    success: true,
-    data: product
-  });
+  const populatedProduct = await Product.findById(product._id)
+    .populate('category', 'name')
+    .populate('subcategory', 'name');
+
+  res.status(201).json({ success: true, data: populatedProduct });
 });
 
 // @desc    Get all products with filtering, sorting, and pagination
 // @route   GET /api/products
 // @access  Public
+// Get all products
 export const getProducts = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  // Build query
   const queryObj = { ...req.query };
-  const excludedFields = ['page', 'sort', 'limit', 'fields'];
-  excludedFields.forEach(field => delete queryObj[field]);
+  ['page', 'sort', 'limit', 'fields'].forEach(field => delete queryObj[field]);
+  let queryStr = JSON.stringify(queryObj).replace(/\b(gt|gte|lt|lte)\b/g, match => `$${match}`);
 
-  // Advanced filtering
-  let queryStr = JSON.stringify(queryObj);
-  queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, match => `$${match}`);
-  
-  let query = Product.find(JSON.parse(queryStr));
+  let query = Product.find(JSON.parse(queryStr))
+    .populate('category', 'name')
+    .populate('subcategory', 'name');
 
-  // Sorting
   if (req.query.sort) {
-    const sortBy = req.query.sort.split(',').join(' ');
-    query = query.sort(sortBy);
+    query = query.sort(req.query.sort.split(',').join(' '));
   } else {
     query = query.sort('-createdAt');
   }
 
-  // Field limiting
   if (req.query.fields) {
-    const fields = req.query.fields.split(',').join(' ');
-    query = query.select(fields);
+    query = query.select(req.query.fields.split(',').join(' '));
   }
 
-  // Execute query with pagination
   const products = await query.skip(skip).limit(limit);
   const total = await Product.countDocuments(JSON.parse(queryStr));
 
@@ -99,7 +108,10 @@ export const getProducts = asyncHandler(async (req, res) => {
 // @route   GET /api/products/:id
 // @access  Public
 export const getProductById = asyncHandler(async (req, res) => {
-  const product = await Product.findById(req.params.id).populate('seller', 'name email');
+  const product = await Product.findById(req.params.id)
+    .populate('category', 'name')
+    .populate('subcategory', 'name')
+    .populate('seller', 'name email');
 
   if (!product) {
     res.status(404);

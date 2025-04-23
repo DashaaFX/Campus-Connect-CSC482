@@ -1,69 +1,80 @@
-import React from 'react';
+// Updated AdminSidebar.jsx to load categories and subcategories dynamically
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
-
-const categoryMap = {
-  academic: ['textbooks', 'lab_manuals', 'solution_guides', 'lecture_notes', 'exam_papers', 'study_guides', 'research_papers'],
-  electronics: ['laptops', 'calculators', 'tablets', 'headphones', 'chargers'],
-  dorm: ['minifridges', 'bedding', 'storage', 'lighting'],
-  clothing: ['formal_wear', 'winter_gear', 'university_merch', 'bags', 'footwear'],
-  supplies: ['notebooks', 'pens', 'stationery', 'printer_supplies'],
-  sports: ['yoga_mats', 'bikes', 'sports_gear'],
-  miscellaneous: ['appliances', 'games', 'suitcases', 'art_supplies']
-};
+import { CATEGORY_API_ENDPOINT } from '@/utils/data';
 
 const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory, selectedSubcategory }) => {
-  const [openCategories, setOpenCategories] = React.useState([]);
+  const [openCategories, setOpenCategories] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [subcategoriesMap, setSubcategoriesMap] = useState({});
 
-  const toggleCategory = (category) => {
-    setOpenCategories(prev => 
-      prev.includes(category) 
-        ? prev.filter(c => c !== category) 
-        : [...prev, category]
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const res = await axios.get(CATEGORY_API_ENDPOINT);
+      setCategories(res.data);
+
+      const subMap = {};
+      for (const cat of res.data) {
+        const subRes = await axios.get(`${CATEGORY_API_ENDPOINT}/${cat._id}/subcategories`);
+        subMap[cat._id] = subRes.data;
+      }
+      setSubcategoriesMap(subMap);
+    };
+
+    fetchCategories();
+  }, []);
+
+  const toggleCategory = (categoryId) => {
+    setOpenCategories(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(c => c !== categoryId)
+        : [...prev, categoryId]
     );
   };
 
   return (
     <div className="w-64 border-r p-4">
       <h2 className="text-lg font-semibold mb-4">Categories</h2>
-      
-      <Button 
-        variant="ghost" 
+
+      <Button
+        variant="ghost"
         className={`w-full justify-start mb-2 ${!selectedCategory ? 'bg-accent' : ''}`}
         onClick={() => onCategorySelect(null)}
       >
         All Products
       </Button>
 
-      {Object.keys(categoryMap).map((category) => (
-        <Collapsible 
-          key={category}
-          open={openCategories.includes(category)}
-          onOpenChange={() => toggleCategory(category)}
+      {categories.map(category => (
+        <Collapsible
+          key={category._id}
+          open={openCategories.includes(category._id)}
+          onOpenChange={() => toggleCategory(category._id)}
           className="mb-2"
         >
           <CollapsibleTrigger asChild>
-            <Button 
-              variant="ghost" 
-              className={`w-full justify-between ${selectedCategory === category ? 'bg-accent' : ''}`}
+            <Button
+              variant="ghost"
+              className={`w-full justify-between ${selectedCategory === category._id ? 'bg-accent' : ''}`}
             >
-              <span className="capitalize">{category.replace(/_/g, ' ')}</span>
-              {openCategories.includes(category) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              <span className="capitalize">{category.name.replace(/_/g, ' ')}</span>
+              {openCategories.includes(category._id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-4 mt-1 space-y-1">
-            {categoryMap[category].map((subcategory) => (
+            {(subcategoriesMap[category._id] || []).map(sub => (
               <Button
-                key={subcategory}
+                key={sub._id}
                 variant="ghost"
-                className={`w-full justify-start text-sm ${selectedSubcategory === subcategory ? 'bg-accent' : ''}`}
+                className={`w-full justify-start text-sm ${selectedSubcategory === sub._id ? 'bg-accent' : ''}`}
                 onClick={() => {
-                  onCategorySelect(category);
-                  onSubcategorySelect(subcategory);
+                  onCategorySelect(category._id);
+                  onSubcategorySelect(sub._id);
                 }}
               >
-                {subcategory.replace(/_/g, ' ')}
+                {sub.name.replace(/_/g, ' ')}
               </Button>
             ))}
           </CollapsibleContent>
