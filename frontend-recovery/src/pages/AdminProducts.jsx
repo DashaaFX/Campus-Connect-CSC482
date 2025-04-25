@@ -1,3 +1,4 @@
+// src/components/components_lite/AdminProducts.jsx
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
@@ -6,17 +7,16 @@ import { fetchProducts } from '../redux/productSlice';
 import AdminSidebar from './AdminSidebar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
-
+import Navbar from '@/components/components_lite/Navbar';
 const AdminProducts = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { products, loading, error } = useSelector((state) => state.products);
-  
+
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
 
   useEffect(() => {
-    // Fetch all products without pagination
     dispatch(fetchProducts());
   }, [dispatch]);
 
@@ -26,13 +26,13 @@ const AdminProducts = () => {
     return true;
   });
 
-  const handleCategorySelect = (category) => {
-    setSelectedCategory(category);
+  const handleCategorySelect = (categoryId) => {
+    setSelectedCategory(categoryId);
     setSelectedSubcategory(null);
   };
 
-  const handleSubcategorySelect = (subcategory) => {
-    setSelectedSubcategory(subcategory);
+  const handleSubcategorySelect = (subcategoryId) => {
+    setSelectedSubcategory(subcategoryId);
   };
 
   const handleClearFilters = () => {
@@ -44,19 +44,20 @@ const AdminProducts = () => {
   if (error) return <div className="flex justify-center p-8 text-red-500">Error: {error}</div>;
 
   return (
+    <> <Navbar/>
     <div className="flex min-h-screen">
-      <AdminSidebar 
+      <AdminSidebar
         onCategorySelect={handleCategorySelect}
         onSubcategorySelect={handleSubcategorySelect}
         selectedCategory={selectedCategory}
         selectedSubcategory={selectedSubcategory}
       />
-      
+
       <div className="flex-1 p-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">
-            {selectedCategory ? selectedCategory : 'All'} Products
-            {selectedSubcategory && ` > ${selectedSubcategory.replace(/_/g, ' ')}`}
+            Products
+            {(selectedCategory || selectedSubcategory) && ' (Filtered)'}
           </h1>
           <div className="flex gap-2">
             {(selectedCategory || selectedSubcategory) && (
@@ -88,14 +89,11 @@ const AdminProducts = () => {
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       {product.images?.[0] ? (
-                        <img 
+                        <img
                           src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${product.images[0]}`}
                           alt={product.title}
                           className="h-10 w-10 object-cover rounded"
-                          onError={(e) => {
-                            e.target.src = '/placeholder-image.jpg';
-                            e.target.onerror = null; // Prevent infinite loop
-                          }}
+                          onError={(e) => { e.target.src = '/placeholder-image.jpg'; e.target.onerror = null; }}
                         />
                       ) : (
                         <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center">
@@ -104,17 +102,13 @@ const AdminProducts = () => {
                       )}
                       <div>
                         <div>{product.title}</div>
-                        <div className="text-sm text-gray-500">
-                          {product.description?.substring(0, 50)}...
-                        </div>
+                        <div className="text-sm text-gray-500">{product.description?.substring(0, 50)}...</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="capitalize">{product.category}</div>
-                    <div className="text-sm text-gray-500">
-                      {product.subcategory?.replace(/_/g, ' ')}
-                    </div>
+                    <div className="capitalize">{product.category?.name || product.category}</div>
+                    <div className="text-sm text-gray-500">{product.subcategory?.name?.replace(/_/g, ' ') || product.subcategory}</div>
                   </TableCell>
                   <TableCell>${product.price?.toFixed(2)}</TableCell>
                   <TableCell>{product.stock}</TableCell>
@@ -123,12 +117,11 @@ const AdminProducts = () => {
                       {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigate(`/admin/products/${product._id}`)}
-                    >
+                  <TableCell className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/products/${product._id}`)}>
+                      View
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/admin/products/${product._id}`)}>
                       Edit
                     </Button>
                   </TableCell>
@@ -137,17 +130,9 @@ const AdminProducts = () => {
             </TableBody>
           </Table>
         </div>
-
-        {/* Simple Pagination Alternative (uncomment if needed) */}
-        {/* 
-        {filteredProducts.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No products found matching your filters
-          </div>
-        )}
-        */}
       </div>
     </div>
+    </>
   );
 };
 

@@ -1,7 +1,9 @@
+// Updated EditProductForm.jsx with delete functionality and retained existing product values
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import axios from "axios";
-import { PRODUCT_API_ENDPOINT } from "@/utils/data";
+import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,44 +19,64 @@ import {
 const EditProductForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const token = useSelector((state) => state.auth.token);
   const [formData, setFormData] = useState({
-    name: "",
+    title: "",
     description: "",
     price: "",
-    location: "",
     category: "",
-    companyId: "",
+    subcategory: "",
+    stock: 1,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const res = await axios.get(CATEGORY_API_ENDPOINT);
+      setCategories(res.data);
+    };
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      if (!formData.category) return;
+      const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
+      setSubcategories(res.data);
+    };
+    fetchSubcategories();
+  }, [formData.category]);
 
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${PRODUCT_API_ENDPOINT}/get/${id}`, {
-          withCredentials: true,
+        const res = await axios.get(`${PRODUCT_API_ENDPOINT}/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true
         });
-        if (res.data.status) {
-          console.log("Product data:", res.data.product);
-          setFormData({
-            name: res.data.product.name,
-            description: res.data.product.description,
-            price: res.data.product.price,
-            location: res.data.product.location,
-            category: res.data.product.category,
-            companyId: res.data.product.company?._id || "",
-          });
-        }
+        const product = res.data;
+        setFormData({
+          title: product.title,
+          description: product.description,
+          price: product.price,
+          category: product.category?._id || product.category,
+          subcategory: product.subcategory?._id || product.subcategory,
+          stock: product.stock,
+        });
+        setError("");
       } catch (err) {
-        setError("Failed to fetch product");
+        console.error("Error fetching product:", err);
+        setError(err.response?.data?.message || err.message || "Failed to fetch product");
       } finally {
         setLoading(false);
       }
     };
-
     fetchProduct();
-  }, [id]);
+  }, [id, token]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -67,18 +89,35 @@ const EditProductForm = () => {
     setError("");
 
     try {
-      const res = await axios.put(
-        `${PRODUCT_API_ENDPOINT}/update/${id}`,
+      await axios.put(
+        `${PRODUCT_API_ENDPOINT}/${id}`,
         formData,
-        { withCredentials: true }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true
+        }
       );
-      if (res.data.status) {
-        navigate("/admin/products");
-      } else {
-        setError(res.data.message || "Failed to update product");
-      }
+      
+      navigate("/admin/products");
+      
     } catch (err) {
       setError(err.response?.data?.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    setLoading(true);
+    try {
+      await axios.delete(`${PRODUCT_API_ENDPOINT}/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true
+      });
+      navigate("/admin/products");
+    } catch (err) {
+      setError("Failed to delete product");
     } finally {
       setLoading(false);
     }
@@ -92,90 +131,58 @@ const EditProductForm = () => {
       {error && <div className="text-red-500 mb-4">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="name">Product Name</Label>
-          <Input
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
+          <Label htmlFor="title">Product Title</Label>
+          <Input id="title" name="title" value={formData.title} onChange={handleChange} required />
         </div>
         <div>
           <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            required
-          />
+          <Textarea id="description" name="description" value={formData.description} onChange={handleChange} required />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="price">Price</Label>
-            <Input
-              id="price"
-              name="price"
-              type="number"
-              value={formData.price}
-              onChange={handleChange}
-              required
-            />
+            <Input id="price" name="price" type="number" value={formData.price} onChange={handleChange} required />
           </div>
           <div>
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              required
-            />
+            <Label htmlFor="stock">Stock</Label>
+            <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required />
           </div>
         </div>
         <div>
           <Label htmlFor="category">Category</Label>
           <Select
             value={formData.category}
-            onValueChange={(value) =>
-              setFormData({ ...formData, category: value })
-            }
-            required
+            onValueChange={(value) => setFormData({ ...formData, category: value, subcategory: "" })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Electronics">Electronics</SelectItem>
-              <SelectItem value="Furniture">Furniture</SelectItem>
-              <SelectItem value="Clothing">Clothing</SelectItem>
-              <SelectItem value="Books">Books</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label htmlFor="companyId">Company ID</Label>
-          <Input
-            id="companyId"
-            name="companyId"
-            value={formData.companyId}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/admin/products")}
+          <Label htmlFor="subcategory">Subcategory</Label>
+          <Select
+            value={formData.subcategory}
+            onValueChange={(value) => setFormData({ ...formData, subcategory: value })}
           >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={loading}>
-            {loading ? "Updating..." : "Update Product"}
-          </Button>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a subcategory" />
+            </SelectTrigger>
+            <SelectContent>
+              {subcategories.map((sub) => (
+                <SelectItem key={sub._id} value={sub._id}>{sub.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex justify-between gap-2">
+          <Button type="submit" disabled={loading}>{loading ? "Updating..." : "Update Product"}</Button>
+          <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>{loading ? "Deleting..." : "Delete Product"}</Button>
         </div>
       </form>
     </div>

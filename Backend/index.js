@@ -7,6 +7,7 @@ import userRoute from "./routes/user.route.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
 import productRoutes from "./routes/products.route.js";
+import categoryRoutes from './routes/category.route.js';
 
 
 
@@ -41,11 +42,8 @@ app.use("/api/user", userRoute);
 
 
 app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/uploads', express.static('uploads'), (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  next();
-});
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', '*');

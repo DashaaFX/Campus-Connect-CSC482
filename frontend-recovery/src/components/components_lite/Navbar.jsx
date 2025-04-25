@@ -40,10 +40,12 @@
       <div className="bg-white sticky top-0 z-50 shadow-sm">
         <div className="flex items-center justify-between mx-auto max-w-7xl h-16 px-4">
           <div>
+            <Link to="/" className="cursor-pointer">
             <h1 className="text-2xl font-bold">
               <span className="text-[#6B3AC2]">Campus</span>{" "}
               <span className="text-[#FA4F09]">Connect</span>
             </h1>
+            </Link>
           </div>
           <div className="flex items-center gap-10">
             <ul className="flex font-medium items-center gap-6">
@@ -51,7 +53,7 @@
                 <Link to={"/Home"}>Home</Link>
               </li>
               <li>
-                <Link to={"/admin/products/create"}>Products</Link>
+                <Link to={"/admin/products"}>Products</Link>
               </li>
               <li>
                 <Link to={"/Creator"}>About</Link>

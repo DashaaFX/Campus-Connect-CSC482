@@ -13,6 +13,8 @@ dist
 dist-ssr
 *.local
 
+.env
+uploads/
 uploads
 uploads/
 .env

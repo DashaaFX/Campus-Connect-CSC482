@@ -12,9 +12,11 @@ import Creator from "./components/creator/Creator.jsx";
 import PostProduct from "./components/admincomponent/PostProduct";
 import EditProductForm from "./components/admincomponent/EditProductForm";
 import AdminProducts from "./pages/AdminProducts"; // Import the new component
+import Products from './components/components_lite/Products';
 
 const appRouter = createBrowserRouter([
   { path: "/", element: <Home /> },
+  { path: '/products/:id', element: <Products /> },
   {
     path: "/login",
     element: <Login />,
@@ -49,25 +51,25 @@ const appRouter = createBrowserRouter([
       {
         path: "products",
         element: (
-          <ProtectedRoute>
+          
             <AdminProducts />
-          </ProtectedRoute>
+          
         ),
       },
       {
         path: "products/create",
         element: (
-          <ProtectedRoute>
+          
             <PostProduct />
-          </ProtectedRoute>
+          
         ),
       },
       {
         path: "products/:id",
         element: (
-          <ProtectedRoute>
+          
             <EditProductForm />
-          </ProtectedRoute>
+          
         ),
       },
     ],
