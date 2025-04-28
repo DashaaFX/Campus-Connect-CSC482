@@ -68,31 +68,62 @@ export const createProduct = asyncHandler(async (req, res) => {
 // @route   GET /api/products
 // @access  Public
 // Get all products
+// @desc    Get all products with filtering, partial search, sorting, and pagination
+// @route   GET /api/products
+// @access  Public
 export const getProducts = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  const queryObj = { ...req.query };
-  ['page', 'sort', 'limit', 'fields'].forEach(field => delete queryObj[field]);
-  let queryStr = JSON.stringify(queryObj).replace(/\b(gt|gte|lt|lte)\b/g, match => `$${match}`);
+  const { q, category, subcategory, sort, fields } = req.query;
+  
+  const query = {};
 
-  let query = Product.find(JSON.parse(queryStr))
+  // Search with partial typing using REGEX
+  if (q) {
+    const searchRegex = new RegExp(q, 'i'); // case-insensitive partial match
+    query.$or = [
+      { title: { $regex: searchRegex } },
+      { description: { $regex: searchRegex } },
+    ];
+  }
+
+  // Category filter
+  if (category) {
+    query.category = category;
+  }
+
+  // Subcategory filter
+  if (subcategory) {
+    query.subcategory = subcategory;
+  }
+
+  let dbQuery = Product.find(query)
     .populate('category', 'name')
-    .populate('subcategory', 'name');
+    .populate('subcategory', 'name')
+    .populate('seller', 'fullname email');
 
-  if (req.query.sort) {
-    query = query.sort(req.query.sort.split(',').join(' '));
+  // Sorting
+  if (sort) {
+    const sortBy = sort.split(',').join(' ');
+    dbQuery = dbQuery.sort(sortBy);
   } else {
-    query = query.sort('-createdAt');
+    dbQuery = dbQuery.sort('-createdAt'); // Newest first
   }
 
-  if (req.query.fields) {
-    query = query.select(req.query.fields.split(',').join(' '));
+  // Field selection (only if not text search)
+  if (fields) {
+    const selectedFields = fields.split(',').join(' ');
+    dbQuery = dbQuery.select(selectedFields);
   }
 
-  const products = await query.skip(skip).limit(limit);
-  const total = await Product.countDocuments(JSON.parse(queryStr));
+  dbQuery = dbQuery.skip(skip).limit(limit);
+
+  const [products, total] = await Promise.all([
+    dbQuery,
+    Product.countDocuments(query)
+  ]);
 
   res.status(200).json({
     success: true,
@@ -100,9 +131,11 @@ export const getProducts = asyncHandler(async (req, res) => {
     total,
     totalPages: Math.ceil(total / limit),
     currentPage: page,
-    data: products
+    data: products,
   });
 });
+
+
 
 // @desc    Get single product by ID
 // @route   GET /api/products/:id

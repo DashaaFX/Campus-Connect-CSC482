@@ -45,12 +45,13 @@ const Header = () => {
       </div>
 
       <nav className="mt-10 overflow-x-auto">
-        <ul className="flex space-x-4 px-4">
+        <ul className="flex flex-wrap justify-center gap-4 px-4">
           {categories.map(cat => (
             <li key={cat._id}>
               <Button
-                variant="outline"
-                onClick={() => navigate(`/products/category/${cat._id}`)}
+                variant="secondary" // change from "outline" to "secondary"
+                onClick={() => navigate(`/products?category=${cat._id}`)}
+                className="capitalize"
               >
                 {cat.name.replace(/_/g, ' ')}
               </Button>
@@ -58,6 +59,7 @@ const Header = () => {
           ))}
         </ul>
       </nav>
+
     </header>
   );
 };

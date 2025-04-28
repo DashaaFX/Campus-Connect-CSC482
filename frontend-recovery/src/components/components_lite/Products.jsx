@@ -8,6 +8,7 @@ import { useDispatch } from 'react-redux';
 import { addToCart } from '@/redux/cartSlice';
 import { toast } from 'sonner';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
+import Navbar from '@/components/components_lite/Navbar';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -43,6 +44,7 @@ const Products = () => {
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (
+    <> <Navbar/>
     <div className="min-h-screen flex flex-col">
       <div className="bg-white sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto p-4 flex items-center">
@@ -95,6 +97,7 @@ const Products = () => {
         </div>
       </div>
     </div>
+  </>
   );
 };
 

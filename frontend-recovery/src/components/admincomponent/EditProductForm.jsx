@@ -57,18 +57,6 @@ const EditProductForm = () => {
         const res = await axios.get(`${PRODUCT_API_ENDPOINT}/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true
-<<<<<<< HEAD
-        });
-        const product = res.data;
-        setFormData({
-          title: product.title,
-          description: product.description,
-          price: product.price,
-          category: product.category?._id || product.category,
-          subcategory: product.subcategory?._id || product.subcategory,
-          stock: product.stock,
-        });
-=======
         });
         const product = res.data;
         setFormData({
@@ -80,7 +68,6 @@ const EditProductForm = () => {
           stock: product.stock,
         });
         setError("");
->>>>>>> dash3
       } catch (err) {
         console.error("Error fetching product:", err);
         setError(err.response?.data?.message || err.message || "Failed to fetch product");
@@ -102,11 +89,7 @@ const EditProductForm = () => {
     setError("");
 
     try {
-<<<<<<< HEAD
-      const res = await axios.put(
-=======
       await axios.put(
->>>>>>> dash3
         `${PRODUCT_API_ENDPOINT}/${id}`,
         formData,
         {
@@ -114,17 +97,9 @@ const EditProductForm = () => {
           withCredentials: true
         }
       );
-<<<<<<< HEAD
-      if (res.data.status || res.data.success) {
-        navigate("/admin/products");
-      } else {
-        setError(res.data.message || "Failed to update product");
-      }
-=======
       
       navigate("/admin/products");
       
->>>>>>> dash3
     } catch (err) {
       setError(err.response?.data?.message || "An error occurred");
     } finally {

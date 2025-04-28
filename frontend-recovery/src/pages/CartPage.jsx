@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchCart, removeFromCart, clearCart } from '@/redux/cartSlice';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import Navbar from '@/components/components_lite/Navbar';
 
 const CartPage = () => {
   const dispatch = useDispatch();
@@ -35,6 +36,7 @@ const CartPage = () => {
   };
 
   return (
+    <><Navbar/>
     <div className="max-w-4xl mx-auto py-6">
       <h1 className="text-2xl font-bold mb-4">Your Cart</h1>
       {loading && <p>Loading...</p>}
@@ -60,6 +62,7 @@ const CartPage = () => {
         </>
       )}
     </div>
+  </>
   );
 };
 

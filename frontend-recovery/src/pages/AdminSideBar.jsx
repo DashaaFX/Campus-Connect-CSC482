@@ -37,11 +37,7 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
 
   return (
     <div className="w-64 border-r p-4">
-<<<<<<< HEAD
-      <h2 className="text-lg font-semibold mb-4">Categories</h2>
-=======
       <h2 className="text-lg font-semibold mb-4 sticky top-0 z-60">Categories</h2>
->>>>>>> dash3
 
       <Button
         variant="ghost"

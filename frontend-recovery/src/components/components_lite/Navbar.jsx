@@ -48,43 +48,13 @@ const Navbar = () => {
               <span className="text-[#6B3AC2]">Campus</span>{" "}
               <span className="text-[#FA4F09]">Connect</span>
             </h1>
-<<<<<<< HEAD
-          </div>
-          <div className="flex items-center gap-10">
-            <ul className="flex font-medium items-center gap-6">
-              <li>
-                <Link to={"/Home"}>Home</Link>
-              </li>
-              <li>
-                <Link to={"/admin/products"}>Products</Link>
-              </li>
-              <li>
-                <Link to={"/Creator"}>About</Link>
-              </li>
-            </ul>
-            {!user ? (
-              <div className="flex items-center gap-2">
-                <Link to={"/login"}>
-                  <Button variant="outline">Login</Button>
-                </Link>
-                <Link to={"/register"}>
-                  <Button className="bg-red-600 hover:bg-red-700">
-                    Register
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Avatar className="cursor-pointer">
-=======
           </Link>
         </div>
 
         <div className="flex items-center gap-10">
           <ul className="flex font-medium items-center gap-6">
             <li><Link to={"/Home"}>Home</Link></li>
-            <li><Link to={"/admin/products"}>Products</Link></li>
+            <li><Link to={"/products"}>Products</Link></li>
             <li><Link to={"/Creator"}>About</Link></li>
             {user && (
               <>
@@ -140,7 +110,6 @@ const Navbar = () => {
               <PopoverContent className="w-80">
                 <div className="flex items-center gap-4 space-y-2">
                   <Avatar>
->>>>>>> dash3
                     <AvatarImage
                       src={user?.profile?.profilePhoto}
                       alt="profile"

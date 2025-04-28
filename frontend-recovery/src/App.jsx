@@ -13,6 +13,8 @@ import PostProduct from "./components/admincomponent/PostProduct";
 import EditProductForm from "./components/admincomponent/EditProductForm";
 import AdminProducts from "./pages/AdminProducts"; // Import the new component
 import Products from './components/components_lite/Products';
+import ProductsList from './components/components_lite/ProductsList'; // Import the new component
+import PublicProductPage from "./components/components_lite/PublicProductPage";
 
 // ✅ New Pages
 import CartPage from "./pages/CartPage.jsx";
@@ -23,6 +25,7 @@ import MySalesPage from "./pages/MySalesPage.jsx";
 const appRouter = createBrowserRouter([
   { path: "/", element: <Home /> },
   { path: '/products/:id', element: <Products /> },
+  {path: '/products', element: <PublicProductPage />},
   {
     path: "/login",
     element: <Login />,
