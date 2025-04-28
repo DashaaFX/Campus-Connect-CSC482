@@ -11,6 +11,7 @@ import {
   REGISTER,
 } from "redux-persist";
 import storage from "redux-persist/lib/storage";
+import cartReducer from "./cartSlice";
 
 // Only persist auth state
 const authPersistConfig = {
@@ -22,6 +23,7 @@ const authPersistConfig = {
 const rootReducer = combineReducers({
   auth: persistReducer(authPersistConfig, authReducer),
   products: productReducer, // Not persisted
+  cart: cartReducer, // ← Add this
 });
 
 const store = configureStore({

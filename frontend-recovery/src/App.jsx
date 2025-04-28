@@ -14,6 +14,12 @@ import EditProductForm from "./components/admincomponent/EditProductForm";
 import AdminProducts from "./pages/AdminProducts"; // Import the new component
 import Products from './components/components_lite/Products';
 
+// ✅ New Pages
+import CartPage from "./pages/CartPage.jsx";
+import CheckoutPage from "./pages/CheckoutPage.jsx";
+import MyOrdersPage from "./pages/MyOrdersPage.jsx";
+import MySalesPage from "./pages/MySalesPage.jsx";
+
 const appRouter = createBrowserRouter([
   { path: "/", element: <Home /> },
   { path: '/products/:id', element: <Products /> },
@@ -45,6 +51,10 @@ const appRouter = createBrowserRouter([
     path: "/creator",
     element: <Creator />
   },
+  { path: "/cart", element: <CartPage /> },
+  { path: "/checkout", element: <CheckoutPage /> },
+  { path: "/my-orders", element: <MyOrdersPage /> },
+  { path: "/my-sales", element: <MySalesPage /> },
   {
     path: "/admin",
     children: [

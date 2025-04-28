@@ -1,17 +1,24 @@
+// src/components/components_lite/Products.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { PRODUCT_API_ENDPOINT } from '@/utils/data';
 import { Button } from '../ui/button';
+import { useDispatch } from 'react-redux';
+import { addToCart } from '@/redux/cartSlice';
+import { toast } from 'sonner';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const Products = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     axios.get(`${PRODUCT_API_ENDPOINT}/${id}`)
@@ -19,6 +26,18 @@ const Products = () => {
       .catch(err => { console.error(err); setError('Failed to load product'); })
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handleAddToCart = () => {
+    if (quantity > product.stock) {
+      toast.error('Requested quantity exceeds stock available');
+      return;
+    }
+
+    dispatch(addToCart({ productId: product._id, quantity }))
+      .unwrap()
+      .then(() => toast.success('Added to cart'))
+      .catch(err => toast.error(err));
+  };
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
@@ -47,8 +66,31 @@ const Products = () => {
             <div className="text-xl font-semibold mb-4">${product.price.toFixed(2)}</div>
             <div className="mb-2"><strong>Category:</strong> {product.category?.name || product.category}</div>
             <div className="mb-2"><strong>Subcategory:</strong> {product.subcategory?.name || product.subcategory}</div>
-            {product.condition && <div className="mb-2"><strong>Condition:</strong> {product.condition}</div>}
-            {product.stock != null && <div className="mb-2"><strong>Stock:</strong> {product.stock}</div>}
+            <div className="mb-2"><strong>Condition:</strong> {product.condition}</div>
+            <div className="mb-2"><strong>Stock:</strong> {product.stock}</div>
+
+            {product.stock > 0 ? (
+              <>
+                <div className="mb-4 mt-4">
+                  <label className="block font-semibold mb-1">Quantity</label>
+                  <Select value={quantity.toString()} onValueChange={(val) => setQuantity(parseInt(val))}>
+                    <SelectTrigger className="w-24">
+                      <SelectValue placeholder="Qty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[...Array(product.stock).keys()].map(n => (
+                        <SelectItem key={n + 1} value={(n + 1).toString()}>
+                          {n + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button className="mt-2" onClick={handleAddToCart}>Add to Cart</Button>
+              </>
+            ) : (
+              <div className="text-red-500 font-semibold mt-4">Out of Stock</div>
+            )}
           </div>
         </div>
       </div>
