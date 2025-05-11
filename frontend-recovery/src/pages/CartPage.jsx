@@ -19,10 +19,9 @@ const CartPage = () => {
     dispatch(fetchCart());
   }, [dispatch]);
 
-  const total = items.reduce(
-    (acc, item) => acc + item.product.price * item.quantity,
-    0
-  );
+  const total = items
+  .filter(item => item?.product && item?.product.price != null)
+  .reduce((acc, item) => acc + item.product.price * item.quantity, 0);
 
   const handleRemove = async (id) => {
     try {
@@ -56,24 +55,25 @@ const CartPage = () => {
         <p>Your cart is empty.</p>
       ) : (
         <>
-          {items.map((item) => (
-            <div
-              key={item.product._id}
-              className="flex justify-between items-center border-b py-4"
-            >
-              <div>
-                <h3 className="font-semibold">{item.product.title}</h3>
-                <p className="text-gray-600">
-                  ${item.product.price.toFixed(2)} × {item.quantity}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => handleRemove(item.product._id)}
+          {items.filter(item => item?.product)  // Filter out items without product
+            .map((item) => (
+              <div
+                key={item.product._id}
+                className="flex justify-between items-center border-b py-4"
               >
-                Remove
-              </Button>
-            </div>
+                <div>
+                  <h3 className="font-semibold">{item.product.title}</h3>
+                  <p className="text-gray-600">
+                    ${item.product.price.toFixed(2)} × {item.quantity}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => handleRemove(item.product._id)}
+                >
+                  Remove
+                </Button>
+              </div>
           ))}
           <div className="mt-6 text-lg font-semibold">
             Total: ${total.toFixed(2)}

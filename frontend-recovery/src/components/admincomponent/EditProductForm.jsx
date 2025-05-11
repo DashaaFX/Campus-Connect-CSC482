@@ -98,7 +98,7 @@ const EditProductForm = () => {
         }
       );
       
-      navigate("/admin/products");
+      navigate("/my-sales");
       
     } catch (err) {
       setError(err.response?.data?.message || "An error occurred");
@@ -115,7 +115,7 @@ const EditProductForm = () => {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true
       });
-      navigate("/admin/products");
+      navigate("/my-sales");
     } catch (err) {
       setError("Failed to delete product");
     } finally {

@@ -56,17 +56,41 @@ const Products = () => {
       </div>
       <div className="container mx-auto py-8 px-4">
         <div className="flex flex-col md:flex-row gap-8">
-          <img
-            src={
-              product.images?.[0]
-                ? `${BASE_URL}${product.images[0]}`
-                : '/placeholder-image.jpg'
-            }
-            alt={product.title}
-            className="w-full md:w-1/2 h-auto object-cover rounded"
-          />
+          <div className="w-full md:w-1/2">
+            {product.images?.length > 0 ? (
+              <img
+                src={
+                  product.images[0].startsWith("http")
+                    ? product.images[0]
+                    : `${BASE_URL}${product.images[0]}`
+                }
+                alt={product.title}
+                className="w-full h-auto object-cover rounded"
+              />
+            ) : product.pdf?.length > 0 ? (
+              <iframe
+                src={`https://docs.google.com/viewer?url=${encodeURIComponent(product.pdf[0])}&embedded=true`}
+                title="PDF Preview"
+                width="100%"
+                height="500px"
+                className="border rounded"
+              />
+            ) : (
+              <img
+                src="/placeholder-image.jpg"
+                alt="placeholder"
+                className="w-full h-auto object-cover rounded"
+              />
+            )}
+          </div>
+
           <div className="flex-1">
             <h1 className="text-3xl font-bold mb-4">{product.title}</h1>
+            {product.pdf?.length > 0 && (
+              <span className="inline-block mb-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">
+                Digital PDF Material
+              </span>
+            )}
             <p className="text-gray-700 mb-4">{product.description}</p>
             <div className="text-xl font-semibold mb-4">${product.price.toFixed(2)}</div>
             <div className="mb-2"><strong>Category:</strong> {product.category?.name || product.category}</div>

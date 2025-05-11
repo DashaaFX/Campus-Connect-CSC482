@@ -4,7 +4,8 @@ import asyncHandler from "./asyncHandler.js";
 
 const authenticateToken = asyncHandler(async (req, res, next) => {
   try {
-    // Get token from cookies
+    // If token is not found in cookies, check the Authorization header
+    // This is useful for APIs that might send the token in the header instead of cookies
     const token = req.cookies.token;
     
     if (!token) {

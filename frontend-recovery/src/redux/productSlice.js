@@ -32,13 +32,14 @@ const createNewProduct = createAsyncThunk(
   async ({ formData, token }, { rejectWithValue }) => {
     try {
       const response = await axios.post(PRODUCT_API_ENDPOINT, formData, {
+        //this sends token via Authorization header
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`
         },
         withCredentials: true
       });
-      return response.data.data;
+      return response.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 

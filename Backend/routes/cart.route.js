@@ -10,5 +10,5 @@ router.get('/', getCart);
 router.post('/add', addToCart);
 router.delete('/remove/:productId', removeFromCart);
 router.delete('/clear', clearCart);
-router.patch('/decrease/:productId', authenticate, decreaseCartItemQuantity);
+router.patch('/decrease/:productId', decreaseCartItemQuantity);
 export default router;
