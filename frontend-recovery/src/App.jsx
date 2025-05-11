@@ -49,6 +49,7 @@ const appRouter = createBrowserRouter([
       { path: "my-orders", element: <MyOrdersPage /> },
       { path: "my-sales", element: <MySalesPage /> },
       { path: "products/create", element: <PostProduct /> },
+      {path: "admin/products/:id", element: <EditProductForm /> },
      
     ]
   }

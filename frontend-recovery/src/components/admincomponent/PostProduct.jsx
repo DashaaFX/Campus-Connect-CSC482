@@ -29,7 +29,8 @@ const PostProduct = () => {
     condition: "good",
   });
 
-  const [images, setImages] = useState([]);
+  //const [images, setImages] = useState([]);
+  const [files, setFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -54,11 +55,23 @@ const PostProduct = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageChange = (e) => {
+  /*const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     setImages(files);
     const urls = files.map(file => URL.createObjectURL(file));
     setPreviewUrls(urls);
+  };
+  */
+  const handleFileChange = (e) => {
+    const selected = Array.from(e.target.files);
+    setFiles(selected);
+
+    // Only preview images
+    const previews = selected
+      .filter(file => file.type.startsWith("image/"))
+      .map(file => URL.createObjectURL(file));
+      
+    setPreviewUrls(previews);
   };
 
   const handleSubmit = async (e) => {
@@ -73,12 +86,13 @@ const PostProduct = () => {
 
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => data.append(key, value));
-    images.forEach(file => data.append("images", file));
+    files.forEach(file => data.append("files", file));  // backend expects 'files'
 
     setLoading(true);
     try {
       const res = await axios.post(PRODUCT_API_ENDPOINT, data, {
         headers: {
+          //this sends token via Authorization header
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data"
         },
@@ -168,13 +182,30 @@ const PostProduct = () => {
         </div>
 
         <div>
-          <Label htmlFor="images">Upload Images</Label>
-          <Input id="images" name="images" type="file" multiple accept="image/*" onChange={handleImageChange} />
+          <Label htmlFor="files">Upload Images / PDFs</Label>
+          <Input
+            id="files"
+            name="files"
+            type="file"
+            multiple
+            accept="image/*,application/pdf"
+            onChange={handleFileChange}
+          />
+
           <div className="mt-2 flex flex-wrap gap-2">
             {previewUrls.map((url, idx) => (
               <img key={idx} src={url} alt={`preview-${idx}`} className="w-24 h-24 object-cover rounded" />
             ))}
           </div>
+
+          <div className="mt-2">
+            {files
+              .filter(file => file.type === "application/pdf")
+              .map((file, idx) => (
+                <div key={idx} className="text-sm text-blue-600">{file.name}</div>
+            ))}
+          </div>
+
         </div>
 
         <Button

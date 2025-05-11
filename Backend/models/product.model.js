@@ -15,6 +15,14 @@ const productSchema = new mongoose.Schema({
       message: 'Cannot have more than 10 product images'
     }
   },
+  pdf: {
+    type: [String],
+    validate: {
+      validator: v=> v.length<=5,
+      message: 'Cannot have more than 5 pdfs'
+    },
+    default: []
+  },
   condition: {
     type: String,
     enum: ['new', 'like new', 'good', 'fair', 'poor'],

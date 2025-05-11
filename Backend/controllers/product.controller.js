@@ -2,6 +2,9 @@ import Product from '../models/product.model.js';
 import asyncHandler from '../middleware/asyncHandler.js';
 import { Category } from '../models/category.model.js';
 import { Subcategory } from '../models/subcategory.model.js';
+// Import Cloudinary and getDataUri
+import cloudinary from '../utils/cloud.js';
+import getDataUri from '../utils/datauri.js';
 
 // @desc    Create a new product
 // @route   POST /api/products
@@ -42,7 +45,28 @@ export const createProduct = asyncHandler(async (req, res) => {
     throw new Error('Invalid subcategory for the selected category');
   }
 
-  const imagePaths = req.files?.map(file => `/uploads/${file.filename}`) || [];
+  const files = req.files || [];
+
+  const imagePaths = [];
+  const pdfPaths = [];
+
+  for (const file of files) {
+    if (!file.buffer) continue; // <- important safeguard
+
+    const fileUri = getDataUri(file);
+    const isPdf = file.mimetype === "application/pdf";
+
+    const uploadResult = await cloudinary.uploader.upload(fileUri.content, {
+      resource_type: isPdf ? "raw" : "image", // 👈 conditional handling
+      folder: "campus-connect/products"
+    });
+
+    if (isPdf) {
+      pdfPaths.push(uploadResult.secure_url);
+    } else {
+      imagePaths.push(uploadResult.secure_url);
+    }
+  }
 
   const product = await Product.create({
     title,
@@ -53,6 +77,7 @@ export const createProduct = asyncHandler(async (req, res) => {
     condition: condition || 'good',
     stock: parseInt(stock) || 1,
     images: imagePaths,
+    pdf: pdfPaths,
     seller: req.user._id,
     attributes: req.body.attributes || {}
   });
@@ -291,7 +316,10 @@ export const getProductsByCategory = asyncHandler(async (req, res) => {
 // @access  Public
 export const getSellerProducts = asyncHandler(async (req, res) => {
   const { sellerId } = req.params;
-  const products = await Product.find({ seller: sellerId }).sort('-createdAt');
+  const products = await Product.find({ seller: sellerId })
+    .populate('category', 'name')
+    .populate('subcategory', 'name')
+    .sort('-createdAt');
 
   res.status(200).json({
     success: true,
