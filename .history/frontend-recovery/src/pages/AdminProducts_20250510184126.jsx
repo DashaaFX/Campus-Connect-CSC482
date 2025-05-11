@@ -16,11 +16,8 @@ const AdminProducts = () => {
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
 
   useEffect(() => {
-    dispatch(fetchProducts()).then((action) => {
-      console.log("Thunk result:", action);
-    }).catch(err => {
-      console.error("Thunk error:", err);
-    });
+    dispatch(fetchProducts());
+    
   }, [dispatch]);
   
   const filteredProducts = products.filter(product => {

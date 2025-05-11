@@ -291,10 +291,7 @@ export const getProductsByCategory = asyncHandler(async (req, res) => {
 // @access  Public
 export const getSellerProducts = asyncHandler(async (req, res) => {
   const { sellerId } = req.params;
-  const products = await Product.find({ seller: sellerId })
-    .populate('category', 'name')           // explicitly populate
-    .populate('subcategory', 'name')        // explicitly populate
-    .sort('-createdAt');
+  const products = await Product.find({ seller: sellerId }).sort('-createdAt');
 
   res.status(200).json({
     success: true,

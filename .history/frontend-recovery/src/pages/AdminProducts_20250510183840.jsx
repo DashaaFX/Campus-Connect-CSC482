@@ -16,11 +16,8 @@ const AdminProducts = () => {
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
 
   useEffect(() => {
-    dispatch(fetchProducts()).then((action) => {
-      console.log("Thunk result:", action);
-    }).catch(err => {
-      console.error("Thunk error:", err);
-    });
+    dispatch(fetchProducts());
+    
   }, [dispatch]);
   
   const filteredProducts = products.filter(product => {
@@ -110,8 +107,8 @@ const AdminProducts = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="capitalize">{product.category?.name || 'No category'}</div>
-                    <div className="text-sm text-gray-500">{product.subcategory?.name || 'No subcategory'}</div>
+                    <div className="capitalize">{product.category?.name || product.category}</div>
+                    <div className="text-sm text-gray-500">{product.subcategory?.name || product.subcategory}</div>
                   </TableCell>
                   <TableCell>${product.price?.toFixed(2)}</TableCell>
                   <TableCell>{product.stock}</TableCell>

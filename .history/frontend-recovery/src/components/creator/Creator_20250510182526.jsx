@@ -26,7 +26,7 @@ const Creator = () => {
               <p className="mb-2"><strong>Education:</strong> [Degree] from [Institution]</p>
               <p className="mb-2"><strong>Specialization:</strong> [Area of expertise]</p>
               <p className="mb-2"><strong>Experience:</strong> [Years] years in [Field]</p>
-              <p className="mb-2"><strong>Contributions:</strong> Frontend</p>
+              <p className="mb-2"><strong>Contributions:</strong> Frontend,</p>
               <p><strong>Contact:</strong> [dadhaap@gmail.com]</p>
             </div>
           </div>
@@ -46,7 +46,7 @@ const Creator = () => {
               <p className="mb-2"><strong>Education:</strong> [Degree] from [Institution]</p>
               <p className="mb-2"><strong>Specialization:</strong> [Area of expertise]</p>
               <p className="mb-2"><strong>Experience:</strong> [Years] years in [Field]</p>
-              <p className="mb-2"><strong>Contributions:</strong> Backend</p>
+              <p className="mb-2"><strong>Contributions:</strong> [Key contributions to project]</p>
               <p><strong>Contact:</strong> [baljaa367@gmail.com]</p>
             </div>
           </div>

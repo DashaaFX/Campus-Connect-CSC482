@@ -302,3 +302,4 @@ export const getSellerProducts = asyncHandler(async (req, res) => {
     data: products
   });
 });
+});

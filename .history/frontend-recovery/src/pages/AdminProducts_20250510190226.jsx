@@ -22,6 +22,8 @@ const AdminProducts = () => {
       console.error("Thunk error:", err);
     });
   }, [dispatch]);
+    
+  }, [dispatch]);
   
   const filteredProducts = products.filter(product => {
     if (selectedCategory && product.category?._id !== selectedCategory) return false;

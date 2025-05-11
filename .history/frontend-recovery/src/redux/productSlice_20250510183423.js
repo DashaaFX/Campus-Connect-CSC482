@@ -8,7 +8,7 @@ const fetchProducts = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(PRODUCT_API_ENDPOINT);
-      return  response.data; 
+      return response.data.data || response.data; 
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch products');
     }
