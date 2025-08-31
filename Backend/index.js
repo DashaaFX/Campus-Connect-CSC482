@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import productRoutes from "./routes/products.route.js";
 import categoryRoutes from './routes/category.route.js';
 import cartRoutes from './routes/cart.route.js';
-
+import orderRoutes from './routes/order.route.js';
 
 
 
@@ -20,11 +20,6 @@ const __dirname = path.dirname(__filename);
 dotenv.config({});
 const app = express();
 
-//middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-
 const corsOptions = {
   origin: ["http://localhost:5173"],
   credentials: true,
@@ -32,6 +27,13 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+//middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+
 
 const PORT = process.env.PORT || 5001;
 
@@ -45,6 +47,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/orders', orderRoutes);
 
 app.listen(PORT, () => {
   connectDB();

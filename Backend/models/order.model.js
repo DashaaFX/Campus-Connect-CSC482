@@ -1,4 +1,3 @@
-// models/order.model.js
 import mongoose from 'mongoose';
 
 const orderItemSchema = new mongoose.Schema({
@@ -15,7 +14,7 @@ const orderSchema = new mongoose.Schema({
   totalAmount: { type: Number, required: true },
   status: {
     type: String,
-    enum: ['pending', 'paid', 'shipped', 'completed', 'cancelled'],
+    enum: ['pending', 'approved', 'cancelled', 'paid', 'shipped', 'completed'],
     default: 'pending'
   },
   paymentInfo: {
