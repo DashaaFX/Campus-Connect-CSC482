@@ -1,170 +1,161 @@
-import React, { useEffect, useState } from "react";
-import Navbar from "../components_lite/Navbar";
+import React, { useEffect } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { RadioGroup } from "../ui/radio-group";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
-import { USER_API_ENDPOINT } from "@/utils/data";
 import { toast } from "sonner";
-import { useDispatch, useSelector } from "react-redux";
-import { setLoading } from "@/redux/authSlice";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useForm } from "@/hooks/useForm";
 
 const Register = () => {
-  const [input, setInput] = useState({
-    fullname: "",
-    email: "",
-    password: "",
-    phoneNumber: "",
-    idnum: "",
-    file: "",
-  });
-
   const navigate = useNavigate();
+  const { user, loading, register, error, clearError } = useAuthStore();
 
-  const dispatch = useDispatch();
+  const validationRules = {
+    fullname: { required: true },
+    email: { 
+      required: true, 
+      pattern: { value: /^\S+@\S+\.\S+$/, message: "Invalid email" } 
+    },
+    password: { required: true },
+    idnum: { required: true },
+    phoneNumber: { 
+      required: true, 
+      pattern: { value: /^\+?\d{7,15}$/, message: "Invalid phone number" } 
+    },
+    file: { required: true },
+  };
 
-  const { loading } = useSelector((store) => store.auth);
-  const changeEventHandler = (e) => {
-    setInput({ ...input, [e.target.name]: e.target.value });
-  };
-  const ChangeFilehandler = (e) => {
-    setInput({ ...input, file: e.target.files?.[0] });
-  };
+  const { input, errors, handleChange, handleFileChange, validate } = useForm(
+    { fullname: "", email: "", password: "", phoneNumber: "", idnum: "", file: null },
+    error,
+    clearError,
+    validationRules
+  );
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) navigate("/");
+  }, [user, navigate]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
+
     const formData = new FormData();
-    formData.append("fullname", input.fullname);
-    formData.append("email", input.email);
-    formData.append("password", input.password);
-    formData.append("idnum", input.idnum);
-    formData.append("phoneNumber", input.phoneNumber);
-    if (input.file) {
-      formData.append("file", input.file);
-    }
+    Object.entries(input).forEach(([key, value]) => {
+      if (value) formData.append(key, value);
+    });
+
     try {
-      dispatch(setLoading(true));
-      const res = await axios.post(`${USER_API_ENDPOINT}/register`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
-      });
-      if (res.data.success) {
-        navigate("/login");
-        toast.success(res.data.message);
-      }
-    } catch (error) {
-      console.log(error);
-      const errorMessage = error.response
-        ? error.response.data.message
-        : "An unexpected error occurred.";
-      toast.error(errorMessage);
-    } finally {
-      dispatch(setLoading(false));
+      await register(formData);
+      toast.success("Registration successful!");
+      navigate("/login");
+    } catch {
+      toast.error(error || "Registration failed");
     }
   };
 
-  const { user } = useSelector((store) => store.auth);
-  useEffect(() => {
-    if (user) {
-      navigate("/");
-    }
-  }, []);
   return (
-    <div>
-      
-      <div className="flex items-center justify-center max-w-7xl mx-auto">
-        <form
-          onSubmit={submitHandler}
-          className="w-1/2 border border-gray-500 rounded-md p-4 my-10"
-        >
-          <h1 className="font-bold text-xl mb-5 text-center text-blue-600">
-            Register
-          </h1>
-          <div className="my-2">
-            <Label>Fullname</Label>
-            <Input
-              type="text"
-              value={input.fullname}
-              name="fullname"
-              onChange={changeEventHandler}
-              placeholder="John Doe"
-            ></Input>
-          </div>
-          <div className="my-2">
-            <Label>Email</Label>
-            <Input
-              type="email"
-              value={input.email}
-              name="email"
-              onChange={changeEventHandler}
-              placeholder="johndoe@gmail.com"
-            ></Input>
-          </div>
-          <div className="my-2">
-            <Label>Password</Label>
-            <Input
-              type="password"
-              value={input.password}
-              name="password"
-              onChange={changeEventHandler}
-              placeholder="********"
-            ></Input>
-          </div>
-          
-          <div>
-            <Label>Student ID Number</Label>
-            <Input
-              type="text"
-              value={input.idnum}
-              name="idnum"
-              onChange={changeEventHandler}
-              placeholder="123456789012"
-            ></Input>
-          </div>
-          <div className="my-2">
-            <Label>Phone Number</Label>
-            <Input
-              type="tel"
-              value={input.phoneNumber}
-              name="phoneNumber"
-              onChange={changeEventHandler}
-              placeholder="+1234567890"
-            ></Input>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Label>Profile Photo</Label>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={ChangeFilehandler}
-              className="cursor-pointer"
-            />
-          </div>
-          {loading ? (
-            <div className="flex items-center justify-center my-10">
-              <div className="spinner-border text-blue-600" role="status">
-                <span className="sr-only">Loading...</span>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="submit"
-              className="block w-full py-3 my-3 text-white bg-primary hover:bg-primary/90 rounded-md"
-            >
-              Register
-            </button>
-          )}
+    <div className="flex items-center justify-center mx-auto max-w-7xl">
+      <form
+        onSubmit={submitHandler}
+        className="w-1/2 p-4 my-10 border border-gray-500 rounded-md"
+      >
+        <h1 className="mb-5 text-xl font-bold text-center text-blue-600">Register</h1>
 
-          <p className="text-gray-500 text-md my-2">
-            Already have an account?{" "}
-            <Link to="/login" className="text-blue-700 font-semibold">
-              Login
-            </Link>
-          </p>
-        </form>
-      </div>
+        <div className="my-2">
+          <Label>Fullname</Label>
+          <Input
+            type="text"
+            name="fullname"
+            value={input.fullname}
+            onChange={handleChange}
+            placeholder="John Doe"
+          />
+          {errors.fullname && <p className="text-sm text-red-500">{errors.fullname}</p>}
+        </div>
+
+        <div className="my-2">
+          <Label>Email</Label>
+          <Input
+            type="email"
+            name="email"
+            value={input.email}
+            onChange={handleChange}
+            placeholder="johndoe@gmail.com"
+          />
+          {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+        </div>
+
+        <div className="my-2">
+          <Label>Password</Label>
+          <Input
+            type="password"
+            name="password"
+            value={input.password}
+            onChange={handleChange}
+            placeholder="********"
+          />
+          {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+        </div>
+
+        <div className="my-2">
+          <Label>Student ID Number</Label>
+          <Input
+            type="text"
+            name="idnum"
+            value={input.idnum}
+            onChange={handleChange}
+            placeholder="123456789012"
+          />
+          {errors.idnum && <p className="text-sm text-red-500">{errors.idnum}</p>}
+        </div>
+
+        <div className="my-2">
+          <Label>Phone Number</Label>
+          <Input
+            type="tel"
+            name="phoneNumber"
+            value={input.phoneNumber}
+            onChange={handleChange}
+            placeholder="+1234567890"
+          />
+          {errors.phoneNumber && <p className="text-sm text-red-500">{errors.phoneNumber}</p>}
+        </div>
+
+        <div className="flex items-center gap-2 my-2">
+          <Label>Profile Photo</Label>
+          <Input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileChange(e, "file")}
+            className="cursor-pointer"
+          />
+          {errors.file && <p className="text-sm text-red-500">{errors.file}</p>}
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center my-10">
+            <div className="text-blue-600 spinner-border" role="status">
+              <span className="sr-only">Loading...</span>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="submit"
+            className="block w-full py-3 my-3 text-white rounded-md bg-primary hover:bg-primary/90"
+          >
+            Register
+          </button>
+        )}
+
+        <p className="my-2 text-center text-gray-500 text-md">
+          Already have an account?{" "}
+          <Link to="/login" className="font-semibold text-blue-700">
+            Login
+          </Link>
+        </p>
+      </form>
     </div>
   );
 };

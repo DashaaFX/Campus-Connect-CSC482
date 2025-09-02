@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { ORDER_API_ENDPOINT } from '@/utils/data';
 import { format } from 'date-fns';
+import { ORDER_STATUS_COLORS } from '@/constants/order-status';
 
 const MyOrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -15,8 +16,8 @@ const MyOrdersPage = () => {
   }, []);
 
   return (
-    <div className="max-w-5xl mx-auto py-6 px-4">
-      <h1 className="text-2xl font-bold mb-4">My Orders</h1>
+    <div className="max-w-5xl px-4 py-6 mx-auto">
+      <h1 className="mb-4 text-2xl font-bold">My Orders</h1>
       {loading ? (
         <p>Loading...</p>
       ) : orders.length === 0 ? (
@@ -24,14 +25,14 @@ const MyOrdersPage = () => {
       ) : (
         <div className="space-y-4">
           {orders.map(order => (
-            <div key={order._id} className="border p-4 rounded shadow-sm">
+            <div key={order._id} className="p-4 border rounded shadow-sm">
               <div className="flex justify-between text-sm text-gray-500">
                 <span>Order ID: {order._id}</span>
                 <span>{format(new Date(order.createdAt), 'PPpp')}</span>
               </div>
               <div className="mt-2">
                 {order.items.map(item => (
-                  <div key={item.product} className="flex justify-between py-1 border-b text-sm">
+                  <div key={item.product} className="flex justify-between py-1 text-sm border-b">
                     <div>{item.title}</div>
                     <div>Qty: {item.quantity} @ ${item.price.toFixed(2)}</div>
                   </div>
@@ -39,7 +40,11 @@ const MyOrdersPage = () => {
               </div>
               <div className="flex justify-between mt-3 font-semibold">
                 <span>Total: ${order.totalAmount.toFixed(2)}</span>
-                <span>Status: <span className="capitalize">{order.status}</span></span>
+                <span>
+                  Status: <span className={`capitalize px-2 py-1 rounded ${ORDER_STATUS_COLORS[order.status] || 'bg-gray-200 text-gray-700'}`}>
+                    {order.status}
+                  </span>
+                </span>
               </div>
             </div>
           ))}

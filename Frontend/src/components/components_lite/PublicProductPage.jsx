@@ -4,7 +4,6 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
 import ProductList from "./ProductsList";
-import Navbar from "./Navbar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,7 +81,7 @@ const PublicProductPage = () => {
     fetchProducts();
   }, [search, selectedCategory, selectedSubcategory, sort]);
 
-  // ✅ When user changes filters, update URL
+  //  When user changes filters, update URL
   const updateUrlParams = () => {
     const params = new URLSearchParams();
     if (search) params.set('q', search);
@@ -108,11 +107,11 @@ const PublicProductPage = () => {
   return (
     <> 
     
-      <div className="max-w-7xl mx-auto py-10 px-4">
-        <h1 className="text-3xl font-bold mb-6">Browse Products</h1>
+      <div className="px-4 py-10 mx-auto max-w-7xl">
+        <h1 className="mb-6 text-3xl font-bold">Browse Products</h1>
 
         {/* Filters and Search */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
+        <div className="flex flex-col gap-4 mb-8 md:flex-row">
           <Input
             placeholder="Search products..."
             value={search}
@@ -178,8 +177,8 @@ const PublicProductPage = () => {
 
         {/* Products or No Products */}
         {products.length === 0 ? (
-          <div className="text-center text-gray-500 py-10">
-            <h2 className="text-2xl font-semibold mb-2">No products found</h2>
+          <div className="py-10 text-center text-gray-500">
+            <h2 className="mb-2 text-2xl font-semibold">No products found</h2>
             <p>Try adjusting your search or filters.</p>
           </div>
         ) : (

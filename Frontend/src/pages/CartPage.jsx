@@ -1,11 +1,8 @@
+// src/pages/CartPage.jsx
 import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  fetchCart,
-  clearCart,
-  decreaseQuantityFromCart
-} from '@/redux/cartSlice';
+import { useCartStore } from '@/store/useCartStore';
 import { Button } from '@/components/ui/button';
+// Removed popover import, using custom modal
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -13,13 +10,23 @@ import axios from 'axios';
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const CartPage = () => {
-  const dispatch = useDispatch();
+  const {
+    items,
+    loading,
+    error,
+    fetchCart,
+    removeFromCart,
+    clearCart,
+    decreaseQuantity,
+  } = useCartStore();
+
   const navigate = useNavigate();
-  const { items, loading, error } = useSelector((state) => state.cart);
 
   useEffect(() => {
-    dispatch(fetchCart());
-  }, [dispatch]);
+    fetchCart();
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const total = items
     .filter(item => item?.product && item?.product.price != null)
@@ -27,8 +34,8 @@ const CartPage = () => {
 
   const handleRemove = async (id) => {
     try {
-      await dispatch(decreaseQuantityFromCart(id)).unwrap();
-      dispatch(fetchCart());
+      await removeFromCart(id);
+      toast.success('Item removed');
     } catch {
       toast.error('Failed to remove item');
     }
@@ -36,8 +43,7 @@ const CartPage = () => {
 
   const handleClear = async () => {
     try {
-      await dispatch(clearCart()).unwrap();
-      dispatch(fetchCart());
+      await clearCart();
       toast.success('Cart cleared');
     } catch {
       toast.error('Failed to clear cart');
@@ -47,6 +53,7 @@ const CartPage = () => {
   const handleCheckout = () => {
     navigate('/checkout');
   };
+  const [modalOpen, setModalOpen] = React.useState(false);
 
   const handleBuyRequest = async (productId) => {
     if (!window.confirm('Buy this product?')) return;
@@ -60,8 +67,8 @@ const CartPage = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-4">Your Cart</h1>
+    <div className="max-w-4xl py-6 mx-auto">
+      <h1 className="mb-4 text-2xl font-bold">Your Cart</h1>
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
       {items.length === 0 ? (
@@ -72,7 +79,7 @@ const CartPage = () => {
             .map((item) => (
               <div
                 key={item.product._id}
-                className="flex justify-between items-center border-b py-4"
+                className="flex items-center justify-between py-4 border-b"
               >
                 <div>
                   <h3 className="font-semibold">{item.product.title}</h3>
@@ -88,7 +95,7 @@ const CartPage = () => {
                     Remove
                   </Button>
                   <Button
-                    className="bg-black text-white"
+                    className="text-white bg-black"
                     onClick={() => handleBuyRequest(item.product._id)}
                   >
                     Buy this
@@ -99,16 +106,38 @@ const CartPage = () => {
           <div className="mt-6 text-lg font-semibold">
             Total: ${total.toFixed(2)}
           </div>
-          <div className="mt-4 flex gap-2">
-            <Button onClick={handleCheckout}>Proceed to Checkout</Button>
-            <Button variant="outline" onClick={handleClear}>
-              Clear Cart
-            </Button>
-          </div>
+            <div className="flex gap-2 mt-4">
+              <Button onClick={() => setModalOpen(true)}>
+                Proceed to Checkout
+              </Button>
+              <Button variant="outline" onClick={handleClear}>
+                Clear Cart
+              </Button>
+            </div>
+            {modalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                <div className="flex flex-col items-center gap-4 p-8 bg-white shadow-xl rounded-xl w-80">
+                  <h2 className="text-lg font-semibold">Confirm Checkout</h2>
+                  <p className="text-center text-gray-600">Are you sure you want to proceed to checkout?</p>
+                  <div className="flex w-full gap-2 mt-2">
+                    <Button 
+                      onClick={() => { setModalOpen(false); handleCheckout(); }} 
+                      className="w-full px-4 py-2 font-semibold text-white bg-black rounded hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black">
+                        Yes, Proceed
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setModalOpen(false)} 
+                      className="w-full px-4 py-2"
+                    >Cancel</Button>
+                  </div>
+                </div>
+              </div>
+            )}
         </>
       )}
     </div>
   );
-};
+}
 
 export default CartPage;

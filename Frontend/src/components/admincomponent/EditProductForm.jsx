@@ -1,7 +1,5 @@
-// Updated EditProductForm.jsx with delete functionality and retained existing product values
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useSelector } from "react-redux";
 import axios from "axios";
 import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
 import { Button } from "@/components/ui/button";
@@ -15,11 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const EditProductForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const token = useSelector((state) => state.auth.token);
+  const user = useAuthStore((state) => state.user);
+  const token = user?.token;
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -126,9 +126,9 @@ const EditProductForm = () => {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Edit Product</h1>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+    <div className="max-w-2xl p-6 mx-auto">
+      <h1 className="mb-6 text-2xl font-bold">Edit Product</h1>
+      {error && <div className="mb-4 text-red-500">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Label htmlFor="title">Product Title</Label>

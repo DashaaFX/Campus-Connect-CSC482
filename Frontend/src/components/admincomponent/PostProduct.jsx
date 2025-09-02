@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
 import { Button } from "@/components/ui/button";
@@ -14,9 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const PostProduct = () => {
-  const token = useSelector((state) => state.auth.token);
+  const user = useAuthStore((state) => state.user);
+  const token = user?.token;
+
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -112,9 +114,9 @@ const PostProduct = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Add New Product</h1>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+    <div className="max-w-2xl p-6 mx-auto">
+      <h1 className="mb-6 text-2xl font-bold">Add New Product</h1>
+      {error && <div className="mb-4 text-red-500">{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">
         <div>
@@ -192,9 +194,9 @@ const PostProduct = () => {
             onChange={handleFileChange}
           />
 
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             {previewUrls.map((url, idx) => (
-              <img key={idx} src={url} alt={`preview-${idx}`} className="w-24 h-24 object-cover rounded" />
+              <img key={idx} src={url} alt={`preview-${idx}`} className="object-cover w-24 h-24 rounded" />
             ))}
           </div>
 

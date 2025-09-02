@@ -10,8 +10,8 @@ const initialState = {
 };
 
 // Authentication API endpoints
-const LOGIN_URL = "/api/auth/login";
-const REGISTER_URL = "/api/auth/register";
+const LOGIN_URL = "/api/auth/login";  
+const REGISTER_URL = "/api/auth/register";  
 
 export const loginUser = createAsyncThunk(
   'auth/login',

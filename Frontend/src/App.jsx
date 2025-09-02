@@ -1,7 +1,6 @@
 import React from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { Provider } from "react-redux";
-import store from "./redux/store";
+
 
 // Pages & Components
 import Layout from "./Layout";
@@ -14,8 +13,6 @@ import TermsofService from "./components/components_lite/TermsofService";
 import Creator from "./components/creator/Creator";
 import PostProduct from "./components/admincomponent/PostProduct";
 import EditProductForm from "./components/admincomponent/EditProductForm";
-import AdminProducts from "./pages/AdminProducts";
-
 import PublicProductPage from "./components/components_lite/PublicProductPage";
 import Products from "./components/components_lite/Products";
 import CartPage from "./pages/CartPage";
@@ -33,11 +30,9 @@ const appRouter = createBrowserRouter([
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
       { path: "profile", element: <Profile /> },
-      { path: "privacy-policy", element: <PrivacyPolicy /> },
-      { path: "terms-of-service", element: <TermsofService /> },
+      { path: "PrivacyPolicy", element: <PrivacyPolicy /> },
+      { path: "TermsOfService", element: <TermsofService /> },
       { path: "creator", element: <Creator /> },
-
-    
       { path: "products", element: <PublicProductPage /> },
       { path: "products/:id", element: <Products /> },
       { path: "admin/products/:productId/status", element: <ProductStatus /> },
@@ -50,18 +45,14 @@ const appRouter = createBrowserRouter([
       { path: "my-orders", element: <MyOrdersPage /> },
       { path: "my-sales", element: <MySalesPage /> },
       { path: "products/create", element: <PostProduct /> },
-      {path: "admin/products/:id", element: <EditProductForm /> },
+      { path: "admin/products/:id", element: <EditProductForm /> },
      
     ]
   }
 ]);
 
 function App() {
-  return (
-    <Provider store={store}>
-      <RouterProvider router={appRouter} />
-    </Provider>
-  );
+  return <RouterProvider router={appRouter} />;
 }
 
 export default App;

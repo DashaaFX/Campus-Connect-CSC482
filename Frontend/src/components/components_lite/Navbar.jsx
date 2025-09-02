@@ -1,54 +1,68 @@
-import React from "react";
-import { useEffect } from "react";
-import { fetchCart } from "@/redux/cartSlice";
+import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
-import { LogOut, User2, ShoppingCart, PackageCheck, PackageSearch,Home, Package, Info } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
+import {
+  LogOut,
+  User2,
+  ShoppingCart,
+  PackageCheck,
+  PackageSearch,
+  Home,
+  Package,
+  Info,
+} from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
-import { setUser } from "@/redux/authSlice";
 import { USER_API_ENDPOINT } from "@/utils/data";
-
+import { useCartStore } from "@/store/useCartStore"; // Zustand store
+import { useAuthStore } from "@/store/useAuthStore"; // Zustand auth store
 
 const Navbar = () => {
-  const { user } = useSelector((store) => store.auth);
-  const cartItems = useSelector((state) => state.cart.items);
-  const itemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-
-
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  useEffect(() => {
-    dispatch(fetchCart());
-  }, [dispatch]);
 
-  const logoutHandler = async () => {
-    try {
-      const res = await axios.post(`${USER_API_ENDPOINT}/logout`, {
-        withCredentials: true,
-      });
-      if (res && res.data && res.data.success) {
-        dispatch(setUser(null));
-        navigate("/");
-        toast.success(res.data.message);
-      } else {
-        console.error("Error logging out:", res.data);
-      }
-    } catch (error) {
-      console.error("Axios error:", error);
-      if (error.response) {
-        console.error("Error response:", error.response.data);
-      }
-      toast.error("Error logging out. Please try again.");
+  // Auth store
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+
+  // Cart store
+  const items = useCartStore((state) => state.items);
+  const fetchCart = useCartStore((state) => state.fetchCart);
+
+  // Recalculate item count whenever `items` changes
+  const itemCount = items.reduce((acc, item) => acc + (item.quantity || 0), 0);
+
+  // Fetch cart when user is present
+  useEffect(() => {
+    if (user) {
+      fetchCart();
     }
-  };
+  }, [user, fetchCart]);
+
+  // Logout handler
+  // Navbar.jsx (inside the component)
+const logoutHandler = async () => {
+  if (!user) return;
+
+  try {
+    // Call Zustand store logout
+    await useAuthStore.getState().logout();
+
+    // Clear cart too (optional, if you want cart cleared on logout)
+    useCartStore.getState().clearCart?.();
+
+    toast.success("Logged out successfully!");
+    navigate("/"); 
+  } catch (err) {
+    console.error("Logout failed:", err);
+    toast.error(err?.message || "Error logging out. Please try again.");
+  }
+};
 
   return (
-    <div className="bg-white sticky top-0 z-50 shadow-sm">
-      <div className="flex items-center justify-between mx-auto max-w-7xl h-16 px-4">
+    <div className="sticky top-0 z-50 bg-white shadow-sm">
+      <div className="flex items-center justify-between h-16 px-4 mx-auto max-w-7xl">
         <div>
           <Link to="/" className="cursor-pointer">
             <h1 className="text-2xl font-bold">
@@ -59,20 +73,20 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-10">
-          <ul className="flex font-medium items-center gap-6">
-          <li className="flex items-center gap-1">
-            <Home size={18} />
-            <Link to={"/Home"}>Home</Link>
-          </li>
-          <li className="flex items-center gap-1">
-            <Package size={18} />
-            <Link to={"/products"}>Products</Link>
-          </li>
-          <li className="flex items-center gap-1">
-            <Info size={18} />
-            <Link to={"/Creator"}>About</Link>
-          </li>
-            
+          <ul className="flex items-center gap-6 font-medium">
+            <li className="flex items-center gap-1">
+              <Home size={18} />
+              <Link to={"/Home"}>Home</Link>
+            </li>
+            <li className="flex items-center gap-1">
+              <Package size={18} />
+              <Link to={"/products"}>Products</Link>
+            </li>
+            <li className="flex items-center gap-1">
+              <Info size={18} />
+              <Link to={"/Creator"}>About</Link>
+            </li>
+
             {user && (
               <>
                 <li>
@@ -98,7 +112,6 @@ const Navbar = () => {
                     My Sales
                   </Link>
                 </li>
-
               </>
             )}
           </ul>
@@ -109,51 +122,45 @@ const Navbar = () => {
                 <Button variant="outline">Login</Button>
               </Link>
               <Link to={"/register"}>
-                <Button className="bg-red-600 hover:bg-red-700">
-                  Register
-                </Button>
+                <Button className="bg-red-600 hover:bg-red-700">Register</Button>
               </Link>
             </div>
           ) : (
             <Popover>
               <PopoverTrigger asChild>
                 <Avatar className="cursor-pointer">
-                  <AvatarImage
-                    src={user?.profile?.profilePhoto}
-                    alt="profile"
-                  />
+                  <AvatarImage src={user?.profile?.profilePhoto} alt="profile" />
                 </Avatar>
               </PopoverTrigger>
               <PopoverContent className="w-80">
                 <div className="flex items-center gap-4 space-y-2">
                   <Avatar>
-                    <AvatarImage
-                      src={user?.profile?.profilePhoto}
-                      alt="profile"
-                    />
+                    <AvatarImage src={user?.profile?.profilePhoto} alt="profile" />
                   </Avatar>
                   <div>
                     <h3 className="font-medium">{user?.fullname}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {user?.profile?.bio}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{user?.profile?.bio}</p>
                   </div>
                 </div>
 
                 <div className="flex flex-col my-2 text-gray-600">
-                  <div className="flex w-fit items-center gap-2 cursor-pointer">
+                  <div className="flex items-center gap-2 cursor-pointer w-fit">
                     <User2 />
                     <Button variant="link">
-                      <Link to={"/Profile"}>Profile</Link>
+                      <Link to={"/profile"}>Profile</Link>
                     </Button>
                   </div>
 
-                  <div className="flex w-fit items-center gap-2 cursor-pointer">
-                    <LogOut />
-                    <Button onClick={logoutHandler} variant="link">
-                      Logout
-                    </Button>
-                  </div>
+                  <div className="flex items-center gap-2 cursor-pointer w-fit">
+                  <LogOut className="text-red-500" /> 
+                  <Button 
+                    onClick={logoutHandler} 
+                    variant="link" 
+                    className="text-red-500 hover:text-red-600"
+                  >
+                    Logout
+                  </Button>
+                </div>
                 </div>
               </PopoverContent>
             </Popover>
