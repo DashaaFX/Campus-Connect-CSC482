@@ -18,7 +18,7 @@ const Home = () => {
     axios
       .get(`${PRODUCT_API_ENDPOINT}?limit=6&sort=-createdAt`)
       .then(res => {
-        setRecentProducts(res.data.data || res.data);
+        setRecentProducts(res.data.products || []);
       })
       .catch(err => console.error('Failed to load products', err));
   }, []);

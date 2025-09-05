@@ -43,9 +43,17 @@ const EditProductForm = () => {
 
   useEffect(() => {
     const fetchSubcategories = async () => {
-      if (!formData.category) return;
-      const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
-      setSubcategories(res.data);
+      if (formData.category) {
+        try {
+          const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
+          setSubcategories(res.data);
+        } catch (err) {
+          console.error("Error fetching subcategories:", err);
+          setSubcategories([]);
+        }
+      } else {
+        setSubcategories([]);
+      }
     };
     fetchSubcategories();
   }, [formData.category]);
@@ -64,7 +72,7 @@ const EditProductForm = () => {
           description: product.description,
           price: product.price,
           category: product.category?._id || product.category,
-          subcategory: product.subcategory?._id || product.subcategory,
+          subcategory: product.subcategory?._id || product.subcategory || "",
           stock: product.stock,
         });
         setError("");
@@ -164,24 +172,30 @@ const EditProductForm = () => {
             </SelectContent>
           </Select>
         </div>
+
         <div>
-          <Label htmlFor="subcategory">Subcategory</Label>
+          <Label>Subcategory</Label>
           <Select
             value={formData.subcategory}
             onValueChange={(value) => setFormData({ ...formData, subcategory: value })}
+            disabled={!formData.category}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select a subcategory" />
+              <SelectValue>
+                {subcategories.find(s => s.id === formData.subcategory)?.name || "Select a subcategory"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {subcategories.map((sub) => (
-                <SelectItem key={sub._id} value={sub._id}>{sub.name}</SelectItem>
+                <SelectItem key={sub.id} value={sub.id}>
+                  {sub.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex justify-between gap-2">
-          <Button type="submit" disabled={loading}>{loading ? "Updating..." : "Update Product"}</Button>
+          <Button type="submit" disabled={loading || !formData.title || !formData.price || !formData.category || !formData.subcategory}>{loading ? "Updating..." : "Update Product"}</Button>
           <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>{loading ? "Deleting..." : "Delete Product"}</Button>
         </div>
       </form>

@@ -28,10 +28,10 @@ const useGetAllAdminProducts = (initialParams = {}) => {
       
       if (res.data.success) {
         dispatch(setAllAdminProducts({
-          products: res.data.data,
-          total: res.data.total,
-          totalPages: res.data.totalPages,
-          currentPage: res.data.currentPage,
+          products: res.data.products,
+          total: res.data.count,
+          totalPages: Math.ceil(res.data.count / limit),
+          currentPage: page,
         }));
       } else {
         setError(res.data.message || "Failed to fetch admin products");

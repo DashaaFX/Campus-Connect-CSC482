@@ -4,20 +4,26 @@ import axios from "axios";
 const initialState = {
   loading: false,
   user: null,
-  token: null,
+  token: localStorage.getItem('token') || null,
   error: null,
-  isAuthenticated: false
+  isAuthenticated: !!localStorage.getItem('token')
 };
 
 // Authentication API endpoints
-const LOGIN_URL = "/api/auth/login";
-const REGISTER_URL = "/api/auth/register";
+const LOGIN_URL = "https://3yud35kmhl.execute-api.us-east-1.amazonaws.com/dev/auth/login";
+const REGISTER_URL = "https://3yud35kmhl.execute-api.us-east-1.amazonaws.com/dev/auth/register";
 
 export const loginUser = createAsyncThunk(
   'auth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
       const response = await axios.post(LOGIN_URL, { email, password });
+      
+      // Store token in localStorage
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+      }
+      
       return {
         user: response.data.user,  // Ensure backend sends user object
         token: response.data.token // Ensure backend sends token
@@ -68,6 +74,7 @@ const authSlice = createSlice({
       }
     },
     logout: (state) => {
+      localStorage.removeItem('token');
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;

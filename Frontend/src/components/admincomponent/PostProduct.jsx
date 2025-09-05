@@ -168,12 +168,12 @@ const PostProduct = () => {
           >
             <SelectTrigger>
               <SelectValue>
-                {subcategories.find(s => s._id === formData.subcategory)?.name || "Select a subcategory"}
+                {subcategories.find(s => s.id === formData.subcategory)?.name || "Select a subcategory"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {subcategories.map((sub) => (
-                <SelectItem key={sub._id} value={sub._id}>
+                <SelectItem key={sub.id} value={sub.id}>
                   {sub.name}
                 </SelectItem>
               ))}

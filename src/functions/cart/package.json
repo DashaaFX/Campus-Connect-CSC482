@@ -1,0 +1,6 @@
+{
+  "name": "cart-functions",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Cart management Lambda functions"
+}

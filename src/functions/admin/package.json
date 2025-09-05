@@ -1,0 +1,6 @@
+{
+  "name": "admin-functions",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Admin and seller management Lambda functions"
+}

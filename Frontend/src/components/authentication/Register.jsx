@@ -33,36 +33,51 @@ const Register = () => {
   };
 
   const submitHandler = async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append("fullname", input.fullname);
-    formData.append("email", input.email);
-    formData.append("password", input.password);
-    formData.append("idnum", input.idnum);
-    formData.append("phoneNumber", input.phoneNumber);
+  e.preventDefault();
+  dispatch(setLoading(true));
+  try {
+    let profilePictureUrl = null;
+
     if (input.file) {
-      formData.append("file", input.file);
-    }
-    try {
-      dispatch(setLoading(true));
-      const res = await axios.post(`${USER_API_ENDPOINT}/register`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
+      // 1️⃣ Get pre-signed URL from backend
+      const presignRes = await axios.post(`${USER_API_ENDPOINT}/getProfileUploadUrl`, {
+        filename: input.file.name,
+        filetype: input.file.type,
       });
-      if (res.data.success) {
-        navigate("/login");
-        toast.success(res.data.message);
-      }
-    } catch (error) {
-      console.log(error);
-      const errorMessage = error.response
-        ? error.response.data.message
-        : "An unexpected error occurred.";
-      toast.error(errorMessage);
-    } finally {
-      dispatch(setLoading(false));
+
+      const { uploadUrl, fileUrl } = presignRes.data;
+
+      // 2️⃣ Upload file directly to S3
+      await axios.put(uploadUrl, input.file, {
+        headers: { 'Content-Type': input.file.type },
+      });
+
+      profilePictureUrl = fileUrl;
     }
-  };
+
+    // 3️⃣ Send registration data with profilePictureUrl
+    const res = await axios.post(`${USER_API_ENDPOINT}/register`, {
+      fullname: input.fullname,
+      email: input.email,
+      password: input.password,
+      phoneNumber: input.phoneNumber,
+      idnum: input.idnum,
+      profilePictureUrl,
+    });
+
+    if (res.data.success) {
+      navigate('/login');
+      toast.success(res.data.message);
+    }
+  } catch (error) {
+    console.error(error);
+    const errorMessage = error.response?.data?.message || 'An unexpected error occurred.';
+    toast.error(errorMessage);
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
 
   const { user } = useSelector((store) => store.auth);
   useEffect(() => {

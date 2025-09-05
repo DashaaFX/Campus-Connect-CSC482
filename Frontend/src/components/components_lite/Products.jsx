@@ -23,7 +23,7 @@ const Products = () => {
 
   useEffect(() => {
     axios.get(`${PRODUCT_API_ENDPOINT}/${id}`)
-      .then(res => setProduct(res.data.data || res.data))
+      .then(res => setProduct(res.data.product || res.data))
       .catch(err => { console.error(err); setError('Failed to load product'); })
       .finally(() => setLoading(false));
   }, [id]);

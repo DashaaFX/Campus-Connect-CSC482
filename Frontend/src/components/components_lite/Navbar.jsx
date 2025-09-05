@@ -9,7 +9,7 @@ import { LogOut, User2, ShoppingCart, PackageCheck, PackageSearch,Home, Package,
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import axios from "axios";
-import { setUser } from "@/redux/authSlice";
+import { setUser, logout } from "@/redux/authSlice";
 import { USER_API_ENDPOINT } from "@/utils/data";
 
 
@@ -25,25 +25,10 @@ const Navbar = () => {
     dispatch(fetchCart());
   }, [dispatch]);
 
-  const logoutHandler = async () => {
-    try {
-      const res = await axios.post(`${USER_API_ENDPOINT}/logout`, {
-        withCredentials: true,
-      });
-      if (res && res.data && res.data.success) {
-        dispatch(setUser(null));
-        navigate("/");
-        toast.success(res.data.message);
-      } else {
-        console.error("Error logging out:", res.data);
-      }
-    } catch (error) {
-      console.error("Axios error:", error);
-      if (error.response) {
-        console.error("Error response:", error.response.data);
-      }
-      toast.error("Error logging out. Please try again.");
-    }
+  const logoutHandler = () => {
+    dispatch(logout());
+    navigate("/");
+    toast.success("Logged out successfully");
   };
 
   return (

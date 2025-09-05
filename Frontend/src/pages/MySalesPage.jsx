@@ -26,7 +26,7 @@ const MySalesPage = () => {
         const res = await axios.get(`${PRODUCT_API_ENDPOINT}/seller/${user._id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setProducts(res.data.data);
+        setProducts(res.data.products || []);
       } catch (err) {
         console.error('Failed to fetch user products', err);
       } finally {

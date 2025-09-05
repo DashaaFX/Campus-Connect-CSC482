@@ -16,7 +16,7 @@ const LatestProducts = ({ limit = 6 }) => {
   useEffect(() => {
     axios
       .get(`${PRODUCT_API_ENDPOINT}?limit=${limit}&sort=-createdAt`)
-      .then(res => setProducts(res.data.data || res.data))
+      .then(res => setProducts(res.data.products || []))
       .catch(err => console.error('Failed to load products', err));
   }, [limit]);
 

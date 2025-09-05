@@ -72,7 +72,7 @@ const PublicProductPage = () => {
       if (sort) params.append('sort', sort);
 
       const res = await axios.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
-      setProducts(res.data.data || res.data);
+      setProducts(res.data.products || []);
     } catch (err) {
       console.error("Failed to fetch products", err);
     }
