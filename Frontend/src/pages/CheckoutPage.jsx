@@ -1,32 +1,49 @@
 // src/pages/CheckoutPage.jsx
 import React from 'react';
-import { useDispatch } from 'react-redux';
 import axios from 'axios';
-import { CART_API_ENDPOINT, ORDER_API_ENDPOINT } from '@/utils/data';
+import { useCartStore } from '@/store/useCartStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { ORDER_API_ENDPOINT } from '@/utils/data';
 import { useNavigate } from 'react-router-dom';
-import { clearCart } from '@/redux/cartSlice';
 import { toast } from 'sonner';
 
 const CheckoutPage = () => {
-  const dispatch = useDispatch();
+  const { clearCart } = useCartStore(); 
+  const { token } = useAuthStore();
   const navigate = useNavigate();
 
   const placeOrder = async () => {
     try {
-      await axios.post(`${ORDER_API_ENDPOINT}/place`, {}, { withCredentials: true });
+      await axios.post(`${ORDER_API_ENDPOINT}/place`, {}, { 
+        headers: { Authorization: `Bearer ${token}` }
+      });
       toast.success('Order placed successfully!');
-      dispatch(clearCart());
+      await clearCart(); // clear cart via Zustand
       navigate('/my-orders');
     } catch (err) {
+      console.error(err);
       toast.error(err.response?.data?.message || 'Checkout failed');
     }
   };
 
   return (
-    <div className="max-w-lg mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Checkout</h1>
-      <p className="mb-4">Ready to place your order?</p>
-      <button onClick={placeOrder} className="btn btn-primary">Place Order</button>
+    <div className="flex items-center justify-center min-h-[60vh] bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="w-full max-w-md p-8 bg-white border border-gray-100 shadow-xl rounded-2xl">
+        <div className="flex flex-col items-center mb-6">
+          <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mb-4 text-primary-500">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.35 2.7A2 2 0 007.5 18h9a2 2 0 001.85-2.7L17 13M7 13V6h13" />
+          </svg>
+          <h1 className="mb-2 text-3xl font-extrabold text-gray-800">Checkout</h1>
+          <p className="text-center text-gray-500">Review your order and place it securely.</p>
+        </div>
+        
+        <button
+          onClick={placeOrder}
+          className="w-full px-4 py-2 font-semibold text-white bg-black rounded hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black"
+        >
+          Place Order
+        </button>
+      </div>
     </div>
   );
 };

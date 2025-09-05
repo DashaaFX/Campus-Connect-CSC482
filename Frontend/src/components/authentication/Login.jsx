@@ -1,126 +1,102 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { Navigate, useNavigate } from "react-router-dom";
-import { RadioGroup } from "../ui/radio-group";
-import { Link } from "react-router-dom";
-import axios from "axios";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { USER_API_ENDPOINT } from "@/utils/data.js";
-import { useDispatch, useSelector } from "react-redux";
-import { setLoading, setUser } from "@/redux/authSlice";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useForm } from "@/hooks/useForm"; // Our reusable form hook
 
 const Login = () => {
-  const [input, setInput] = useState({
-    email: "",
-    password: "", 
-  });
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { loading, user } = useSelector((store) => store.auth);
-  const changeEventHandler = (e) => {
-    setInput({ ...input, [e.target.name]: e.target.value });
+  const { user, loading, login, error, clearError } = useAuthStore();
+
+  const validationRules = {
+    email: {
+      required: true,
+      pattern: { value: /^\S+@\S+\.\S+$/, message: "Invalid email" },
+    },
+    password: { required: true },
   };
-  const ChangeFilehandler = (e) => {
-    setInput({ ...input, file: e.target.files?.[0] });
-  };
+
+  const { input, errors, handleChange, validate } = useForm(
+    { email: "", password: "" },
+    error,
+    clearError,
+    validationRules
+  );
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) navigate("/");
+  }, [user, navigate]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
 
     try {
-      dispatch(setLoading(true)); // Start loading
-      const res = await axios.post(
-        `${USER_API_ENDPOINT}/login`,
-        {
-          email: input.email,
-          password: input.password,
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-      if (res.data.success) {
-        // Store JWT token in localStorage
-        localStorage.setItem('token', res.data.token);
-        dispatch(setUser(res.data.user));
-        navigate("/");
-        toast.success(res.data.message);
-      }
-    } catch (error) {
+      await login({ email: input.email, password: input.password });
+      toast.success("Logged in successfully!");
+      navigate("/");
+    } catch {
       toast.error("Login failed");
-    } finally {
-      dispatch(setLoading(false)); // End loading
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      navigate("/");
-    }
-  }, []);
-
   return (
-    <div>
-      
-      <div className="flex items-center justify-center max-w-7xl mx-auto">
-        <form
-          onSubmit={submitHandler}
-          className="w-1/2 border border-gray-500 rounded-md p-4 my-10"
-        >
-          <h1 className="font-bold text-xl mb-5 text-center text-blue-600">
-            Login
-          </h1>
-          <div className="my-2">
-            <Label>Email</Label>
-            <Input
-              type="email"
-              value={input.email}
-              name="email"
-              onChange={changeEventHandler}
-              placeholder="hello@gmail.com"
-            ></Input>
-          </div>
-          <div className="my-2">
-            <Label>Password</Label>
-            <Input
-              type="password"
-              value={input.password}
-              name="password"
-              onChange={changeEventHandler}
-              placeholder="********"
-            ></Input>
-          </div>
-           
-            
+    <div className="flex items-center justify-center mx-auto max-w-7xl">
+      <form
+        onSubmit={submitHandler}
+        className="w-1/2 p-4 my-10 border border-gray-500 rounded-md"
+      >
+        <h1 className="mb-5 text-xl font-bold text-center text-blue-600">Login</h1>
 
-          {loading ? (
-            <div className="flex items-center justify-center my-10">
-              <div className="spinner-border text-blue-600" role="status">
-                <span className="sr-only">Loading...</span>
-              </div>
+        <div className="my-2">
+          <Label>Email</Label>
+          <Input
+            type="email"
+            name="email"
+            value={input.email}
+            onChange={handleChange}
+            placeholder="hello@gmail.com"
+          />
+          {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+        </div>
+
+        <div className="my-2">
+          <Label>Password</Label>
+          <Input
+            type="password"
+            name="password"
+            value={input.password}
+            onChange={handleChange}
+            placeholder="********"
+          />
+          {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center my-10">
+            <div className="text-blue-600 spinner-border" role="status">
+              <span className="sr-only">Loading...</span>
             </div>
-          ) : (
-            <button
-              type="submit"
-              className="w-3/4 py-3 my-3 text-white flex items-center justify-center max-w-7xl mx-auto bg-blue-600 hover:bg-blue-800/90 rounded-md"
-            >
-              Login
-            </button>
-          )}
-
-          <div className=" ">
-            <p className="text-gray-700  text-center my-2">
-              Create new Account{" "}
-              <Link to="/register" className="text-blue-700">
-                <button className=" w-1/2 py-3 my-3 text-white flex items-center justify-center max-w-7xl mx-auto bg-green-600 hover:bg-green-800/90 rounded-md">
-                  Register
-                </button>
-              </Link>
-            </p>
           </div>
-        </form>
-      </div>
+        ) : (
+          <button
+            type="submit"
+            className="flex items-center justify-center w-3/4 py-3 mx-auto my-3 text-white bg-blue-600 rounded-md hover:bg-blue-800/90"
+          >
+            Login
+          </button>
+        )}
+
+        <p className="my-2 text-center text-gray-700">
+          Don't have an account?{" "}
+          <Link to="/register" className="font-semibold text-blue-700">
+            Register
+          </Link>
+        </p>
+      </form>
     </div>
   );
 };

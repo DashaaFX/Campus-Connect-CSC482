@@ -34,14 +34,7 @@ const Header = () => {
         <p className="text-lg mb-8">
           Buy, sell, or trade items, access study materials,<br /> and earn money all in one place.
         </p>
-        <div className="max-w-xl mx-auto relative">
-          <input
-            type="text"
-            placeholder="Search for products or academic materials"
-            className="w-full py-3 px-4 rounded-full text-black focus:outline-none"
-          />
-          <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500" />
-        </div>
+        
       </div>
 
       <nav className="mt-10 overflow-x-auto">

@@ -3,12 +3,14 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setAllAdminProducts } from "@/redux/productSlice";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const useGetAllAdminProducts = (initialParams = {}) => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { allAdminProducts } = useSelector((store) => store.product);
+  const { token } = useAuthStore();
   const [params, setParams] = useState({
     page: 1,
     limit: 10,
@@ -16,6 +18,7 @@ const useGetAllAdminProducts = (initialParams = {}) => {
   });
 
   const fetchAllAdminProducts = async (customParams = {}) => {
+    if (!token) return;
     setLoading(true);
     setError(null);
     try {
@@ -23,7 +26,7 @@ const useGetAllAdminProducts = (initialParams = {}) => {
       
       const res = await axios.get(`${PRODUCT_API_ENDPOINT}/admin`, {
         params: { page, limit, sort, fields, ...filters },
-        withCredentials: true,
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       if (res.data.success) {

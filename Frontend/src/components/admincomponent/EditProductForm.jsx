@@ -1,7 +1,5 @@
-// Updated EditProductForm.jsx with delete functionality and retained existing product values
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useSelector } from "react-redux";
 import axios from "axios";
 import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
 import { Button } from "@/components/ui/button";
@@ -15,11 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const EditProductForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const token = useSelector((state) => state.auth.token);
+  const { user, token } = useAuthStore((state) => ({ user: state.user, token: state.token }));
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -43,17 +42,9 @@ const EditProductForm = () => {
 
   useEffect(() => {
     const fetchSubcategories = async () => {
-      if (formData.category) {
-        try {
-          const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
-          setSubcategories(res.data);
-        } catch (err) {
-          console.error("Error fetching subcategories:", err);
-          setSubcategories([]);
-        }
-      } else {
-        setSubcategories([]);
-      }
+      if (!formData.category) return;
+      const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
+      setSubcategories(res.data);
     };
     fetchSubcategories();
   }, [formData.category]);
@@ -63,16 +54,15 @@ const EditProductForm = () => {
       setLoading(true);
       try {
         const res = await axios.get(`${PRODUCT_API_ENDPOINT}/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true
+          headers: { Authorization: `Bearer ${token}` }
         });
-        const product = res.data;
+        const product = res.data.product || res.data;
         setFormData({
           title: product.title,
           description: product.description,
           price: product.price,
           category: product.category?._id || product.category,
-          subcategory: product.subcategory?._id || product.subcategory || "",
+          subcategory: product.subcategory?._id || product.subcategory,
           stock: product.stock,
         });
         setError("");
@@ -101,8 +91,7 @@ const EditProductForm = () => {
         `${PRODUCT_API_ENDPOINT}/${id}`,
         formData,
         {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
       
@@ -120,8 +109,7 @@ const EditProductForm = () => {
     setLoading(true);
     try {
       await axios.delete(`${PRODUCT_API_ENDPOINT}/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        withCredentials: true
+        headers: { Authorization: `Bearer ${token}` }
       });
       navigate("/my-sales");
     } catch (err) {
@@ -134,9 +122,9 @@ const EditProductForm = () => {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Edit Product</h1>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+    <div className="max-w-2xl p-6 mx-auto">
+      <h1 className="mb-6 text-2xl font-bold">Edit Product</h1>
+      {error && <div className="mb-4 text-red-500">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Label htmlFor="title">Product Title</Label>
@@ -172,30 +160,24 @@ const EditProductForm = () => {
             </SelectContent>
           </Select>
         </div>
-
         <div>
-          <Label>Subcategory</Label>
+          <Label htmlFor="subcategory">Subcategory</Label>
           <Select
             value={formData.subcategory}
             onValueChange={(value) => setFormData({ ...formData, subcategory: value })}
-            disabled={!formData.category}
           >
             <SelectTrigger>
-              <SelectValue>
-                {subcategories.find(s => s.id === formData.subcategory)?.name || "Select a subcategory"}
-              </SelectValue>
+              <SelectValue placeholder="Select a subcategory" />
             </SelectTrigger>
             <SelectContent>
               {subcategories.map((sub) => (
-                <SelectItem key={sub.id} value={sub.id}>
-                  {sub.name}
-                </SelectItem>
+                <SelectItem key={sub._id} value={sub._id}>{sub.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex justify-between gap-2">
-          <Button type="submit" disabled={loading || !formData.title || !formData.price || !formData.category || !formData.subcategory}>{loading ? "Updating..." : "Update Product"}</Button>
+          <Button type="submit" disabled={loading}>{loading ? "Updating..." : "Update Product"}</Button>
           <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>{loading ? "Deleting..." : "Delete Product"}</Button>
         </div>
       </form>
