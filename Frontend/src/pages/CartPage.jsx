@@ -1,8 +1,6 @@
-// src/pages/CartPage.jsx
 import React, { useEffect } from 'react';
 import { useCartStore } from '@/store/useCartStore';
 import { Button } from '@/components/ui/button';
-// Removed popover import, using custom modal
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -24,8 +22,7 @@ const CartPage = () => {
 
   useEffect(() => {
     fetchCart();
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
   const total = items

@@ -1,4 +1,3 @@
-// src/components/products/LatestProducts.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { PRODUCT_API_ENDPOINT } from '@/utils/data';
@@ -34,7 +33,7 @@ const LatestProducts = ({ limit = 6 }) => {
       {products.map(product => (
         <div
           key={product._id}
-          className="flex flex-col p-4 transition-shadow bg-white rounded-lg shadow hover:shadow-lg"
+          className="flex flex-col p-4 transition-shadow border border-gray-100 shadow-md bg-gradient-to-br from-gray-100 via-gray-50 to-gray-200 rounded-xl hover:shadow-xl"
         >
           <Link to={`/products/${product._id}`}>
             {product.images?.length > 0 ? (

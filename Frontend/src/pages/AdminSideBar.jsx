@@ -1,4 +1,3 @@
-// Updated AdminSidebar.jsx to load categories and subcategories dynamically
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Button } from '../components/ui/button';
@@ -36,8 +35,8 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
   };
 
   return (
-    <div className="w-64 border-r p-4">
-      <h2 className="text-lg font-semibold mb-4 sticky top-0 z-60">Categories</h2>
+    <div className="w-64 p-4 border-r">
+      <h2 className="sticky top-0 mb-4 text-lg font-semibold z-60">Categories</h2>
 
       <Button
         variant="ghost"

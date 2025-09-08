@@ -1,4 +1,3 @@
-// src/components/components_lite/ProductsList.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';

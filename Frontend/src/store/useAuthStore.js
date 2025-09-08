@@ -69,7 +69,7 @@ export const useAuthStore = create(
       },
     }),
     {
-      name: "auth-storage", // persist key
+      name: "auth-storage",
       partialize: (state) => ({ user: state.user }), // only persist user
     }
   )

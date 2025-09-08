@@ -92,7 +92,7 @@ const EditProfileModal = ({ open, setOpen }) => {
           {/* Form for editing profile */}
           <form onSubmit={handleFileChange}>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="name" className="text-right">
                   Name
                 </Label>
@@ -102,10 +102,10 @@ const EditProfileModal = ({ open, setOpen }) => {
                   value={input.fullname}
                   name="name"
                   onChange={changeEventHandler}
-                  className="col-span-3 border border-gray-300 rounded-md p-2"
+                  className="col-span-3 p-2 border border-gray-300 rounded-md"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="email" className="text-right">
                   Email
                 </Label>
@@ -115,23 +115,23 @@ const EditProfileModal = ({ open, setOpen }) => {
                   value={input.email}
                   name="email"
                   onChange={changeEventHandler}
-                  className="col-span-3 border border-gray-300 rounded-md p-2"
+                  className="col-span-3 p-2 border border-gray-300 rounded-md"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="phone" className="text-right">
                   Phone
                 </Label>
                 <input
                   type="tel"
                   id="phone"
-                  value={input.phoneNumber} // Ensure this is correctly set
-                  name="phoneNumber" // Ensure this matches the expected key
+                  value={input.phoneNumber} 
+                  name="phoneNumber" 
                   onChange={changeEventHandler}
-                  className="col-span-3 border border-gray-300 rounded-md p-2"
+                  className="col-span-3 p-2 border border-gray-300 rounded-md"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="bio" className="text-right">
                   Bio
                 </Label>
@@ -141,11 +141,10 @@ const EditProfileModal = ({ open, setOpen }) => {
                   value={input.bio}
                   name="bio"
                   onChange={changeEventHandler}
-                  className="col-span-3 border border-gray-300 rounded-md p-2"
+                  className="col-span-3 p-2 border border-gray-300 rounded-md"
                 />
               </div>
-              {/* skills */}
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="skills" className="text-right">
                   Skills
                 </Label>
@@ -154,11 +153,10 @@ const EditProfileModal = ({ open, setOpen }) => {
                   name="skills"
                   value={input.skills}
                   onChange={changeEventHandler}
-                  className="col-span-3 border border-gray-300 rounded-md p-2"
+                  className="col-span-3 p-2 border border-gray-300 rounded-md"
                 />
               </div>
-              {/* Resume file upload */}
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="file" className="text-right">
                   Resume
                 </Label>
@@ -168,7 +166,7 @@ const EditProfileModal = ({ open, setOpen }) => {
                   name="file"
                   accept="application/pdf"
                   onChange={FileChangehandler}
-                  className="col-span-3 border border-gray-300 rounded-md p-2"
+                  className="col-span-3 p-2 border border-gray-300 rounded-md"
                 />
               </div>
             </div>
@@ -177,7 +175,7 @@ const EditProfileModal = ({ open, setOpen }) => {
               {loading ? (
                 <Button className="w-full my-4">
                   {" "}
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please wait{" "}
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Please wait{" "}
                 </Button>
               ) : (
                 <Button type="submit" className="w-full my-4">

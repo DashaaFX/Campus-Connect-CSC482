@@ -1,4 +1,3 @@
-// src/components/components_lite/PublicProductPage.jsx
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -27,7 +26,6 @@ const PublicProductPage = () => {
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [sort, setSort] = useState("");
 
-  // Read query params on first load
   useEffect(() => {
     const initialSearch = searchParams.get('q') || "";
     const initialCategory = searchParams.get('category') || "";

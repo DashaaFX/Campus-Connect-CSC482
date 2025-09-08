@@ -1,4 +1,3 @@
-// src/pages/CheckoutPage.jsx
 import React from 'react';
 import axios from 'axios';
 import { useCartStore } from '@/store/useCartStore';
@@ -14,7 +13,7 @@ const CheckoutPage = () => {
     try {
       await axios.post(`${ORDER_API_ENDPOINT}/place`, {}, { withCredentials: true });
       toast.success('Order placed successfully!');
-      await clearCart(); // clear cart via Zustand
+      await clearCart(); 
       navigate('/my-orders');
     } catch (err) {
       console.error(err);

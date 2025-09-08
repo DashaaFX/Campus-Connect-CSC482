@@ -17,7 +17,7 @@ export const useProductStore = create(
       selectedCategory: null,
       selectedSubcategory: null,
 
-      // Helpers
+  
       setLoading: (loading) => set({ loading }),
       resetError: () => set({ error: null }),
       clearProduct: () => set({ product: null, error: null }),

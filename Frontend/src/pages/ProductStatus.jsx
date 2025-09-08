@@ -28,19 +28,11 @@ const ProductStatus = () => {
       });
   }, [productId]);
 
-  /*const handleStatusUpdate = (orderId, status) => {
-    axios.patch(`${BASE_URL}/api/orders/${orderId}/status`, { withCredentials: true })
-      .then(() => {
-        setRequests(prev => prev.map(o => o._id === orderId ? { ...o, status } : o));
-      })
-      .catch(err => console.error('Error updating status:', err));
-  };
-  */
   const handleStatusUpdate = (orderId, status) => {
     axios.patch(
       `${BASE_URL}/api/orders/${orderId}/status`,
-      { status }, // ✅ correct payload
-      { withCredentials: true } // ✅ correct config
+      { status }, 
+      { withCredentials: true } 
     )
       .then(() => {
         setRequests(prev =>
@@ -52,18 +44,18 @@ const ProductStatus = () => {
 
 
   return (
-    <div className="max-w-3xl mx-auto py-6 px-4">
-      <h1 className="text-2xl font-bold mb-4">Purchase Requests</h1>
+    <div className="max-w-3xl px-4 py-6 mx-auto">
+      <h1 className="mb-4 text-2xl font-bold">Purchase Requests</h1>
       {requests.length === 0 ? (
         <p>No requests found for this product.</p>
       ) : (
         <div className="space-y-4">
           {requests.map(req => (
-            <div key={req._id} className="border p-4 rounded shadow-sm">
+            <div key={req._id} className="p-4 border rounded shadow-sm">
               <p><strong>User:</strong> {req.buyer?.fullname} ({req.buyer?.email})</p>
               <p><strong>Status:</strong> <span className="capitalize">{req.status}</span></p>
               {req.status === 'pending' && (
-                <div className="mt-2 flex gap-2">
+                <div className="flex gap-2 mt-2">
                   <Button onClick={() => handleStatusUpdate(req._id, 'approved')}>Approve</Button>
                   <Button variant="outline" onClick={() => handleStatusUpdate(req._id, 'cancelled')}>Cancel</Button>
                 </div>

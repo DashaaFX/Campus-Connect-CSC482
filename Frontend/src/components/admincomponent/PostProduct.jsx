@@ -68,7 +68,6 @@ const PostProduct = () => {
     const selected = Array.from(e.target.files);
     setFiles(selected);
 
-    // Only preview images
     const previews = selected
       .filter(file => file.type.startsWith("image/"))
       .map(file => URL.createObjectURL(file));
