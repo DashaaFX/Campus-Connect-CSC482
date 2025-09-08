@@ -1,8 +1,6 @@
 /**
  * Utility functions for product handling
  */
-import { S3_BUCKET_URL, API_BASE_URL, getS3Url } from './environment';
-
 /**
  * Extracts a consistent ID from product object regardless of ID format
  * @param {Object} product - The product object
@@ -68,19 +66,25 @@ export const getProductImageUrl = (product) => {
   
   // If it's not an http URL but starts with a slash, it might be a relative path
   if (typeof image === 'string' && image.startsWith('/')) {
-    const fullUrl = `${API_BASE_URL}${image}`;
+    const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const fullUrl = `${BASE_URL}${image}`;
     return fullUrl;
   }
   
   // Handle S3 paths
+  const region = import.meta.env.VITE_AWS_REGION || 'us-east-1';
+  const environment = import.meta.env.VITE_ENVIRONMENT || 'dev';
+  
+  // Construct the full S3 URL
+  const bucketUrl = `https://campus-connect-uploads-${environment}.s3.${region}.amazonaws.com/`;
   let fullUrl;
   
   // Check if the image path contains a folder structure
   if (typeof image === 'string' && (image.includes('products/') || image.includes('profiles/'))) {
-    fullUrl = getS3Url(image);
+    fullUrl = bucketUrl + image;
   } else {
     // Use a default path structure with the image as the filename
-    fullUrl = getS3Url('products/anonymous-user/' + image);
+    fullUrl = bucketUrl + 'products/anonymous-user/' + image;
   }
   
   console.log(`Generated image URL: ${fullUrl} for product ${product?.title || 'unknown'}`);
