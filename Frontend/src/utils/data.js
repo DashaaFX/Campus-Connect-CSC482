@@ -1,5 +1,6 @@
-export const USER_API_ENDPOINT = "http://localhost:5011/api/user";
-export const PRODUCT_API_ENDPOINT = "http://localhost:5011/api/products";
-export const CATEGORY_API_ENDPOINT = "http://localhost:5011/api/categories";
-export const CART_API_ENDPOINT = "http://localhost:5011/api/cart";
-export const ORDER_API_ENDPOINT = "http://localhost:5011/api/orders";
+export const USER_API_ENDPOINT = "https://3yud35kmhl.execute-api.us-east-1.amazonaws.com/dev/auth";
+export const PRODUCT_API_ENDPOINT = "https://3yud35kmhl.execute-api.us-east-1.amazonaws.com/dev/products";
+export const CATEGORY_API_ENDPOINT = "https://3yud35kmhl.execute-api.us-east-1.amazonaws.com/dev/categories";
+export const CART_API_ENDPOINT = "https://3yud35kmhl.execute-api.us-east-1.amazonaws.com/dev/cart";
+export const ORDER_API_ENDPOINT = "https://3yud35kmhl.execute-api.us-east-1.amazonaws.com/dev/orders";
+export const UPLOAD_API_ENDPOINT = "https://3yud35kmhl.execute-api.us-east-1.amazonaws.com/dev/upload";

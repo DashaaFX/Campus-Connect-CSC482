@@ -18,8 +18,9 @@ import { useAuthStore } from "@/store/useAuthStore";
 const EditProductForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const user = useAuthStore((state) => state.user);
-  const token = user?.token;
+  const user = useAuthStore(state => state.user);
+  const token = useAuthStore(state => state.token);
+  // Initialize with null values to prevent controlled/uncontrolled input warnings
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -27,6 +28,7 @@ const EditProductForm = () => {
     category: "",
     subcategory: "",
     stock: 1,
+    images: []
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,8 +37,14 @@ const EditProductForm = () => {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const res = await axios.get(CATEGORY_API_ENDPOINT);
-      setCategories(res.data);
+      try {
+        const res = await axios.get(CATEGORY_API_ENDPOINT);
+        console.log('Categories API response:', res.data);
+        setCategories(res.data.categories || []);
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+        setCategories([]);
+      }
     };
     fetchCategories();
   }, []);
@@ -44,8 +52,15 @@ const EditProductForm = () => {
   useEffect(() => {
     const fetchSubcategories = async () => {
       if (!formData.category) return;
-      const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
-      setSubcategories(res.data);
+      try {
+        const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
+        console.log('Subcategories API response:', res.data);
+        const subcategoriesData = Array.isArray(res.data) ? res.data : (res.data.data || res.data.subcategories || []);
+        setSubcategories(subcategoriesData);
+      } catch (err) {
+        console.error('Failed to load subcategories:', err);
+        setSubcategories([]);
+      }
     };
     fetchSubcategories();
   }, [formData.category]);
@@ -55,17 +70,18 @@ const EditProductForm = () => {
       setLoading(true);
       try {
         const res = await axios.get(`${PRODUCT_API_ENDPOINT}/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true
+          headers: { Authorization: `Bearer ${token}` }
         });
-        const product = res.data;
+        const product = res.data.product || res.data;
+        console.log('Product loaded:', product);
         setFormData({
-          title: product.title,
-          description: product.description,
-          price: product.price,
-          category: product.category?._id || product.category,
-          subcategory: product.subcategory?._id || product.subcategory,
-          stock: product.stock,
+          title: product.title || "",
+          description: product.description || "",
+          price: product.price || 0,
+          category: product.category?._id || product.category || "",
+          subcategory: product.subcategory?._id || product.subcategory || "",
+          stock: product.stock || 0,
+          images: product.images || []
         });
         setError("");
       } catch (err) {
@@ -93,8 +109,7 @@ const EditProductForm = () => {
         `${PRODUCT_API_ENDPOINT}/${id}`,
         formData,
         {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
       
@@ -112,8 +127,7 @@ const EditProductForm = () => {
     setLoading(true);
     try {
       await axios.delete(`${PRODUCT_API_ENDPOINT}/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        withCredentials: true
+        headers: { Authorization: `Bearer ${token}` }
       });
       navigate("/my-sales");
     } catch (err) {
@@ -159,7 +173,7 @@ const EditProductForm = () => {
             </SelectTrigger>
             <SelectContent>
               {categories.map((cat) => (
-                <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
+                <SelectItem key={cat.id || cat._id} value={cat.id || cat._id}>{cat.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -175,7 +189,7 @@ const EditProductForm = () => {
             </SelectTrigger>
             <SelectContent>
               {subcategories.map((sub) => (
-                <SelectItem key={sub._id} value={sub._id}>{sub.name}</SelectItem>
+                <SelectItem key={sub.id || sub._id} value={sub.id || sub._id}>{sub.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

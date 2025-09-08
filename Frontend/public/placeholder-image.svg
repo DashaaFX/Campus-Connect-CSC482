@@ -1,0 +1,7 @@
+<!-- Base64 encoded placeholder image -->
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" fill="#f0f0f0"/>
+  <path d="M80 100 L120 100 L100 70 Z" fill="#cccccc"/>
+  <circle cx="100" cy="100" r="50" fill="none" stroke="#cccccc" stroke-width="2"/>
+  <text x="100" y="120" font-family="Arial" font-size="12" text-anchor="middle" fill="#999999">Image Not Available</text>
+</svg>

@@ -3,18 +3,27 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
+<<<<<<< HEAD
 
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+=======
+import { ORDER_API_ENDPOINT } from '@/utils/data';
+import { useAuthStore } from '@/store/useAuthStore';
+>>>>>>> 6496b4944d7778c77fd7abfac1a4765ec9f6d223
 
 const ProductStatus = () => {
   const { productId } = useParams();
   const [requests, setRequests] = useState([]);
+  const { token } = useAuthStore();
 
   useEffect(() => {
-    axios.get(`${BASE_URL}/api/orders/product/${productId}`, { withCredentials: true })
+    if (!token) return;
+    axios.get(`${ORDER_API_ENDPOINT}/product/${productId}`, { 
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .then(res => {
-        const data = res.data?.data || res.data;
+        const data = res.data?.data || res.data?.orders || res.data;
         if (Array.isArray(data)) {
           setRequests(data);
         } else {
@@ -26,13 +35,13 @@ const ProductStatus = () => {
         console.error('Error loading requests:', err);
         setRequests([]);
       });
-  }, [productId]);
+  }, [productId, token]);
 
   const handleStatusUpdate = (orderId, status) => {
     axios.patch(
-      `${BASE_URL}/api/orders/${orderId}/status`,
-      { status }, 
-      { withCredentials: true } 
+      `${ORDER_API_ENDPOINT}/${orderId}/status`,
+      { status }, // ✅ correct payload
+      { headers: { Authorization: `Bearer ${token}` } } // ✅ correct config
     )
       .then(() => {
         setRequests(prev =>

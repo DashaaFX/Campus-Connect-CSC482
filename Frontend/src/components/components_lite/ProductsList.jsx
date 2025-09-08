@@ -1,9 +1,11 @@
+// src/components/components_lite/ProductsList.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useCartStore } from '@/store/useCartStore'; 
+import { getProductId, getProductTitle, getProductPrice, getProductImageUrl, getPlaceholderImage } from '@/utils/productHelpers';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5011';
 
@@ -18,10 +20,17 @@ const ProductList = ({ products = [] }) => {
     }
 
     try {
-      await addToCart({ productId: product._id, quantity: 1 });
-      toast.success(`${product.title} added to cart`);
+      const productId = getProductId(product);
+      console.log('Adding product to cart with ID:', productId, 'Product:', product);
+      
+      if (!productId) {
+        throw new Error('Invalid product ID');
+      }
+      
+      await addToCart({ productId, quantity: 1 });
+      toast.success(`${getProductTitle(product)} added to cart`);
     } catch (err) {
-      console.error(err);
+      console.error('Error adding to cart:', err);
       toast.error('Failed to add to cart');
     }
   };
@@ -30,20 +39,21 @@ const ProductList = ({ products = [] }) => {
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
       {products.map((product) => (
         <div
-          key={product._id}
+          key={product.id || product._id}
           className="flex flex-col justify-between p-4 transition bg-white rounded-lg shadow-md hover:shadow-xl"
         >
           <div className="relative">
-            <Link to={`/products/${product._id}`}>
+            <Link to={`/products/${getProductId(product)}`}>
               {product.images?.length > 0 ? (
                 <img
-                  src={
-                    product.images[0].startsWith('http')
-                      ? product.images[0]
-                      : `${BASE_URL}${product.images[0]}`
-                  }
-                  alt={product.title}
+                  src={getProductImageUrl(product)}
+                  alt={getProductTitle(product)}
                   className="object-cover w-full h-48 rounded-md"
+                  onError={(e) => {
+                    console.error('Image failed to load:', e.target.src);
+                    e.target.onerror = null;
+                    e.target.src = getPlaceholderImage();
+                  }}
                 />
               ) : product.pdf?.length > 0 ? (
                 <iframe
@@ -55,7 +65,7 @@ const ProductList = ({ products = [] }) => {
                 />
               ) : (
                 <img
-                  src="/placeholder-image.jpg"
+                  src={getPlaceholderImage()}
                   alt="placeholder"
                   className="object-cover w-full h-48 rounded-md"
                 />
@@ -65,7 +75,7 @@ const ProductList = ({ products = [] }) => {
 
           <div className="flex flex-col justify-between flex-1 mt-4">
             <div>
-              <Link to={`/products/${product._id}`}>
+              <Link to={`/products/${product.id || product._id}`}>
                 <h2 className="mb-1 text-lg font-semibold">{product.title}</h2>
               </Link>
 
@@ -76,12 +86,12 @@ const ProductList = ({ products = [] }) => {
               )}
 
               <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
-              <p className="mt-2 text-lg font-bold text-red-600">${product.price.toFixed(2)}</p>
+              <p className="mt-2 text-lg font-bold text-red-600">${Number(product.price || 0).toFixed(2)}</p>
               <p className="text-xs text-gray-500">Stock: {product.stock}</p>
             </div>
 
             <div className="flex flex-col gap-2 mt-4">
-              <Link to={`/products/${product._id}`} className="w-full">
+              <Link to={`/products/${product.id || product._id}`} className="w-full">
                 <Button variant="outline" className="w-full">View</Button>
               </Link>
 

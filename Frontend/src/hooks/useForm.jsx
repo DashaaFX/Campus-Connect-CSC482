@@ -4,6 +4,7 @@ export const useForm = (initialState = {}, error, clearError, validationRules = 
   const [input, setInput] = useState(initialState);
   const [errors, setErrors] = useState({});
 
+  // Clear error when input changes
   useEffect(() => {
     if (error) clearError();
   }, [...Object.values(input), error, clearError]);

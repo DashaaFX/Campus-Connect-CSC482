@@ -1,0 +1,11 @@
+{
+  "name": "upload-functions",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "File upload Lambda functions",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.0.0",
+    "uuid": "^9.0.0"
+  }
+}

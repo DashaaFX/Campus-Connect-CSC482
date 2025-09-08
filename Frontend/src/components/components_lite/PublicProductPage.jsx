@@ -42,8 +42,14 @@ const PublicProductPage = () => {
   useEffect(() => {
     axios
       .get(CATEGORY_API_ENDPOINT)
-      .then(res => setCategories(res.data))
-      .catch(err => console.error('Failed to load categories', err));
+      .then(res => {
+        console.log('Categories API response:', res.data);
+        setCategories(res.data.categories || []);
+      })
+      .catch(err => {
+        console.error('Failed to load categories', err);
+        setCategories([]);
+      });
   }, []);
 
   // Load subcategories when category changes
@@ -54,8 +60,31 @@ const PublicProductPage = () => {
     }
     axios
       .get(`${CATEGORY_API_ENDPOINT}/${selectedCategory}/subcategories`)
-      .then(res => setSubcategories(res.data))
-      .catch(err => console.error('Failed to load subcategories', err));
+      .then(res => {
+        console.log('Subcategories API response:', res.data);
+        // Handle multiple formats: direct array, nested in data property, or object with numbered keys
+        let subcategoriesData;
+        if (Array.isArray(res.data)) {
+          subcategoriesData = res.data;
+        } else if (res.data.data && Array.isArray(res.data.data)) {
+          subcategoriesData = res.data.data;
+        } else if (res.data.subcategories && Array.isArray(res.data.subcategories)) {
+          subcategoriesData = res.data.subcategories;
+        } else if (res.data && typeof res.data === 'object') {
+          // Convert object with numbered keys to array
+          subcategoriesData = Object.values(res.data).filter(item => item && typeof item === 'object' && item.id);
+        } else {
+          subcategoriesData = [];
+        }
+        
+        console.log('Parsed subcategories data:', subcategoriesData);
+        console.log('Subcategories length:', subcategoriesData.length);
+        setSubcategories(subcategoriesData);
+      })
+      .catch(err => {
+        console.error('Failed to load subcategories', err);
+        setSubcategories([]);
+      });
   }, [selectedCategory]);
 
   // Fetch products
@@ -69,7 +98,7 @@ const PublicProductPage = () => {
       if (sort) params.append('sort', sort);
 
       const res = await axios.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
-      setProducts(res.data.data || res.data);
+      setProducts(res.data.products || []);
     } catch (err) {
       console.error("Failed to fetch products", err);
     }
@@ -129,7 +158,7 @@ const PublicProductPage = () => {
             </SelectTrigger>
             <SelectContent>
               {categories.map(cat => (
-                <SelectItem key={cat._id} value={cat._id}>
+                <SelectItem key={cat.id || cat._id} value={cat.id || cat._id}>
                   {cat.name.replace(/_/g, ' ')}
                 </SelectItem>
               ))}
@@ -145,8 +174,9 @@ const PublicProductPage = () => {
               <SelectValue placeholder="Subcategory" />
             </SelectTrigger>
             <SelectContent>
+              {console.log('Rendering subcategories:', subcategories)}
               {subcategories.map(sub => (
-                <SelectItem key={sub._id} value={sub._id}>
+                <SelectItem key={sub.id || sub._id} value={sub.id || sub._id}>
                   {sub.name.replace(/_/g, ' ')}
                 </SelectItem>
               ))}

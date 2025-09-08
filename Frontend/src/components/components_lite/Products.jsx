@@ -6,6 +6,8 @@ import { Button } from '../ui/button';
 import { toast } from 'sonner';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import { useCartStore } from '@/store/useCartStore';
+import { formatSubcategory } from '@/utils/formatSubcategory';
+import { getProductId, getProductTitle, getProductPrice, getProductImageUrl, getPlaceholderImage } from '@/utils/productHelpers';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -20,8 +22,14 @@ const Products = () => {
 
   useEffect(() => {
     axios.get(`${PRODUCT_API_ENDPOINT}/${id}`)
-      .then(res => setProduct(res.data.data || res.data))
-      .catch(err => { console.error(err); setError('Failed to load product'); })
+      .then(res => {
+        const productData = res.data.product || res.data;
+        setProduct(productData);
+      })
+      .catch(err => { 
+        console.error('Error fetching product:', err); 
+        setError('Failed to load product'); 
+      })
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -32,9 +40,18 @@ const Products = () => {
     }
 
     try {
-      await addToCart({ productId: product._id, quantity });
-      toast.success('Added to cart');
-    } catch {
+      // Use the utility function to get a consistent ID
+      const productId = getProductId(product);
+      console.log('Adding product to cart with ID:', productId);
+      
+      if (!productId) {
+        throw new Error('Invalid product ID');
+      }
+      
+      await addToCart({ productId, quantity });
+      toast.success(`${getProductTitle(product)} added to cart`);
+    } catch (err) {
+      console.error('Failed to add to cart:', err);
       toast.error('Failed to add to cart');
     }
   };
@@ -54,13 +71,14 @@ const Products = () => {
           <div className="w-full md:w-1/2">
             {product.images?.length > 0 ? (
               <img
-                src={
-                  product.images[0].startsWith("http")
-                    ? product.images[0]
-                    : `${BASE_URL}${product.images[0]}`
-                }
-                alt={product.title}
+                src={getProductImageUrl(product)}
+                alt={getProductTitle(product)}
                 className="object-cover w-full h-auto rounded"
+                onError={(e) => {
+                  console.error('Image failed to load:', e.target.src);
+                  e.target.onerror = null;
+                  e.target.src = getPlaceholderImage();
+                }}
               />
             ) : product.pdf?.length > 0 ? (
               <iframe
@@ -72,7 +90,7 @@ const Products = () => {
               />
             ) : (
               <img
-                src="/placeholder-image.jpg"
+                src={getPlaceholderImage()}
                 alt="placeholder"
                 className="object-cover w-full h-auto rounded"
               />
@@ -87,9 +105,9 @@ const Products = () => {
               </span>
             )}
             <p className="mb-4 text-gray-700">{product.description}</p>
-            <div className="mb-4 text-xl font-semibold">${product.price.toFixed(2)}</div>
+            <div className="mb-4 text-xl font-semibold">${Number(product.price || 0).toFixed(2)}</div>
             <div className="mb-2"><strong>Category:</strong> {product.category?.name || product.category}</div>
-            <div className="mb-2"><strong>Subcategory:</strong> {product.subcategory?.name || product.subcategory}</div>
+            <div className="mb-2"><strong>Subcategory:</strong> {formatSubcategory(product.subcategory)}</div>
             <div className="mb-2"><strong>Condition:</strong> {product.condition}</div>
             <div className="mb-2"><strong>Stock:</strong> {product.stock}</div>
 
@@ -115,6 +133,8 @@ const Products = () => {
             ) : (
               <div className="mt-4 font-semibold text-red-500">Out of Stock</div>
             )}
+            
+            {/* Product details continue here */}
           </div>
         </div>
       </div>

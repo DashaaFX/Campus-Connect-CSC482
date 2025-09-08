@@ -1,0 +1,13 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "campus-connect-v3"
+s3_prefix = "campus-connect-v3"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=\"dev\""
+resolve_s3 = true
+disable_rollback = true
+image_repositories = []

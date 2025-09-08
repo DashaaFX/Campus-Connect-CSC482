@@ -1,14 +1,16 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useForm } from "@/hooks/useForm";
+import ImageUploader from "../ui/ImageUploader";
 
 const Register = () => {
   const navigate = useNavigate();
   const { user, loading, register, error, clearError } = useAuthStore();
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
 
   const validationRules = {
     fullname: { required: true },
@@ -22,11 +24,10 @@ const Register = () => {
       required: true, 
       pattern: { value: /^\+?\d{7,15}$/, message: "Invalid phone number" } 
     },
-    file: { required: true },
   };
 
-  const { input, errors, handleChange, handleFileChange, validate } = useForm(
-    { fullname: "", email: "", password: "", phoneNumber: "", idnum: "", file: null },
+  const { input, errors, handleChange, validate } = useForm(
+    { fullname: "", email: "", password: "", phoneNumber: "", idnum: "" },
     error,
     clearError,
     validationRules
@@ -41,13 +42,22 @@ const Register = () => {
     e.preventDefault();
     if (!validate()) return;
 
-    const formData = new FormData();
-    Object.entries(input).forEach(([key, value]) => {
-      if (value) formData.append(key, value);
-    });
+    // Create JSON payload - we'll handle image upload after successful registration
+    const userData = {
+      ...input,
+      profilePicture: null // We'll upload the image after registration
+    };
 
     try {
-      await register(formData);
+      await register(userData);
+      
+      // If registration successful and there's a profile picture, upload it
+      if (profilePictureFile) {
+        // For now, we'll skip the profile picture upload during registration
+        // This can be implemented later as a separate step after login
+        console.log('Profile picture will be uploaded after login');
+      }
+      
       toast.success("Registration successful!");
       navigate("/login");
     } catch {
@@ -123,15 +133,12 @@ const Register = () => {
           {errors.phoneNumber && <p className="text-sm text-red-500">{errors.phoneNumber}</p>}
         </div>
 
-        <div className="flex items-center gap-2 my-2">
-          <Label>Profile Photo</Label>
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={(e) => handleFileChange(e, "file")}
-            className="cursor-pointer"
+        <div className="my-2">
+          <ImageUploader 
+            onUploadComplete={setProfilePictureFile}
+            uploadType="profile"
+            requireAuth={false}
           />
-          {errors.file && <p className="text-sm text-red-500">{errors.file}</p>}
         </div>
 
         {loading ? (

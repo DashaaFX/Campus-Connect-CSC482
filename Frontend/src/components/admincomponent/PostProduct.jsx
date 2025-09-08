@@ -14,10 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/useAuthStore";
+import MultiImageUploader from "@/components/ui/MultiImageUploader";
 
 const PostProduct = () => {
-  const user = useAuthStore((state) => state.user);
-  const token = user?.token;
+  const user = useAuthStore(state => state.user);
+  const token = useAuthStore(state => state.token);
 
   const navigate = useNavigate();
 
@@ -31,48 +32,88 @@ const PostProduct = () => {
     condition: "good",
   });
 
-  //const [images, setImages] = useState([]);
-  const [files, setFiles] = useState([]);
-  const [previewUrls, setPreviewUrls] = useState([]);
+  const [productImages, setProductImages] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    axios.get(CATEGORY_API_ENDPOINT)
-      .then((res) => setCategories(res.data))
-      .catch(() => setError("Failed to load categories"));
+    let mounted = true;
+    
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get(CATEGORY_API_ENDPOINT);
+        if (!mounted) return;
+        
+        console.log('Categories API response:', res.data);
+        setCategories(res.data.categories || []);
+      } catch (err) {
+        if (mounted) {
+          setError("Failed to load categories");
+          setCategories([]);
+        }
+      }
+    };
+    
+    fetchCategories();
+    
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
-    if (!formData.category) return;
-    axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`)
-      .then((res) => setSubcategories(res.data))
-      .catch(() => setError("Failed to load subcategories"));
+    if (!formData.category) {
+      setSubcategories([]);
+      return;
+    }
+    
+    let mounted = true;
+    
+    const fetchSubcategories = async () => {
+      try {
+        const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
+        if (!mounted) return;
+        
+        console.log('Subcategories API response:', res.data);
+        
+        // Handle multiple formats: direct array, nested in data property, or object with numbered keys
+        let subcategoriesData;
+        if (Array.isArray(res.data)) {
+          subcategoriesData = res.data;
+        } else if (res.data.data && Array.isArray(res.data.data)) {
+          subcategoriesData = res.data.data;
+        } else if (res.data.subcategories && Array.isArray(res.data.subcategories)) {
+          subcategoriesData = res.data.subcategories;
+        } else if (res.data && typeof res.data === 'object') {
+          // Convert object with numbered keys to array
+          subcategoriesData = Object.values(res.data).filter(item => item && typeof item === 'object' && item.id);
+        } else {
+          subcategoriesData = [];
+        }
+        
+        console.log('Parsed subcategories data:', subcategoriesData);
+        console.log('Subcategories length:', subcategoriesData.length);
+        setSubcategories(subcategoriesData);
+      } catch (err) {
+        if (mounted) {
+          console.error('Failed to load subcategories:', err);
+          setSubcategories([]);
+        }
+      }
+    };
+    
+    fetchSubcategories();
+    
+    return () => {
+      mounted = false;
+    };
   }, [formData.category]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  /*const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setImages(files);
-    const urls = files.map(file => URL.createObjectURL(file));
-    setPreviewUrls(urls);
-  };
-  */
-  const handleFileChange = (e) => {
-    const selected = Array.from(e.target.files);
-    setFiles(selected);
-
-    const previews = selected
-      .filter(file => file.type.startsWith("image/"))
-      .map(file => URL.createObjectURL(file));
-      
-    setPreviewUrls(previews);
   };
 
   const handleSubmit = async (e) => {
@@ -85,20 +126,37 @@ const PostProduct = () => {
       return;
     }
 
-    const data = new FormData();
-    Object.entries(formData).forEach(([key, value]) => data.append(key, value));
-    files.forEach(file => data.append("files", file));  // backend expects 'files'
+    // Create JSON payload instead of FormData
+    // Make sure we have the userId in the correct format
+    const userId = user?.id || user?._id || user?.userId;
+    
+    const productData = {
+      ...formData,
+      images: productImages, // Array of uploaded image URLs
+      userId: userId,
+      // Include sellerId explicitly as userId for backend consistency
+      sellerId: userId
+    };
+
+    console.log('Creating product with data:', productData);
+    console.log('Auth state - User:', user, 'Token:', token ? 'Present' : 'Missing');
+    console.log('User ID used:', userId);
+    console.log('Full user object:', user);
 
     setLoading(true);
     try {
-      const res = await axios.post(PRODUCT_API_ENDPOINT, data, {
+      // Log authorization status before request
+      console.log('About to make product request with token:', token?.substring(0, 15) + '...');
+      
+      const res = await axios.post(PRODUCT_API_ENDPOINT, productData, {
         headers: {
-          //this sends token via Authorization header
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data"
-        },
-        withCredentials: true
+          "Content-Type": "application/json",
+          // Explicitly add Authorization header for debugging
+          "Authorization": `Bearer ${token}`
+        }
       });
+
+      console.log('Product creation response:', res.data);
 
       if (res.data.success) {
         navigate("/my-sales");
@@ -106,6 +164,8 @@ const PostProduct = () => {
         setError(res.data.message || "Failed to create product.");
       }
     } catch (err) {
+      console.error('Product creation error:', err);
+      console.error('Error response:', err.response?.data);
       setError(err.response?.data?.message || "Server error.");
     } finally {
       setLoading(false);
@@ -152,7 +212,7 @@ const PostProduct = () => {
             </SelectTrigger>
             <SelectContent>
               {categories.map((cat) => (
-                <SelectItem key={cat._id} value={cat._id}>
+                <SelectItem key={cat.id || cat._id} value={cat.id || cat._id}>
                   {cat.name}
                 </SelectItem>
               ))}
@@ -169,12 +229,13 @@ const PostProduct = () => {
           >
             <SelectTrigger>
               <SelectValue>
-                {subcategories.find(s => s._id === formData.subcategory)?.name || "Select a subcategory"}
+                {subcategories.find(s => (s.id || s._id) === formData.subcategory)?.name || "Select a subcategory"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
+              {console.log('Rendering subcategories in PostProduct:', subcategories)}
               {subcategories.map((sub) => (
-                <SelectItem key={sub._id} value={sub._id}>
+                <SelectItem key={sub.id || sub._id} value={sub.id || sub._id}>
                   {sub.name}
                 </SelectItem>
               ))}
@@ -183,30 +244,10 @@ const PostProduct = () => {
         </div>
 
         <div>
-          <Label htmlFor="files">Upload Images / PDFs</Label>
-          <Input
-            id="files"
-            name="files"
-            type="file"
-            multiple
-            accept="image/*,application/pdf"
-            onChange={handleFileChange}
+          <MultiImageUploader 
+            onUploadComplete={setProductImages}
+            uploadType="product"
           />
-
-          <div className="flex flex-wrap gap-2 mt-2">
-            {previewUrls.map((url, idx) => (
-              <img key={idx} src={url} alt={`preview-${idx}`} className="object-cover w-24 h-24 rounded" />
-            ))}
-          </div>
-
-          <div className="mt-2">
-            {files
-              .filter(file => file.type === "application/pdf")
-              .map((file, idx) => (
-                <div key={idx} className="text-sm text-blue-600">{file.name}</div>
-            ))}
-          </div>
-
         </div>
 
         <Button

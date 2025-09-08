@@ -1,0 +1,16 @@
+{
+  "name": "campus-connect",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Campus Connect Full Stack Application",
+  "scripts": {
+    "build": "sam build --template template-new.yaml",
+    "deploy": "sam deploy --guided --template template-new.yaml",
+    "local": "sam local start-api --env-vars env.json --template template-new.yaml",
+    "create-tables": "node scripts/create-local-tables.js",
+    "test-local": "./test-local.bat"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.879.0"
+  }
+}

@@ -11,19 +11,53 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
   const [subcategoriesMap, setSubcategoriesMap] = useState({});
 
   useEffect(() => {
+    let mounted = true;
+    
     const fetchCategories = async () => {
-      const res = await axios.get(CATEGORY_API_ENDPOINT);
-      setCategories(res.data);
+      try {
+        const res = await axios.get(CATEGORY_API_ENDPOINT);
+        if (!mounted) return;
+        
+        console.log('Categories API response:', res.data);
+        const categoriesData = res.data.categories || [];
+        setCategories(categoriesData);
 
-      const subMap = {};
-      for (const cat of res.data) {
-        const subRes = await axios.get(`${CATEGORY_API_ENDPOINT}/${cat._id}/subcategories`);
-        subMap[cat._id] = subRes.data;
+        const subMap = {};
+        for (const cat of categoriesData) {
+          if (!mounted) break;
+          
+          try {
+            const catId = cat.id || cat._id;
+            const subRes = await axios.get(`${CATEGORY_API_ENDPOINT}/${catId}/subcategories`);
+            
+            if (!mounted) break;
+            
+            console.log('Subcategories API response:', subRes.data);
+            // Handle both formats: direct array or nested in data property
+            const subcategoriesData = Array.isArray(subRes.data) ? subRes.data : (subRes.data.data || subRes.data.subcategories || []);
+            subMap[catId] = subcategoriesData;
+          } catch (err) {
+            console.error(`Failed to load subcategories for ${cat.id || cat._id}:`, err);
+            subMap[cat.id || cat._id] = [];
+          }
+        }
+        
+        if (mounted) {
+          setSubcategoriesMap(subMap);
+        }
+      } catch (err) {
+        if (mounted) {
+          console.error('Failed to load categories:', err);
+          setCategories([]);
+        }
       }
-      setSubcategoriesMap(subMap);
     };
 
     fetchCategories();
+    
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const toggleCategory = (categoryId) => {
@@ -48,29 +82,29 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
 
       {categories.map(category => (
         <Collapsible
-          key={category._id}
-          open={openCategories.includes(category._id)}
-          onOpenChange={() => toggleCategory(category._id)}
+          key={category.id || category._id}
+          open={openCategories.includes(category.id || category._id)}
+          onOpenChange={() => toggleCategory(category.id || category._id)}
           className="mb-2"
         >
           <CollapsibleTrigger asChild>
             <Button
               variant="ghost"
-              className={`w-full justify-between ${selectedCategory === category._id ? 'bg-accent' : ''}`}
+              className={`w-full justify-between ${selectedCategory === (category.id || category._id) ? 'bg-accent' : ''}`}
             >
               <span className="capitalize">{category.name.replace(/_/g, ' ')}</span>
-              {openCategories.includes(category._id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              {openCategories.includes(category.id || category._id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-4 mt-1 space-y-1">
-            {(subcategoriesMap[category._id] || []).map(sub => (
+            {(subcategoriesMap[category.id || category._id] || []).map(sub => (
               <Button
-                key={sub._id}
+                key={sub.id || sub._id}
                 variant="ghost"
-                className={`w-full justify-start text-sm ${selectedSubcategory === sub._id ? 'bg-accent' : ''}`}
+                className={`w-full justify-start text-sm ${selectedSubcategory === (sub.id || sub._id) ? 'bg-accent' : ''}`}
                 onClick={() => {
-                  onCategorySelect(category._id);
-                  onSubcategorySelect(sub._id);
+                  onCategorySelect(category.id || category._id);
+                  onSubcategorySelect(sub.id || sub._id);
                 }}
               >
                 {sub.name.replace(/_/g, ' ')}
