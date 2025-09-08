@@ -3,14 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
-<<<<<<< HEAD
-
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-=======
 import { ORDER_API_ENDPOINT } from '@/utils/data';
 import { useAuthStore } from '@/store/useAuthStore';
->>>>>>> 6496b4944d7778c77fd7abfac1a4765ec9f6d223
 
 const ProductStatus = () => {
   const { productId } = useParams();
