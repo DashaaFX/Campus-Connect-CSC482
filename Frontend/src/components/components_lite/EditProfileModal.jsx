@@ -8,16 +8,15 @@ import {
 } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
-import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { toast } from "sonner";
 import { USER_API_ENDPOINT } from "@/utils/data";
-import { setUser } from "@/redux/authSlice";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Loader2 } from "lucide-react";
 
 const EditProfileModal = ({ open, setOpen }) => {
   const [loading, setLoading] = useState(false);
-  const { user } = useSelector((store) => store.auth);
+  const { user, token } = useAuthStore();
 
   const [input, setInput] = useState({
     fullname: user?.fullname, // Corrected from fullnamename to fullname
@@ -27,7 +26,6 @@ const EditProfileModal = ({ open, setOpen }) => {
     skills: user?.profile?.skills?.map((skill) => skill),
     file: user?.profile?.resume,
   });
-  const dispatch = useDispatch();
 
   const changeEventHandler = (e) => {
     setInput({ ...input, [e.target.name]: e.target.value });
@@ -54,13 +52,12 @@ const EditProfileModal = ({ open, setOpen }) => {
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
           },
-          withCredentials: true,
         }
       );
       if (res.data.success) {
-        // dispatch(setUser(res.data.user));
-        dispatch(setUser({ ...res.data.user, skills: input.skills }));
+        // Update user in Zustand store would need a new method
         toast.success(res.data.message);
       }
     } catch (error) {

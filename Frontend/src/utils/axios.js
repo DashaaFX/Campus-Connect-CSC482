@@ -1,14 +1,61 @@
 import axios from 'axios';
 
 // Create axios instance
-const api = axios.create();
+const api = axios.create({
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: false // Ensure credentials aren't sent for CORS
+});
+
+// Function to get token from persisted auth storage
+const getAuthToken = () => {
+  try {
+    // Try the auth-storage format (Zustand persist)
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const parsed = JSON.parse(authStorage);
+      const token = parsed.state?.token || parsed.token;
+      
+      if (token) {
+        console.log('Found token in auth-storage:', token.substring(0, 15) + '...');
+        return token;
+      }
+    }
+    
+    // Fallback to old token storage
+    const legacyToken = localStorage.getItem('token');
+    if (legacyToken) {
+      console.log('Found token in legacy storage:', legacyToken.substring(0, 15) + '...');
+      return legacyToken;
+    }
+    
+    console.warn('No auth token found in any storage!');
+    return null;
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return localStorage.getItem('token'); // Final fallback
+  }
+};
 
 // Request interceptor to add JWT token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    // Skip adding auth headers for S3 upload URLs
+    if (config.url && (
+      config.url.includes('amazonaws.com') || 
+      config.url.includes('s3.') ||
+      // If withCredentials is explicitly set to false, don't add auth headers
+      config.withCredentials === false
+    )) {
+      return config;
+    }
+
+    const token = getAuthToken();
+    console.log('Axios interceptor - Token:', token ? 'Found' : 'Not found');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Axios interceptor - Authorization header set:', config.headers.Authorization);
     }
     return config;
   },
@@ -22,9 +69,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Only redirect for non-upload related 401 errors
+      // Let upload components handle their own auth errors
+      if (!error.config?.url?.includes('/upload')) {
+        // Clear both old and new token storage
+        localStorage.removeItem('token');
+        localStorage.removeItem('auth-storage');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

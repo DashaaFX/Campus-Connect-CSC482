@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { useCartStore } from '@/store/useCartStore';
 import { toast } from 'sonner';
+import { formatPrice } from '@/utils/formatPrice';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -16,7 +17,10 @@ const LatestProducts = ({ limit = 6 }) => {
   useEffect(() => {
     axios
       .get(`${PRODUCT_API_ENDPOINT}?limit=${limit}&sort=-createdAt`)
-      .then(res => setProducts(res.data.products || []))
+      .then(res => {
+        console.log('Latest Products API response:', res.data);
+        setProducts(res.data.products || []);
+      })
       .catch(err => console.error('Failed to load products', err));
   }, [limit]);
 
@@ -33,19 +37,19 @@ const LatestProducts = ({ limit = 6 }) => {
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
       {products.map(product => (
         <div
-          key={product._id}
+          key={product.id || product._id}
           className="flex flex-col p-4 transition-shadow bg-white rounded-lg shadow hover:shadow-lg"
         >
-          <Link to={`/products/${product._id}`}>
+          <Link to={`/products/${product.id || product._id}`}>
             {product.images?.length > 0 ? (
               <img
-                src={
-                  product.images[0].startsWith('http')
-                    ? product.images[0]
-                    : `${BASE_URL}${product.images[0]}`
-                }
-                alt={product.title}
+                src={product.images[0]}
+                alt={product.title || product.name}
                 className="object-cover w-full h-40 rounded"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = '/placeholder-image.jpg';
+                }}
               />
             ) : product.pdf?.length > 0 ? (
               <iframe
@@ -75,14 +79,14 @@ const LatestProducts = ({ limit = 6 }) => {
           </Link>
 
           <div className="flex items-center justify-between mt-4">
-            <span className="text-xl font-bold">${product.price.toFixed(2)}</span>
+            <span className="text-xl font-bold">${formatPrice(product.price)}</span>
           </div>
 
           <div className="flex gap-2 mt-3">
-            <Link to={`/products/${product._id}`}>
+            <Link to={`/products/${product.id || product._id}`}>
               <Button size="sm" variant="outline">View</Button>
             </Link>
-            <Button size="sm" onClick={() => handleAddToCart(product._id)}>Add to Cart</Button>
+            <Button size="sm" onClick={() => handleAddToCart(product.id || product._id)}>Add to Cart</Button>
           </div>
         </div>
       ))}

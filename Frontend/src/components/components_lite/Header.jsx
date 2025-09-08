@@ -14,8 +14,14 @@ const Header = () => {
   useEffect(() => {
     axios
       .get(CATEGORY_API_ENDPOINT)
-      .then(res => setCategories(res.data))
-      .catch(err => console.error('Failed to load categories', err));
+      .then(res => {
+        console.log('Categories API response:', res.data);
+        setCategories(res.data.categories || []);
+      })
+      .catch(err => {
+        console.error('Failed to load categories', err);
+        setCategories([]);
+      });
   }, []);
 
   return (
@@ -40,10 +46,10 @@ const Header = () => {
       <nav className="mt-10 overflow-x-auto">
         <ul className="flex flex-wrap justify-center gap-4 px-4">
           {categories.map(cat => (
-            <li key={cat._id}>
+            <li key={cat.id || cat._id}>
               <Button
                 variant="secondary" // change from "outline" to "secondary"
-                onClick={() => navigate(`/products?category=${cat._id}`)}
+                onClick={() => navigate(`/products?category=${cat.id || cat._id}`)}
                 className="capitalize"
               >
                 {cat.name.replace(/_/g, ' ')}

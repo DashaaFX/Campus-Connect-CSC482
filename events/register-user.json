@@ -1,9 +1,0 @@
-{
-  "body": "{\"email\":\"test@example.com\",\"password\":\"Test123!\",\"fullname\":\"Test User\",\"phoneNumber\":\"1234567890\",\"idnum\":\"12345\"}",
-  "requestContext": {
-    "http": {
-      "method": "POST",
-      "path": "/api/user/register"
-    }
-  }
-}

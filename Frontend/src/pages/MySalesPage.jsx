@@ -9,10 +9,10 @@
   import { Badge } from '@/components/ui/badge';
   import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
   import PdfIcon from '@/assets/Pdf.png';
-  import {useAuthStore} from '@/store/useAuthStore';
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-
-  const MySalesPage = () => {
+  import { useAuthStore } from '@/store/useAuthStore';
+  import { toast } from 'sonner';
+  import { formatSubcategory } from '@/utils/formatSubcategory';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  const MySalesPage = () => {
     const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -28,18 +28,42 @@
       const fetchMyProducts = async () => {
         if (!token) return;
         try {
-          const res = await axios.get(`${PRODUCT_API_ENDPOINT}/seller/${user._id}`, {
-            headers: { Authorization: `Bearer ${token}` }
+          // Try the user ID in different formats
+          const userId = user?._id || user?.id || user?.userId;
+          console.log('Fetching products for user:', userId);
+          
+          const res = await axios.get(`${PRODUCT_API_ENDPOINT}/seller/${userId}`, {
+            headers: { 
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            withCredentials: false
           });
-          setProducts(res.data.products || []);
+          console.log('My products response:', res.data);
+          
+          // Ensure products have consistent ID format
+          const processedProducts = (res.data.products || []).map(product => {
+            // Make sure each product has both id and _id fields
+            return {
+              ...product,
+              id: product.id || product._id,
+              _id: product._id || product.id
+            };
+          });
+          
+          console.log('Processed products:', processedProducts);
+          setProducts(processedProducts);
         } catch (err) {
           console.error('Failed to fetch user products', err);
+          // Set empty array to avoid errors in rendering
+          setProducts([]);
+          toast?.error?.('Failed to load your products. Please try again later.');
         } finally {
           setLoading(false);
         }
       };
 
-      if (user?._id && token) fetchMyProducts();
+      if ((user?._id || user?.id) && token) fetchMyProducts();
     }, [user, token]);
 
     const filteredProducts = products.filter((product) => {
@@ -92,7 +116,7 @@
                   </TableHeader>
                   <TableBody>
                     {filteredProducts.map((product) => (
-                      <TableRow key={product._id}>
+                      <TableRow key={product._id || product.id}>
               <TableCell>
                 <div className="flex items-center gap-3">
                   <Dialog>
@@ -100,11 +124,11 @@
                       {product.images?.length > 0 ? (
                         <img
                           src={
-                            product.images[0].startsWith("http")
+                            product.images[0] && typeof product.images[0] === 'string' && product.images[0].startsWith("http")
                               ? product.images[0]
-                              : `${BASE_URL}${product.images[0]}`
+                              : product.images[0] ? `${BASE_URL}${product.images[0]}` : '/placeholder-image.jpg'
                           }
-                          alt={product.title}
+                          alt={product.title || product.name}
                           className="object-cover w-16 h-16 rounded cursor-pointer hover:opacity-80"
                         />
                       ) : product.pdf?.length > 0 ? (
@@ -126,11 +150,11 @@
                       {product.images?.length > 0 ? (
                         <img
                           src={
-                            product.images[0].startsWith("http")
+                            product.images[0] && typeof product.images[0] === 'string' && product.images[0].startsWith("http")
                               ? product.images[0]
-                              : `${BASE_URL}${product.images[0]}`
+                              : product.images[0] ? `${BASE_URL}${product.images[0]}` : '/placeholder-image.jpg'
                           }
-                          alt={product.title}
+                          alt={product.title || product.name}
                           className="object-contain w-full h-full rounded"
                         />
                       ) : product.pdf?.length > 0 ? (
@@ -164,9 +188,9 @@
 
                         <TableCell>
                           <div className="capitalize">{product.category?.name || product.category}</div>
-                          <div className="text-sm text-gray-500">{product.subcategory?.name || product.subcategory}</div>
+                          <div className="text-sm text-gray-500">{formatSubcategory(product.subcategory)}</div>
                         </TableCell>
-                        <TableCell>${product.price.toFixed(2)}</TableCell>
+                        <TableCell>${Number(product.price || 0).toFixed(2)}</TableCell>
                         <TableCell>{product.stock}</TableCell>
                         <TableCell>
                           <Badge variant={product.stock > 0 ? 'default' : 'destructive'}>
@@ -174,13 +198,13 @@
                           </Badge>
                         </TableCell>
                         <TableCell className="flex flex-wrap gap-2">
-                          <Button variant="outline" size="sm" onClick={() => navigate(`/products/${product._id}`)}>
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/products/${product._id || product.id}`)}>
                             View
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => navigate(`/admin/products/${product._id}`)}>
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/admin/products/${product._id || product.id}`)}>
                             Edit
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => navigate(`/admin/products/${product._id}/status`)}>
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/admin/products/${product._id || product.id}/status`)}>
                             Status
                           </Button>
                         </TableCell>

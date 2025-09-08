@@ -1,7 +1,20 @@
-import { cartModel } from '/opt/nodejs/models/Cart.js';
+import { CartModel } from '/opt/nodejs/models/Cart.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
+  // Handle CORS preflight requests
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'DELETE,OPTIONS'
+      },
+      body: JSON.stringify({})
+    };
+  }
+  
   try {
     // Get user info from JWT authorizer context
     const userId = event.requestContext?.authorizer?.userId;
@@ -11,22 +24,46 @@ export const handler = async (event) => {
     }
 
     // Clear the cart
-    const emptyCart = {
-      userId: userId,
+    // Only include the fields we want to update - DON'T include userId as it's part of the key
+    const updates = {
       items: [],
-      total: 0,
-      updatedAt: new Date().toISOString()
+      total: 0
     };
 
-    await cartModel.update(userId, emptyCart);
+    const cartModel = new CartModel();
+    await cartModel.update(userId, updates);
 
-    return createSuccessResponse({
+    // Get the updated cart after changes
+    const updatedCart = await cartModel.getByUserId(userId);
+    
+    const response = createSuccessResponse({
       message: 'Cart cleared successfully',
-      cart: emptyCart
+      cart: updatedCart,
+      items: updatedCart.items || [] // Ensure items are returned for frontend compatibility
     });
+    
+    // Add CORS headers
+    response.headers = {
+      ...response.headers,
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+      'Access-Control-Allow-Methods': 'DELETE,OPTIONS'
+    };
+    
+    return response;
 
   } catch (error) {
     console.error('Clear cart error:', error);
-    return createErrorResponse(error.message, 500);
+    const errorResponse = createErrorResponse(error.message, 500);
+    
+    // Add CORS headers to error response too
+    errorResponse.headers = {
+      ...errorResponse.headers,
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+      'Access-Control-Allow-Methods': 'DELETE,OPTIONS'
+    };
+    
+    return errorResponse;
   }
 };

@@ -1,8 +1,21 @@
-import { orderModel } from '/opt/nodejs/models/Order.js';
-import { cartModel } from '/opt/nodejs/models/Cart.js';
+import { OrderModel } from '/opt/nodejs/models/Order.js';
+import { CartModel } from '/opt/nodejs/models/Cart.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
+  // Handle CORS preflight requests
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'POST,OPTIONS'
+      },
+      body: JSON.stringify({})
+    };
+  }
+  
   try {
     // Get user info from JWT authorizer context
     const userId = event.requestContext?.authorizer?.userId;
@@ -21,7 +34,8 @@ export const handler = async (event) => {
     }
 
     // Get user's cart
-    const cart = await cartModel.get(userId);
+    const cartModel = new CartModel();
+    const cart = await cartModel.getByUserId(userId);
     if (!cart || !cart.items || cart.items.length === 0) {
       return createErrorResponse('Cart is empty', 400);
     }
@@ -37,18 +51,39 @@ export const handler = async (event) => {
       updatedAt: new Date().toISOString()
     };
 
+    const orderModel = new OrderModel();
     const order = await orderModel.create(orderData);
 
     // Clear the cart after successful order
     await cartModel.update(userId, { userId: userId, items: [], total: 0 });
 
-    return createSuccessResponse({
+    const response = createSuccessResponse({
       message: 'Order created successfully',
       order
     }, 201);
+    
+    // Add CORS headers
+    response.headers = {
+      ...response.headers,
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+      'Access-Control-Allow-Methods': 'POST,OPTIONS'
+    };
+    
+    return response;
 
   } catch (error) {
     console.error('Create order error:', error);
-    return createErrorResponse(error.message, 500);
+    const errorResponse = createErrorResponse(error.message, 500);
+    
+    // Add CORS headers to error response
+    errorResponse.headers = {
+      ...errorResponse.headers,
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+      'Access-Control-Allow-Methods': 'POST,OPTIONS'
+    };
+    
+    return errorResponse;
   }
 };

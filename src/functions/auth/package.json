@@ -1,5 +1,8 @@
 {
   "name": "campus-connect-auth-functions",
   "version": "1.0.0",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.0"
+  }
 }

@@ -12,6 +12,7 @@ import {
   Home,
   Package,
   Info,
+  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -28,7 +29,6 @@ const Navbar = () => {
 
   // Cart store
   const items = useCartStore((state) => state.items);
-  const fetchCart = useCartStore((state) => state.fetchCart);
 
   // Recalculate item count whenever `items` changes
   const itemCount = items.reduce((acc, item) => acc + (item.quantity || 0), 0);
@@ -36,9 +36,9 @@ const Navbar = () => {
   // Fetch cart when user is present
   useEffect(() => {
     if (user) {
-      fetchCart();
+      useCartStore.getState().fetchCart();
     }
-  }, [user, fetchCart]);
+  }, [user]);
 
   // Logout handler
   // Navbar.jsx (inside the component)
@@ -112,6 +112,15 @@ const logoutHandler = async () => {
                     My Sales
                   </Link>
                 </li>
+                {/* Admin Category Management - Only show for admins */}
+                {user?.role === 'Admin' && (
+                  <li>
+                    <Link to={"/admin/categories"} className="flex items-center gap-1">
+                      <Settings size={18} />
+                      Manage Categories
+                    </Link>
+                  </li>
+                )}
               </>
             )}
           </ul>

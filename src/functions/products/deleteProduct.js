@@ -1,4 +1,4 @@
-import { productModel } from '/opt/nodejs/models/Product.js';
+import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
@@ -16,7 +16,12 @@ export const handler = async (event) => {
     }
 
     // Get existing product to verify ownership
-    const existingProduct = await productModel.get(productId);
+    const productModel = new ProductModel();
+    console.log(`Deleting product with ID: ${productId}`);
+    
+    // Try to get the product by ID using enhanced method
+    const existingProduct = await productModel.getById(productId);
+    
     if (!existingProduct) {
       return createErrorResponse('Product not found', 404);
     }
@@ -27,9 +32,9 @@ export const handler = async (event) => {
     }
 
     // Soft delete by deactivating the product
-    await productModel.update(productId, { 
-      status: 'inactive',
-      updatedAt: new Date().toISOString()
+    // Note: updatedAt is automatically added by the BaseModel.update method
+    await productModel.update(existingProduct.id || productId, { 
+      status: 'inactive'
     });
 
     return createSuccessResponse({

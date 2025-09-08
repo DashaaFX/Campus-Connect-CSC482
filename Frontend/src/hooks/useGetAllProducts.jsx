@@ -16,13 +16,10 @@ const useGetAllProducts = () => {
       setError(null);
       try {
         const res = await axios.get(
-          `${PRODUCT_API_ENDPOINT}/get?keyword=${searchedQuery}`,
-          {
-            withCredentials: true,  // Include credentials if needed (cookies, auth headers)
-          }
+          `${PRODUCT_API_ENDPOINT}?search=${searchedQuery}`
         );
         console.log("API Response:", res.data);
-        if (res.data.status) {
+        if (res.data.success) {
           // Assuming a successful response contains products under `data.products`
           dispatch(setAllProducts(res.data.products));
         } else {

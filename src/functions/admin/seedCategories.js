@@ -16,23 +16,34 @@ export const handler = async (event) => {
       { id: 'miscellaneous', name: 'Miscellaneous', description: 'Other items and miscellaneous goods' }
     ];
 
-    // Create categories in DynamoDB
-    const promises = categories.map(category => {
+    // Create categories in DynamoDB with duplicate prevention
+    const promises = categories.map(async category => {
       const params = {
         TableName: CATEGORIES_TABLE,
         Item: {
           ...category,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
-        }
+        },
+        // Prevent overwriting existing categories
+        ConditionExpression: 'attribute_not_exists(id)'
       };
-      return docClient.send(new PutCommand(params));
+      
+      try {
+        return await docClient.send(new PutCommand(params));
+      } catch (error) {
+        if (error.name === 'ConditionalCheckFailedException') {
+          console.log(`Category ${category.id} already exists, skipping...`);
+          return null; // Category already exists
+        }
+        throw error; // Re-throw other errors
+      }
     });
 
     await Promise.all(promises);
 
     return createSuccessResponse({
-      message: 'Categories seeded successfully',
+      message: 'Categories seeded successfully (duplicates skipped)',
       categories
     });
 

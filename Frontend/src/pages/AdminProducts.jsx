@@ -7,6 +7,7 @@ import { fetchProducts } from '../redux/productSlice';
 import AdminSidebar from './AdminSidebar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
+import { formatSubcategory } from '@/utils/formatSubcategory';
 const AdminProducts = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -108,7 +109,7 @@ const AdminProducts = () => {
                   </TableCell>
                   <TableCell>
                     <div className="capitalize">{product.category?.name || product.category}</div>
-                    <div className="text-sm text-gray-500">{product.subcategory?.name || product.subcategory}</div>
+                    <div className="text-sm text-gray-500">{formatSubcategory(product.subcategory)}</div>
                   </TableCell>
                   <TableCell>${product.price?.toFixed(2)}</TableCell>
                   <TableCell>{product.stock}</TableCell>

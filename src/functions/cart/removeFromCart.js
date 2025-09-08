@@ -1,7 +1,20 @@
-import { cartModel } from '/opt/nodejs/models/Cart.js';
+import { CartModel } from '/opt/nodejs/models/Cart.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
+  // Handle CORS preflight requests
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'DELETE,OPTIONS'
+      },
+      body: JSON.stringify({})
+    };
+  }
+  
   try {
     // Get user info from JWT authorizer context
     const userId = event.requestContext?.authorizer?.userId;
@@ -16,27 +29,61 @@ export const handler = async (event) => {
     }
 
     // Get current cart
-    let cart = await cartModel.get(userId);
+    const cartModel = new CartModel();
+    let cart = await cartModel.getByUserId(userId);
     if (!cart || !cart.items) {
       return createErrorResponse('Cart is empty', 400);
     }
 
     // Remove item from cart
-    cart.items = cart.items.filter(item => item.productId !== productId);
+    const updatedItems = cart.items.filter(item => item.productId !== productId);
 
     // Recalculate total
-    cart.total = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    cart.updatedAt = new Date().toISOString();
+    const updatedTotal = updatedItems.reduce((sum, item) => {
+      const price = item.product?.price || item.price || 0;
+      return sum + (price * item.quantity);
+    }, 0);
+    
+    // Only pass the fields we want to update
+    // Don't include userId or any key fields
+    const updates = {
+      items: updatedItems,
+      total: updatedTotal
+    };
+    
+    await cartModel.update(userId, updates);
 
-    await cartModel.update(userId, cart);
-
-    return createSuccessResponse({
+    // Get the updated cart after changes
+    const updatedCart = await cartModel.getByUserId(userId);
+    
+    const response = createSuccessResponse({
       message: 'Item removed from cart successfully',
-      cart
+      cart: updatedCart,
+      items: updatedCart.items || [] // Ensure items are returned for frontend compatibility
     });
+    
+    // Add CORS headers
+    response.headers = {
+      ...response.headers,
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+      'Access-Control-Allow-Methods': 'DELETE,OPTIONS'
+    };
+    
+    return response;
 
   } catch (error) {
     console.error('Remove from cart error:', error);
-    return createErrorResponse(error.message, 500);
+    const errorResponse = createErrorResponse(error.message, 500);
+    
+    // Add CORS headers to error response too
+    errorResponse.headers = {
+      ...errorResponse.headers,
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+      'Access-Control-Allow-Methods': 'DELETE,OPTIONS'
+    };
+    
+    return errorResponse;
   }
 };

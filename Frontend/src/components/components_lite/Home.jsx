@@ -26,11 +26,15 @@ const Home = () => {
       <Header />
 
       <main className="flex-grow px-4 py-12 bg-gray-50">
-      <div className="container mx-auto">
-        <h2 className="mb-8 text-3xl font-bold text-center">Latest Products</h2>
-        <LatestProducts limit={6} />
-      </div>
-    </main>
+        <div className="container mx-auto">
+          <h2 className="mb-8 text-3xl font-bold text-center">Latest Products</h2>
+          <div className="text-center">
+            <p>TEST: If you see this, React is working!</p>
+            <p>Products found: {recentProducts.length}</p>
+          </div>
+          <LatestProducts limit={6} />
+        </div>
+      </main>
 
       <Footer />
     </div>

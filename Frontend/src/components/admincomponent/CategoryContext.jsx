@@ -15,9 +15,11 @@ export function CategoryProvider({ children }) {
     const fetchCategories = async () => {
       try {
         const { data } = await axios.get(CATEGORY_API_ENDPOINT);
-        setCategories(data);
+        console.log('Categories API response:', data);
+        const categoriesData = data.categories || [];
+        setCategories(categoriesData);
         // Cache in localStorage
-        localStorage.setItem('categories', JSON.stringify(data));
+        localStorage.setItem('categories', JSON.stringify(categoriesData));
       } catch (err) {
         console.error('Failed to load categories', err);
         // Fallback to cache if available

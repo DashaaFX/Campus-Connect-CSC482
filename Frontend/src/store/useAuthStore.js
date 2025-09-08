@@ -14,13 +14,15 @@ export const useAuthStore = create(
 
       clearError: () => set({ error: null }),
 
-      register: async (formData) => {
+      setUser: (user) => set({ user }),
+
+      register: async (userData) => {
         set({ loading: true, error: null });
         try {
-          const res = await axios.post(`${USER_API_ENDPOINT}/register`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
+          const res = await axios.post(`${USER_API_ENDPOINT}/register`, userData, {
+            headers: { "Content-Type": "application/json" },
           });
-          set({ loading: false });
+          set({ user: res.data.user, token: res.data.token, loading: false });
           if (!res.data.success) throw new Error(res.data.message);
           return res.data;
         } catch (err) {
@@ -36,9 +38,18 @@ export const useAuthStore = create(
             `${USER_API_ENDPOINT}/login`,
             { email, password }
           );
-          const { user, token } = res.data;
-          set({ loading: false, user, token });
-          return user;
+          
+          // Make sure the user object has the id in a consistent format
+          const user = res.data.user;
+          if (!user.id && user._id) {
+            user.id = user._id;
+          }
+          
+          console.log('Login successful - User data:', user);
+          console.log('Token received:', res.data.token ? 'Yes' : 'No');
+          
+          set({ user: user, token: res.data.token, loading: false });
+          return res.data;
         } catch (err) {
           set({ loading: false, error: err.response?.data?.message || err.message });
           throw err;

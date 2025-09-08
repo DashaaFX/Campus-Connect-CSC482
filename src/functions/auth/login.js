@@ -1,4 +1,4 @@
-import { userModel } from '/opt/nodejs/models/User.js';
+import { UserModel } from '/opt/nodejs/models/User.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
 import { generateToken } from '/opt/nodejs/utils/jwt.js';
 
@@ -15,6 +15,7 @@ export const handler = async (event) => {
     const { email, password } = body;
 
     // Get user by email
+    const userModel = new UserModel();
     const user = await userModel.getByEmail(email);
     if (!user) {
       return createErrorResponse('Invalid email or password', 401);

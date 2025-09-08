@@ -1,15 +1,16 @@
-import { dynamodb } from '/opt/nodejs/utils/dynamodb.js';
+import { docClient } from '/opt/nodejs/utils/dynamodb.js';
+import { ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 
 const CATEGORIES_TABLE = process.env.CATEGORIES_TABLE || 'Categories';
 
 export const handler = async (event) => {
   try {
-    const params = {
+    const command = new ScanCommand({
       TableName: CATEGORIES_TABLE
-    };
+    });
 
-    const result = await dynamodb.scan(params).promise();
+    const result = await docClient.send(command);
     const categories = result.Items || [];
 
     return createSuccessResponse({

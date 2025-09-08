@@ -1,9 +1,0 @@
-{
-  "body": "{\"email\":\"test@example.com\",\"password\":\"Test123!\"}",
-  "requestContext": {
-    "http": {
-      "method": "POST",
-      "path": "/api/user/login"
-    }
-  }
-}

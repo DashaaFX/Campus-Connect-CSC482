@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { ORDER_API_ENDPOINT } from '@/utils/data';
 import { format } from 'date-fns';
-import { ORDER_STATUS_COLORS } from '@/constants/order-status';
+import { ORDER_STATUS_COLORS } from '@/constants/order-status.jsx';
 import { useAuthStore } from '@/store/useAuthStore';
 
 const MyOrdersPage = () => {
@@ -39,12 +39,12 @@ const MyOrdersPage = () => {
                 {order.items.map(item => (
                   <div key={item.product} className="flex justify-between py-1 text-sm border-b">
                     <div>{item.title}</div>
-                    <div>Qty: {item.quantity} @ ${item.price.toFixed(2)}</div>
+                    <div>Qty: {item.quantity} @ ${Number(item.price || 0).toFixed(2)}</div>
                   </div>
                 ))}
               </div>
               <div className="flex justify-between mt-3 font-semibold">
-                <span>Total: ${order.totalAmount.toFixed(2)}</span>
+                <span>Total: ${Number(order.totalAmount || 0).toFixed(2)}</span>
                 <span>
                   Status: <span className={`capitalize px-2 py-1 rounded ${ORDER_STATUS_COLORS[order.status] || 'bg-gray-200 text-gray-700'}`}>
                     {order.status}

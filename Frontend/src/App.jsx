@@ -13,6 +13,8 @@ import TermsofService from "./components/components_lite/TermsofService";
 import Creator from "./components/creator/Creator";
 import PostProduct from "./components/admincomponent/PostProduct";
 import EditProductForm from "./components/admincomponent/EditProductForm";
+import CategoryManagement from "./components/admincomponent/CategoryManagement";
+import AdminRoute from "./components/auth/AdminRoute";
 import PublicProductPage from "./components/components_lite/PublicProductPage";
 import Products from "./components/components_lite/Products";
 import CartPage from "./pages/CartPage";
@@ -46,6 +48,14 @@ const appRouter = createBrowserRouter([
       { path: "my-sales", element: <MySalesPage /> },
       { path: "products/create", element: <PostProduct /> },
       { path: "admin/products/:id", element: <EditProductForm /> },
+      { 
+        path: "admin/categories", 
+        element: (
+          <AdminRoute>
+            <CategoryManagement />
+          </AdminRoute>
+        ) 
+      },
      
     ]
   }

@@ -1,4 +1,4 @@
-import { productModel } from '/opt/nodejs/models/Product.js';
+import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
@@ -16,7 +16,29 @@ export const handler = async (event) => {
     }
 
     // Get existing product to verify ownership
-    const existingProduct = await productModel.get(productId);
+    const productModel = new ProductModel();
+    console.log(`Updating product with ID: ${productId}`);
+    
+    // Try to get the product by ID
+    let existingProduct = await productModel.getById(productId);
+    
+    // If not found, try using different ID formats
+    if (!existingProduct) {
+      console.log(`Product not found with direct ID, trying alternative ID formats`);
+      
+      // Get all products and find match by _id or id
+      const allProducts = await productModel.getAll();
+      existingProduct = allProducts.find(p => 
+        p.id === productId || 
+        p._id === productId ||
+        p.id?.toString() === productId.toString() || 
+        p._id?.toString() === productId.toString()
+      );
+      
+      if (existingProduct) {
+        console.log(`Found product using alternative ID match: ${existingProduct.id || existingProduct._id}`);
+      }
+    }
     if (!existingProduct) {
       return createErrorResponse('Product not found', 404);
     }
@@ -28,15 +50,16 @@ export const handler = async (event) => {
 
     const body = parseJSONBody(event.body);
     
+    // Don't explicitly add updatedAt, it's handled by the BaseModel.update method
     const updateData = {
-      ...body,
-      updatedAt: new Date().toISOString()
+      ...body
     };
 
     // Remove fields that shouldn't be updated
     delete updateData.sellerId;
     delete updateData.sellerEmail;
     delete updateData.createdAt;
+    delete updateData.updatedAt; // Remove if present in request body
 
     const updatedProduct = await productModel.update(productId, updateData);
 
