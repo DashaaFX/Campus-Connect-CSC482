@@ -23,12 +23,12 @@ export const handler = async (event) => {
       return await updateCartItem.handler(event);
     }
     
-    if (path.includes('/cart/') && method === 'DELETE') {
-      return await removeFromCart.handler(event);
-    }
-    
     if (path === '/cart/clear' && method === 'DELETE') {
       return await clearCart.handler(event);
+    }
+    
+    if (path.includes('/cart/') && method === 'DELETE') {
+      return await removeFromCart.handler(event);
     }
 
     // If no route matches
