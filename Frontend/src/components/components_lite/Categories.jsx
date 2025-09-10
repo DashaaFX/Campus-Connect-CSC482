@@ -45,7 +45,7 @@ const Categories = () => {
           Choose which resource you're looking for
         </p>
       </div>
-      <Carousel className="w-full   max-w-xl  mx-auto my-10">
+      <Carousel className="w-full max-w-xl mx-auto my-10">
         <CarouselContent>
           {Category.map((category, index) => {
             return (
@@ -65,3 +65,4 @@ const Categories = () => {
 };
 
 export default Categories;
+

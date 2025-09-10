@@ -39,14 +39,15 @@ const ImageUploader = ({ onUploadComplete, uploadType = "profile", currentImage 
     setError("");
 
     try {
-      console.log('Uploading file:', file.name, 'Type:', uploadType, 'RequireAuth:', requireAuth);
-      
       if (requireAuth) {
         // Use presigned URL for authenticated uploads
         const uploadResponse = await axios.post(`${UPLOAD_API_ENDPOINT}/url`, {
           fileName: file.name,
           fileType: file.type,
-          uploadType: uploadType
+          uploadType: uploadType, // Explicitly using the passed uploadType
+          userId: user?.id || user?._id || 'anonymous-user'
+        }, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
 
         const { uploadUrl, fileUrl } = uploadResponse.data;
@@ -140,3 +141,4 @@ const ImageUploader = ({ onUploadComplete, uploadType = "profile", currentImage 
 };
 
 export default ImageUploader;
+

@@ -21,8 +21,6 @@ const ProductList = ({ products = [] }) => {
 
     try {
       const productId = getProductId(product);
-      console.log('Adding product to cart with ID:', productId, 'Product:', product);
-      
       if (!productId) {
         throw new Error('Invalid product ID');
       }
@@ -134,3 +132,4 @@ const ProductList = ({ products = [] }) => {
 };
 
 export default ProductList;
+

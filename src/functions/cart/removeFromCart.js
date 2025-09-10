@@ -23,7 +23,7 @@ export const handler = async (event) => {
       return createErrorResponse('User authentication required', 401);
     }
 
-    const productId = event.pathParameters?.productId;
+    const productId = event.pathParameters?.productId || event.pathParameters?.id;
     if (!productId) {
       return createErrorResponse('Product ID required', 400);
     }

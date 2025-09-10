@@ -36,18 +36,25 @@ export const getS3BucketName = () => {
  * @returns {string} Full S3 URL
  */
 export const getS3ImageUrl = (key) => {
-  // If already a full URL, return as is
+  // If null or undefined, return null
   if (!key) return null;
+  
+  // If already a full URL, return as is
   if (key.startsWith('http')) return key;
   
   // Clean up the key to ensure no double slashes
   const cleanKey = key.startsWith('/') ? key.substring(1) : key;
   
+  // Check if it's a profile image and ensure it's in the profiles/ folder
+  const prefixedKey = cleanKey.startsWith('profiles/') || cleanKey.startsWith('products/') 
+    ? cleanKey 
+    : `products/${cleanKey}`; // Default to products/ if no prefix
+  
   // Construct S3 URL
   const bucketName = getS3BucketName();
   const region = getAwsRegion();
   
-  return `https://${bucketName}.s3.${region}.amazonaws.com/${cleanKey}`;
+  return `https://${bucketName}.s3.${region}.amazonaws.com/${prefixedKey}`;
 };
 
 /**

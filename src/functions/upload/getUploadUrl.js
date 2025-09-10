@@ -13,17 +13,34 @@ export const handler = async (event) => {
     // Extract user ID from authorizer if it exists
     let userId = 'anonymous-user';
     
-    // Try to get userId from authorizer or custom header
-    if (event.requestContext?.authorizer?.userId) {
-      userId = event.requestContext.authorizer.userId;
-    } else if (event.headers && event.headers.Authorization) {
-      // If there's an Authorization header but no userId in authorizer, log it
-      console.log('Authorization header present but no userId extracted');
-    }
+    const requestBody = JSON.parse(event.body || '{}');
+    const { fileName, fileType, uploadType, userId: bodyUserId, isRegistration } = requestBody;
     
-    console.log('Upload URL request for userId:', userId);
-
-    const { fileName, fileType, uploadType } = JSON.parse(event.body || '{}');
+    // Check if this is a registration endpoint or registration flag
+    const isRegistrationRequest = event.pathParameters?.proxy?.includes('registration') || 
+                                  event.path?.includes('registration') || 
+                                  isRegistration === true;
+    
+    // For registration requests, allow without authentication
+    if (isRegistrationRequest) {
+      userId = bodyUserId || 'registration-temp-' + Date.now();
+    } else {
+      // For regular requests, require authentication
+      if (event.requestContext?.authorizer?.userId) {
+        userId = event.requestContext.authorizer.userId;
+      } else {
+        // If not a registration upload and no authorizer, return unauthorized
+        return {
+          statusCode: 401,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ message: 'Unauthorized' })
+        };
+      }
+    }
     
     if (!fileName || !fileType) {
       return createErrorResponse('fileName and fileType are required', 400);
@@ -64,8 +81,6 @@ export const handler = async (event) => {
     // S3 URL structure
     const fileUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
 
-    console.log(`Generated upload URL for: ${key}`);
-    
     return createSuccessResponse({
       uploadUrl,
       fileUrl,

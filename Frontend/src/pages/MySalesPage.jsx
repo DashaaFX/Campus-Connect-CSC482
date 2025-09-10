@@ -30,8 +30,6 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
         try {
           // Try the user ID in different formats
           const userId = user?._id || user?.id || user?.userId;
-          console.log('Fetching products for user:', userId);
-          
           const res = await axios.get(`${PRODUCT_API_ENDPOINT}/seller/${userId}`, {
             headers: { 
               'Authorization': `Bearer ${token}`,
@@ -39,8 +37,6 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
             },
             withCredentials: false
           });
-          console.log('My products response:', res.data);
-          
           // Ensure products have consistent ID format
           const processedProducts = (res.data.products || []).map(product => {
             // Make sure each product has both id and _id fields
@@ -50,8 +46,6 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
               _id: product._id || product.id
             };
           });
-          
-          console.log('Processed products:', processedProducts);
           setProducts(processedProducts);
         } catch (err) {
           console.error('Failed to fetch user products', err);
@@ -221,3 +215,4 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
   };
 
   export default MySalesPage;
+

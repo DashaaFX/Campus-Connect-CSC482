@@ -15,7 +15,6 @@ export function CategoryProvider({ children }) {
     const fetchCategories = async () => {
       try {
         const { data } = await axios.get(CATEGORY_API_ENDPOINT);
-        console.log('Categories API response:', data);
         const categoriesData = data.categories || [];
         setCategories(categoriesData);
         // Cache in localStorage
@@ -53,3 +52,4 @@ export function CategoryProvider({ children }) {
 
 
 export const useCategories = () => useContext(CategoryContext);
+

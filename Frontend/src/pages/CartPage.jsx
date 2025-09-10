@@ -33,7 +33,6 @@ const CartPage = () => {
     // Force a new cart fetch when the component mounts
     const fetchCartData = async () => {
       try {
-        console.log('Initial cart fetch');
         // Set loading state explicitly before fetch
         useCartStore.setState({ loading: true });
         await useCartStore.getState().fetchCart();
@@ -47,7 +46,6 @@ const CartPage = () => {
     
     // Re-fetch cart once after a short delay to ensure products load
     const initialRetryTimeout = setTimeout(() => {
-      console.log('Performing immediate retry to load any missing products');
       fetchCartData();
     }, 800);
     
@@ -63,7 +61,6 @@ const CartPage = () => {
       );
       
       if (hasMissingProductInfo) {
-        console.log('Some products still missing data after initial retries, doing final retry');
         fetchCartData();
       }
     }, 2500);
@@ -77,18 +74,13 @@ const CartPage = () => {
   // Calculate total, handling potentially missing product data
   const total = items.reduce((acc, item) => {
     // Add debug info
-    console.log('Calculating price for item:', item);
-    
     // Handle potentially missing product object
     if (!item || !item.product) {
-      console.log('Item or product missing');
       return acc;
     }
     
     const price = parseFloat(item.product?.price || 0);
     const quantity = parseInt(item.quantity || 1);
-    
-    console.log(`Price: ${price}, Quantity: ${quantity}, Subtotal: ${price * quantity}`);
     return acc + (price * quantity);
   }, 0);
 
@@ -159,8 +151,6 @@ const CartPage = () => {
       {!loading && items.length > 0 && (
         <>
           {items.map((item) => {
-            console.log('Rendering cart item:', item);
-            
             // Determine product status for UI
             const isLoading = !item.product || item.product.title === 'Loading product...';
             const isError = item.product?.title === 'Error loading product' || item.product?.title === 'Product not found';
@@ -277,3 +267,4 @@ const CartPage = () => {
 }
 
 export default CartPage;
+

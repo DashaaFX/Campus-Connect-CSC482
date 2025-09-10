@@ -37,7 +37,6 @@ const CategoryManagement = () => {
           const subs = Array.isArray(subRes.data) ? subRes.data : (subRes.data.data || subRes.data.subcategories || []);
           allSubcategories.push(...subs);
         } catch (err) {
-          console.log(`No subcategories for ${category.id}:`, err.message);
         }
       }
       setSubcategories(allSubcategories);
@@ -327,3 +326,4 @@ const CategoryManagement = () => {
 };
 
 export default CategoryManagement;
+

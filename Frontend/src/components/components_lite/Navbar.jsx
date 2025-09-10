@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
+import { getProfilePictureUrl } from "@/utils/userHelpers";
 import {
   LogOut,
   User2,
@@ -60,38 +61,38 @@ const logoutHandler = async () => {
   }
 };
 
-  return (
-    <div className="sticky top-0 z-50 bg-white shadow-sm">
+ return (
+  <div className="sticky top-0 z-50 text-white border-b shadow-md bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 border-white/10 backdrop-blur">
       <div className="flex items-center justify-between h-16 px-4 mx-auto max-w-7xl">
         <div>
           <Link to="/" className="cursor-pointer">
             <h1 className="text-2xl font-bold">
-              <span className="text-[#6B3AC2]">Campus</span>{" "}
-              <span className="text-[#FA4F09]">Connect</span>
+              <span className="text-yellow-300">Campus</span>{" "}
+              <span className="text-pink-300">Connect</span>
             </h1>
           </Link>
         </div>
 
         <div className="flex items-center gap-10">
-          <ul className="flex items-center gap-6 font-medium">
+          <ul className="flex items-center gap-6 font-medium text-white">
             <li className="flex items-center gap-1">
-              <Home size={18} />
-              <Link to={"/Home"}>Home</Link>
+              <Home size={18} className="text-yellow-300" />
+              <Link to={"/Home"} className="hover:text-yellow-300">Home</Link>
             </li>
             <li className="flex items-center gap-1">
-              <Package size={18} />
-              <Link to={"/products"}>Products</Link>
+              <Package size={18} className="text-pink-300" />
+              <Link to={"/products"} className="hover:text-pink-300">Products</Link>
             </li>
             <li className="flex items-center gap-1">
-              <Info size={18} />
-              <Link to={"/Creator"}>About</Link>
+              <Info size={18} className="text-blue-300" />
+              <Link to={"/Creator"} className="hover:text-blue-300">About</Link>
             </li>
 
             {user && (
               <>
                 <li>
-                  <Link to={"/cart"} className="relative flex items-center gap-1">
-                    <ShoppingCart size={18} />
+                  <Link to={"/cart"} className="relative flex items-center gap-1 hover:text-red-300">
+                    <ShoppingCart size={18} className="text-red-300" />
                     Cart
                     {itemCount > 0 && (
                       <span className="ml-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-500 rounded-full">
@@ -101,26 +102,17 @@ const logoutHandler = async () => {
                   </Link>
                 </li>
                 <li>
-                  <Link to={"/my-orders"} className="flex items-center gap-1">
-                    <PackageCheck size={18} />
+                  <Link to={"/my-orders"} className="flex items-center gap-1 hover:text-green-300">
+                    <PackageCheck size={18} className="text-green-300" />
                     My Orders
                   </Link>
                 </li>
                 <li>
-                  <Link to={"/my-sales"} className="flex items-center gap-1">
-                    <PackageSearch size={18} />
+                  <Link to={"/my-sales"} className="flex items-center gap-1 hover:text-purple-300">
+                    <PackageSearch size={18} className="text-purple-300" />
                     My Sales
                   </Link>
                 </li>
-                {/* Admin Category Management - Only show for admins */}
-                {user?.role === 'Admin' && (
-                  <li>
-                    <Link to={"/admin/categories"} className="flex items-center gap-1">
-                      <Settings size={18} />
-                      Manage Categories
-                    </Link>
-                  </li>
-                )}
               </>
             )}
           </ul>
@@ -128,10 +120,10 @@ const logoutHandler = async () => {
           {!user ? (
             <div className="flex items-center gap-2">
               <Link to={"/login"}>
-                <Button variant="outline">Login</Button>
+                <Button variant="outline" className="text-black bg-white hover:bg-gray-300">Login</Button>
               </Link>
               <Link to={"/register"}>
-                <Button className="bg-red-600 hover:bg-red-700">Register</Button>
+                <Button className="text-white bg-red-600 hover:bg-red-700">Register</Button>
               </Link>
             </div>
           ) : (

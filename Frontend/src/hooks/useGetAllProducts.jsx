@@ -18,7 +18,6 @@ const useGetAllProducts = () => {
         const res = await axios.get(
           `${PRODUCT_API_ENDPOINT}?search=${searchedQuery}`
         );
-        console.log("API Response:", res.data);
         if (res.data.success) {
           // Assuming a successful response contains products under `data.products`
           dispatch(setAllProducts(res.data.products));

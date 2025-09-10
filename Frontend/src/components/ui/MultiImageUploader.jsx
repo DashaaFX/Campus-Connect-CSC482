@@ -39,13 +39,14 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
     setError("");
 
     try {
-      console.log('Uploading file:', file.name, 'Type:', uploadType, 'User:', user?.email);
-      
-      // Get presigned URL
+      // Get presigned URL with authentication
+      const token = useAuthStore.getState().token;
       const uploadResponse = await axios.post(`${UPLOAD_API_ENDPOINT}/url`, {
         fileName: file.name,
         fileType: file.type,
         uploadType: uploadType
+      }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
       const { uploadUrl, fileUrl } = uploadResponse.data;
@@ -147,3 +148,4 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
 };
 
 export default MultiImageUploader;
+

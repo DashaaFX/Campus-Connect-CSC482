@@ -49,3 +49,4 @@ export const useForm = (initialState = {}, error, clearError, validationRules = 
 
   return { input, errors, handleChange, handleFileChange, resetForm, validate };
 };
+

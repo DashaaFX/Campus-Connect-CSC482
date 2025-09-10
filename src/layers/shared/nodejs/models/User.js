@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 
 export class UserModel extends BaseModel {
   constructor() {
-    console.log('UserModel constructor, table name:', process.env.USERS_TABLE);
     super(process.env.USERS_TABLE);
   }
 
@@ -11,11 +10,22 @@ export class UserModel extends BaseModel {
     const { password, ...otherData } = userData;
     const hashedPassword = await bcrypt.hash(password, 10);
     
+    let profilePicture = userData.profilePicture || null;
+    
+    // Ensure profilePicture has the correct S3 URL format if provided
+    if (profilePicture && typeof profilePicture === 'string' && !profilePicture.startsWith('http')) {
+      profilePicture = `https://campus-connect-uploads-${process.env.ENVIRONMENT || 'dev'}.s3.amazonaws.com/${profilePicture}`;
+    }
+    
     const user = {
       ...otherData,
       password: hashedPassword,
       role: userData.role || 'User',
-      profile: userData.profile || {}
+      profilePicture: profilePicture,
+      profile: {
+        ...(userData.profile || {}),
+        profilePhoto: profilePicture // Ensure this field is also set during creation
+      }
     };
 
     const createdUser = await super.create(user);
@@ -26,7 +36,6 @@ export class UserModel extends BaseModel {
   }
 
   async getByEmail(email) {
-    console.log('Getting user by email:', email, 'from table:', this.tableName);
     const users = await this.queryByIndex(
       'EmailIndex',
       'email = :email',
@@ -56,6 +65,62 @@ export class UserModel extends BaseModel {
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
+  }
+  
+  async updateProfilePicture(userId, profilePictureUrl) {
+    // Get the user first
+    const user = await this.getById(userId);
+    if (!user) {
+      return null;
+    }
+    
+    // Ensure profilePictureUrl has the correct S3 URL format if it's not a full URL
+    let formattedProfilePicUrl = profilePictureUrl;
+    if (formattedProfilePicUrl && typeof formattedProfilePicUrl === 'string' && !formattedProfilePicUrl.startsWith('http')) {
+      formattedProfilePicUrl = `https://campus-connect-uploads-${process.env.ENVIRONMENT || 'dev'}.s3.amazonaws.com/${formattedProfilePicUrl}`;
+    }
+    
+    // Create the updated profile object
+    const updatedProfile = {
+      ...(user.profile || {}),
+      profilePhoto: formattedProfilePicUrl
+    };
+    
+    // Use a direct DynamoDB update command for better control
+    const timestamp = new Date().toISOString();
+    const updateExpression = 'SET #profilePicture = :profilePicture, #profile = :profile, #updatedAt = :updatedAt';
+    const expressionAttributeNames = {
+      '#profilePicture': 'profilePicture',
+      '#profile': 'profile',
+      '#updatedAt': 'updatedAt'
+    };
+    const expressionAttributeValues = {
+      ':profilePicture': formattedProfilePicUrl,
+      ':profile': updatedProfile,
+      ':updatedAt': timestamp
+    };
+    
+    const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
+    const { docClient } = await import('../utils/dynamodb.js');
+    
+    const command = new UpdateCommand({
+      TableName: this.tableName,
+      Key: { id: userId },
+      UpdateExpression: updateExpression,
+      ExpressionAttributeNames: expressionAttributeNames,
+      ExpressionAttributeValues: expressionAttributeValues,
+      ReturnValues: 'ALL_NEW'
+    });
+    
+    const result = await docClient.send(command);
+    
+    if (result.Attributes) {
+      // Return the updated user without password
+      const { password: _, ...userWithoutPassword } = result.Attributes;
+      return userWithoutPassword;
+    }
+    
+    return null;
   }
 }
 

@@ -1,18 +1,15 @@
 export const handler = async (event) => {
-  console.log('CORS Handler called for:', event.httpMethod, event.path);
-  
   // Get the HTTP method from the request context
   const requestContext = event.requestContext || {};
   const resourcePath = requestContext.resourcePath || event.path;
   
-  // Determine allowed methods based on the path
-  let allowedMethods = 'GET,POST,PUT,DELETE,OPTIONS,PATCH';
+  // Default allowed methods
+  let allowedMethods = 'OPTIONS,GET,POST,PUT,DELETE';
   
   // Specific allowed methods for certain paths
   if (resourcePath && resourcePath.includes('/products/{id}')) {
     // Ensure PUT and DELETE are allowed for product editing/deletion
     allowedMethods = 'GET,PUT,DELETE,OPTIONS';
-    console.log('Enhanced CORS for product ID endpoint:', allowedMethods);
   }
 
   return {

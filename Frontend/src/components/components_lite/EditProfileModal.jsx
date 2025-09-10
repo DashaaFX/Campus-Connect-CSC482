@@ -61,14 +61,11 @@ const EditProfileModal = ({ open, setOpen }) => {
         toast.success(res.data.message);
       }
     } catch (error) {
-      console.log(error);
       toast.error(error.response.data.message);
     } finally {
       setLoading(false);
     }
     setOpen(false);
-
-    console.log(input);
   };
 
   const FileChangehandler = (e) => {
@@ -188,3 +185,4 @@ const EditProfileModal = ({ open, setOpen }) => {
 };
 
 export default EditProfileModal;
+

@@ -19,3 +19,4 @@ export const formatSubcategory = (subcategory) => {
   
   return 'Not specified';
 };
+

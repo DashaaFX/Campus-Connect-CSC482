@@ -52,7 +52,6 @@ export const getPlaceholderImage = () => {
  */
 export const getProductImageUrl = (product) => {
   if (!product || !product.images || !product.images.length) {
-    console.log('No images available for product:', product?.title || 'unknown');
     return getPlaceholderImage();
   }
   
@@ -86,8 +85,6 @@ export const getProductImageUrl = (product) => {
     // Use a default path structure with the image as the filename
     fullUrl = bucketUrl + 'products/anonymous-user/' + image;
   }
-  
-  console.log(`Generated image URL: ${fullUrl} for product ${product?.title || 'unknown'}`);
   return fullUrl;
 };
 
@@ -125,10 +122,8 @@ export const processCartItem = (item) => {
   // Process images if they exist
   if (product.images && product.images.length > 0) {
     const imageUrl = getProductImageUrl({...product});
-    console.log(`Processed image URL: ${imageUrl} for product ${product.title}`);
     product.images = [imageUrl]; // Store the full URL directly
   } else {
-    console.log(`No images found for product ${product.title}`);
     // Add a placeholder image directly in the array
     product.images = [getPlaceholderImage()];
   }
@@ -140,3 +135,4 @@ export const processCartItem = (item) => {
     product
   };
 };
+

@@ -45,8 +45,6 @@ const PostProduct = () => {
       try {
         const res = await axios.get(CATEGORY_API_ENDPOINT);
         if (!mounted) return;
-        
-        console.log('Categories API response:', res.data);
         setCategories(res.data.categories || []);
       } catch (err) {
         if (mounted) {
@@ -75,9 +73,6 @@ const PostProduct = () => {
       try {
         const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
         if (!mounted) return;
-        
-        console.log('Subcategories API response:', res.data);
-        
         // Handle multiple formats: direct array, nested in data property, or object with numbered keys
         let subcategoriesData;
         if (Array.isArray(res.data)) {
@@ -92,9 +87,6 @@ const PostProduct = () => {
         } else {
           subcategoriesData = [];
         }
-        
-        console.log('Parsed subcategories data:', subcategoriesData);
-        console.log('Subcategories length:', subcategoriesData.length);
         setSubcategories(subcategoriesData);
       } catch (err) {
         if (mounted) {
@@ -137,17 +129,9 @@ const PostProduct = () => {
       // Include sellerId explicitly as userId for backend consistency
       sellerId: userId
     };
-
-    console.log('Creating product with data:', productData);
-    console.log('Auth state - User:', user, 'Token:', token ? 'Present' : 'Missing');
-    console.log('User ID used:', userId);
-    console.log('Full user object:', user);
-
     setLoading(true);
     try {
       // Log authorization status before request
-      console.log('About to make product request with token:', token?.substring(0, 15) + '...');
-      
       const res = await axios.post(PRODUCT_API_ENDPOINT, productData, {
         headers: {
           "Content-Type": "application/json",
@@ -155,9 +139,6 @@ const PostProduct = () => {
           "Authorization": `Bearer ${token}`
         }
       });
-
-      console.log('Product creation response:', res.data);
-
       if (res.data.success) {
         navigate("/my-sales");
       } else {
@@ -262,3 +243,4 @@ const PostProduct = () => {
 };
 
 export default PostProduct;
+
