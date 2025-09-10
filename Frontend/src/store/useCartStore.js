@@ -1,13 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import axios from "axios";
-<<<<<<< HEAD
-import { CART_API_ENDPOINT } from "@/utils/data";
-=======
 import { CART_API_ENDPOINT, PRODUCT_API_ENDPOINT } from "@/utils/data";
 import { useAuthStore } from "./useAuthStore";
 import { processCartItem } from "@/utils/productHelpers";
->>>>>>> 6496b4944d7778c77fd7abfac1a4765ec9f6d223
 
 export const useCartStore = create(
   persist(
