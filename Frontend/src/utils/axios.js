@@ -18,7 +18,6 @@ const getAuthToken = () => {
       const token = parsed.state?.token || parsed.token;
       
       if (token) {
-        console.log('Found token in auth-storage:', token.substring(0, 15) + '...');
         return token;
       }
     }
@@ -26,7 +25,6 @@ const getAuthToken = () => {
     // Fallback to old token storage
     const legacyToken = localStorage.getItem('token');
     if (legacyToken) {
-      console.log('Found token in legacy storage:', legacyToken.substring(0, 15) + '...');
       return legacyToken;
     }
     
@@ -52,10 +50,8 @@ api.interceptors.request.use(
     }
 
     const token = getAuthToken();
-    console.log('Axios interceptor - Token:', token ? 'Found' : 'Not found');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('Axios interceptor - Authorization header set:', config.headers.Authorization);
     }
     return config;
   },
@@ -83,3 +79,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+

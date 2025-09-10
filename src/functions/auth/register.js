@@ -1,5 +1,6 @@
 import { UserModel } from '/opt/nodejs/models/User.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
+import { generateToken } from '/opt/nodejs/utils/jwt.js';
 
 export const handler = async (event) => {
   try {
@@ -44,9 +45,17 @@ export const handler = async (event) => {
     // Remove password from response
     const { password: _, ...userResponse } = newUser;
 
+    // Generate JWT token for immediate authentication after registration
+    const token = await generateToken({
+      userId: newUser.id,
+      email: newUser.email,
+      role: newUser.role || 'User'
+    });
+
     return createSuccessResponse({
       message: 'User registered successfully',
-      user: userResponse
+      user: userResponse,
+      token
     }, 201);
 
   } catch (error) {

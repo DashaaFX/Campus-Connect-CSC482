@@ -18,7 +18,6 @@ const LatestProducts = ({ limit = 6 }) => {
     axios
       .get(`${PRODUCT_API_ENDPOINT}?limit=${limit}&sort=-createdAt`)
       .then(res => {
-        console.log('Latest Products API response:', res.data);
         setProducts(res.data.products || []);
       })
       .catch(err => console.error('Failed to load products', err));
@@ -95,3 +94,4 @@ const LatestProducts = ({ limit = 6 }) => {
 };
 
 export default LatestProducts;
+

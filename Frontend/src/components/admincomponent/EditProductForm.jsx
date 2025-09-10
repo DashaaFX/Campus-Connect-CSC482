@@ -39,7 +39,6 @@ const EditProductForm = () => {
     const fetchCategories = async () => {
       try {
         const res = await axios.get(CATEGORY_API_ENDPOINT);
-        console.log('Categories API response:', res.data);
         setCategories(res.data.categories || []);
       } catch (err) {
         console.error('Failed to load categories:', err);
@@ -54,7 +53,6 @@ const EditProductForm = () => {
       if (!formData.category) return;
       try {
         const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
-        console.log('Subcategories API response:', res.data);
         const subcategoriesData = Array.isArray(res.data) ? res.data : (res.data.data || res.data.subcategories || []);
         setSubcategories(subcategoriesData);
       } catch (err) {
@@ -73,7 +71,6 @@ const EditProductForm = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         const product = res.data.product || res.data;
-        console.log('Product loaded:', product);
         setFormData({
           title: product.title || "",
           description: product.description || "",
@@ -204,3 +201,4 @@ const EditProductForm = () => {
 };
 
 export default EditProductForm;
+

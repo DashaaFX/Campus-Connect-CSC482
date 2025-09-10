@@ -43,8 +43,6 @@ const Products = () => {
     try {
       // Use the utility function to get a consistent ID
       const productId = getProductId(product);
-      console.log('Adding product to cart with ID:', productId);
-      
       if (!productId) {
         throw new Error('Invalid product ID');
       }
@@ -144,3 +142,4 @@ const Products = () => {
 };
 
 export default Products;
+

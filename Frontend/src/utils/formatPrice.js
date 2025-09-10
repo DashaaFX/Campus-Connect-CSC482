@@ -21,3 +21,4 @@ export const parsePrice = (price) => {
   const numPrice = Number(price || 0);
   return isNaN(numPrice) ? 0 : numPrice;
 };
+

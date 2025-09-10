@@ -32,7 +32,6 @@ const CheckoutPage = () => {
     
     // Re-fetch cart once after a short delay to ensure products load correctly
     const initialRetryTimeout = setTimeout(() => {
-      console.log('Performing immediate retry on checkout page to load any missing products');
       fetchCartData();
     }, 800);
     
@@ -186,3 +185,4 @@ const CheckoutPage = () => {
 };
 
 export default CheckoutPage;
+

@@ -1,0 +1,1068 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Campus Connect - Optimized Serverless Backend with JWT Authorizer
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs18.x
+    MemorySize: 256
+    Environment:
+      Variables:
+        USERS_TABLE: !Ref UsersTable
+        PRODUCTS_TABLE: !Ref ProductsTable
+        ORDERS_TABLE: !Ref OrdersTable
+        CARTS_TABLE: !Ref CartsTable
+        CATEGORIES_TABLE: !Ref CategoriesTable
+        SUBCATEGORIES_TABLE: !Ref SubcategoriesTable
+        UPLOADS_BUCKET: !Ref UploadsBucket
+        JWT_SECRET: !Ref JWTSecret
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Resources:
+  # Lambda Layer with shared dependencies
+  SharedLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub campus-connect-shared-${Environment}
+      Description: Shared dependencies and utilities
+      ContentUri: src/layers/shared/
+      CompatibleRuntimes:
+        - nodejs18.x
+      RetentionPolicy: Delete
+
+  # JWT Authorizer Function
+  JWTAuthorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-jwt-authorizer-${Environment}
+      CodeUri: src/functions/auth/
+      Handler: authorizer.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref JWTSecret
+
+  # DynamoDB Tables
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub Users-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: EmailIndex
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  ProductsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub Products-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: sellerId
+          AttributeType: S
+        - AttributeName: category
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: SellerIndex
+          KeySchema:
+            - AttributeName: sellerId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: CategoryIndex
+          KeySchema:
+            - AttributeName: category
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  OrdersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub Orders-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  CartsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub Carts-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+
+  CategoriesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub Categories-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  SubcategoriesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub Subcategories-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: categoryId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: CategoryIndex
+          KeySchema:
+            - AttributeName: categoryId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # S3 Bucket for uploads
+  UploadsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub campus-connect-uploads-${Environment}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
+            AllowedOrigins: ['*']
+            
+
+  # JWT Secret in Secrets Manager
+  JWTSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub campus-connect-jwt-secret-${Environment}
+      Description: JWT Secret for Campus Connect
+      GenerateSecretString:
+        SecretStringTemplate: '{}'
+        GenerateStringKey: 'secret'
+        PasswordLength: 64
+        ExcludeCharacters: '"@/\'
+
+  CampusConnectApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub campus-connect-api-${Environment}
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'*'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"
+        MaxAge: "'86400'"
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'*'"
+              Access-Control-Allow-Methods: "'*'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'*'"
+              Access-Control-Allow-Methods: "'*'"
+        UNAUTHORIZED:
+          StatusCode: 401
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'*'"
+              Access-Control-Allow-Methods: "'*'"
+        ACCESS_DENIED:
+          StatusCode: 403
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'*'"
+              Access-Control-Allow-Methods: "'*'"
+      Auth:
+        DefaultAuthorizer: JWTAuth
+        Authorizers:
+          JWTAuth:
+            FunctionArn: !GetAtt JWTAuthorizer.Arn
+            AuthorizerPayloadFormatVersion: "1.0"
+            Identity:
+              Headers:
+                - Authorization
+            AuthorizerResultTtlInSeconds: 0
+
+  # Dedicated CORS Handler for Auth endpoints
+  CorsHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-cors-handler-${Environment}
+      CodeUri: src/functions/auth/
+      Handler: corsHandler.handler
+      Layers:
+        - !Ref SharedLayer
+      Events:
+        # Auth endpoints
+        AuthLoginOptionsApi:
+          Type: Api
+          Properties:
+            Path: /auth/login
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+        AuthRegisterOptionsApi:
+          Type: Api
+          Properties:
+            Path: /auth/register
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+        OrdersOptionsApi:
+          Type: Api
+          Properties:
+            Path: /orders
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+        OrderIdOptionsApi:
+          Type: Api
+          Properties:
+            Path: /orders/{id}
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+        OrderStatusOptionsApi:
+          Type: Api
+          Properties:
+            Path: /orders/{id}/status
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+        # Upload endpoints
+        UploadUrlOptionsApi:
+          Type: Api
+          Properties:
+            Path: /upload/url
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+        # Registration upload OPTIONS endpoint
+        RegistrationUploadUrlOptionsApi:
+          Type: Api
+          Properties:
+            Path: /upload/registration/url
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+        # Admin endpoints
+        AdminProductsOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/products
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+        # Product ID endpoint for PUT and DELETE methods
+        ProductIdOptionsApi:
+          Type: Api
+          Properties:
+            Path: /products/{id}
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  # Authentication Functions (No Auth Required)
+  RegisterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-register-${Environment}
+      CodeUri: src/functions/auth/
+      Handler: register.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref JWTSecret
+      Events:
+        RegisterApi:
+          Type: Api
+          Properties:
+            Path: /auth/register
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  LoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-login-${Environment}
+      CodeUri: src/functions/auth/
+      Handler: login.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UsersTable
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref JWTSecret
+      Events:
+        LoginApi:
+          Type: Api
+          Properties:
+            Path: /auth/login
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  UpdateProfilePictureFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-update-profile-picture-${Environment}
+      CodeUri: src/functions/auth/
+      Handler: updateProfilePicture.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+      Events:
+        UpdateProfilePictureApi:
+          Type: Api
+          Properties:
+            Path: /auth/profile/picture
+            Method: put
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+
+  # Public Functions (No Auth Required)
+  GetProductsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-get-products-${Environment}
+      CodeUri: src/functions/products/
+      Handler: getProducts.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ProductsTable
+      Events:
+        GetProductsApi:
+          Type: Api
+          Properties:
+            Path: /products
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+        GetProductsOptionsApi:
+          Type: Api
+          Properties:
+            Path: /products
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  GetProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-get-product-${Environment}
+      CodeUri: src/functions/products/
+      Handler: getProduct.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ProductsTable
+      Events:
+        GetProductApi:
+          Type: Api
+          Properties:
+            Path: /products/{id}
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  GetCategoriesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-get-categories-${Environment}
+      CodeUri: src/functions/admin/
+      Handler: getCategories.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CategoriesTable
+      Events:
+        GetCategoriesApi:
+          Type: Api
+          Properties:
+            Path: /categories
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  GetSubcategoriesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-get-subcategories-${Environment}
+      CodeUri: src/functions/admin/
+      Handler: getSubcategories.handler
+      Layers:
+        - !Ref SharedLayer
+      Environment:
+        Variables:
+          SUBCATEGORIES_TABLE: !Ref SubcategoriesTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref SubcategoriesTable
+      Events:
+        GetSubcategoriesApi:
+          Type: Api
+          Properties:
+            Path: /categories/{categoryId}/subcategories
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  # Protected Functions (Auth Required)
+  CreateProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-create-product-${Environment}
+      CodeUri: src/functions/products/
+      Handler: createProduct.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+      Events:
+        CreateProductApi:
+          Type: Api
+          Properties:
+            Path: /products
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+
+  UpdateProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-update-product-${Environment}
+      CodeUri: src/functions/products/
+      Handler: updateProduct.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+      Events:
+        UpdateProductApi:
+          Type: Api
+          Properties:
+            Path: /products/{id}
+            Method: put
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        # OPTIONS method for this path is consolidated under GetProductOptionsApi
+
+  DeleteProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-delete-product-${Environment}
+      CodeUri: src/functions/products/
+      Handler: deleteProduct.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+      Events:
+        DeleteProductApi:
+          Type: Api
+          Properties:
+            Path: /products/{id}
+            Method: delete
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        # OPTIONS method for this path is consolidated under GetProductOptionsApi
+
+  # Cart Functions (All Protected)
+  GetCartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-get-cart-${Environment}
+      CodeUri: src/functions/cart/
+      Handler: getCart.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CartsTable
+      Events:
+        GetCartApi:
+          Type: Api
+          Properties:
+            Path: /cart
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        GetCartOptionsApi:
+          Type: Api
+          Properties:
+            Path: /cart
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  AddToCartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-add-to-cart-${Environment}
+      CodeUri: src/functions/cart/
+      Handler: addToCart.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CartsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref ProductsTable
+      Events:
+        AddToCartApi:
+          Type: Api
+          Properties:
+            Path: /cart/add
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        AddToCartOptionsApi:
+          Type: Api
+          Properties:
+            Path: /cart/add
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  UpdateCartItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-update-cart-item-${Environment}
+      CodeUri: src/functions/cart/
+      Handler: updateCartItem.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CartsTable
+      Events:
+        UpdateCartItemApi:
+          Type: Api
+          Properties:
+            Path: /cart/update/{productId}
+            Method: put
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        UpdateCartItemOptionsApi:
+          Type: Api
+          Properties:
+            Path: /cart/update/{productId}
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  RemoveFromCartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-remove-from-cart-${Environment}
+      CodeUri: src/functions/cart/
+      Handler: removeFromCart.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CartsTable
+      Events:
+        RemoveFromCartApi:
+          Type: Api
+          Properties:
+            Path: /cart/remove/{productId}
+            Method: delete
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        RemoveFromCartOptionsApi:
+          Type: Api
+          Properties:
+            Path: /cart/remove/{productId}
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  ClearCartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-clear-cart-${Environment}
+      CodeUri: src/functions/cart/
+      Handler: clearCart.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CartsTable
+      Events:
+        ClearCartApi:
+          Type: Api
+          Properties:
+            Path: /cart/clear
+            Method: delete
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        ClearCartOptionsApi:
+          Type: Api
+          Properties:
+            Path: /cart/clear
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  # Order Functions (All Protected)
+  CreateOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-create-order-${Environment}
+      CodeUri: src/functions/orders/
+      Handler: createOrder.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CartsTable
+      Events:
+        CreateOrderApi:
+          Type: Api
+          Properties:
+            Path: /orders
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        PlaceOrderApi:
+          Type: Api
+          Properties:
+            Path: /orders/place
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+
+  RequestOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-request-order-${Environment}
+      CodeUri: src/functions/orders/
+      Handler: requestOrder.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+      Events:
+        RequestOrderApi:
+          Type: Api
+          Properties:
+            Path: /orders/request
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+            
+  GetOrdersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-get-orders-${Environment}
+      CodeUri: src/functions/orders/
+      Handler: getOrders.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref OrdersTable
+      Events:
+        GetOrdersApi:
+          Type: Api
+          Properties:
+            Path: /orders
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        GetMyOrdersApi:
+          Type: Api
+          Properties:
+            Path: /orders/my-orders
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        GetMyOrdersOptionsApi:
+          Type: Api
+          Properties:
+            Path: /orders/my-orders
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  GetOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-get-order-${Environment}
+      CodeUri: src/functions/orders/
+      Handler: getOrder.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref OrdersTable
+      Events:
+        GetOrderApi:
+          Type: Api
+          Properties:
+            Path: /orders/{id}
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+
+  UpdateOrderStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-update-order-status-${Environment}
+      CodeUri: src/functions/orders/
+      Handler: updateOrderStatus.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+      Events:
+        UpdateOrderStatusApi:
+          Type: Api
+          Properties:
+            Path: /orders/{id}/status
+            Method: put
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+
+  # Admin Functions (Protected)
+  SeedCategoriesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-seed-categories-${Environment}
+      CodeUri: src/functions/admin/
+      Handler: seedCategories.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CategoriesTable
+      Events:
+        SeedCategoriesApi:
+          Type: Api
+          Properties:
+            Path: /admin/seed-categories
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  GetSellerProductsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-get-seller-products-${Environment}
+      CodeUri: src/functions/admin/
+      Handler: getSellerProducts.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ProductsTable
+      Events:
+        GetSellerProductsApi:
+          Type: Api
+          Properties:
+            Path: /admin/products
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        GetSellerProductsBySellerId:
+          Type: Api
+          Properties:
+            Path: /products/seller/{sellerId}
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        GetSellerProductsBySellerIdOptions:
+          Type: Api
+          Properties:
+            Path: /products/seller/{sellerId}
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  SeedSubcategoriesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-seed-subcategories-${Environment}
+      CodeUri: src/functions/admin/
+      Handler: seedSubcategories.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SubcategoriesTable
+      Events:
+        SeedSubcategoriesApi:
+          Type: Api
+          Properties:
+            Path: /admin/seed-subcategories
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+  # Admin Category Management Functions
+  CreateCategoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-create-category-${Environment}
+      CodeUri: src/functions/admin/
+      Handler: createCategory.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CategoriesTable
+      Events:
+        CreateCategoryApi:
+          Type: Api
+          Properties:
+            Path: /admin/categories
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+
+  CreateSubcategoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-create-subcategory-${Environment}
+      CodeUri: src/functions/admin/
+      Handler: createSubcategory.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SubcategoriesTable
+      Events:
+        CreateSubcategoryApi:
+          Type: Api
+          Properties:
+            Path: /admin/subcategories
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+
+  CleanDuplicatesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-clean-duplicates-${Environment}
+      CodeUri: src/functions/admin/
+      Handler: cleanDuplicates.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CategoriesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SubcategoriesTable
+      Events:
+        CleanDuplicatesApi:
+          Type: Api
+          Properties:
+            Path: /admin/clean-duplicates
+            Method: delete
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+
+  # Temporary admin setup function (remove in production)
+  MakeAdminFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-make-admin-${Environment}
+      CodeUri: src/functions/admin/
+      Handler: makeAdmin.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+      Events:
+        MakeAdminApi:
+          Type: Api
+          Properties:
+            Path: /admin/make-admin
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE  # Remove this after creating your first admin
+
+  # Upload Functions (Protected)
+  GetUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-get-upload-url-${Environment}
+      CodeUri: src/functions/upload/
+      Handler: getUploadUrl.handler
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref UploadsBucket
+      Events:
+        GetUploadUrlApi:
+          Type: Api
+          Properties:
+            Path: /upload/url
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        # Registration upload endpoint (no auth required)
+        GetRegistrationUploadUrlApi:
+          Type: Api
+          Properties:
+            Path: /upload/registration/url
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: NONE
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${CampusConnectApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiEndpoint"
+
+  UsersTableName:
+    Description: Users DynamoDB table name
+    Value: !Ref UsersTable
+
+  ProductsTableName:
+    Description: Products DynamoDB table name
+    Value: !Ref ProductsTable
+
+  UploadsBucketName:
+    Description: S3 bucket for uploads
+    Value: !Ref UploadsBucket

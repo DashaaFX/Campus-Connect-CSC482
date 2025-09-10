@@ -38,8 +38,6 @@ const generatePolicy = (principalId, effect, resource, context = {}) => {
     wildcardResource = [...apiParts, '*'].join('/');
   }
   
-  console.log('🔐 Generated policy with resource:', wildcardResource);
-  
   return {
     principalId,
     policyDocument: {
@@ -61,20 +59,15 @@ const verifyToken = async (token) => {
   try {
     const secret = await getJWTSecret();
     const decoded = jwt.verify(token, secret);
-    console.log('Token verified successfully:', decoded);
     return decoded;
   } catch (error) {
-    console.error('Token verification failed:', error);
     throw error;
   }
 };
 
 export const handler = async (event) => {
-  console.log('🔐 Authorizer event:', JSON.stringify(event, null, 2));
-
   // For AuthorizerPayloadFormatVersion 1.0, check the methodArn for OPTIONS
   if (event.methodArn && event.methodArn.includes('/OPTIONS/')) {
-    console.log('⚪ OPTIONS request detected in methodArn, allowing through');
     return generatePolicy('anonymous', 'Allow', event.methodArn);
   }
 
@@ -82,7 +75,6 @@ export const handler = async (event) => {
   const httpMethod = event.httpMethod || event.requestContext?.http?.method || event.requestContext?.httpMethod;
   
   if (httpMethod === 'OPTIONS') {
-    console.log('⚪ OPTIONS request detected in httpMethod, allowing through');
     return generatePolicy('anonymous', 'Allow', event.methodArn || '*');
   }
 
@@ -92,30 +84,20 @@ export const handler = async (event) => {
                   event.headers?.Authorization || 
                   event.headers?.authorization;
     
-    console.log('🔑 Authorization token received:', token ? 'Present' : 'Missing');
-    
     if (!token) {
-      console.log('⛔ No authorization token provided');
       throw new Error('Unauthorized');
     }
 
     // Remove 'Bearer ' prefix if present
     const cleanToken = token.replace(/^Bearer\s+/i, '');
-    console.log('🔑 Clean token length:', cleanToken.length);
-    console.log('🔑 Token start:', cleanToken.substring(0, 10) + '...');
-    console.log('🔑 Token end:', '...' + cleanToken.substring(cleanToken.length - 10));
     
     const decoded = await verifyToken(cleanToken);
-    console.log('🔓 Full decoded token:', decoded);
     
     // Extract userId and email from the decoded token
     const userId = decoded.userId || decoded.sub || decoded.id;
     const email = decoded.email;
     
-    console.log('👤 Extracted user data:', { userId, email });
-    
     // Authentication successful
-    console.log('✅ Authentication successful - proceeding with authorization');
     
     // For debugging - use a broad policy that allows access to all API paths
     const apiGatewayArnTmp = event.methodArn.split(':');
@@ -125,8 +107,6 @@ export const handler = async (event) => {
     
     // Generate a wildcard resource ARN that grants access to all paths in this API
     const wildcardArn = `arn:aws:execute-api:${process.env.AWS_REGION || 'us-east-1'}:${apiGatewayArnAwsAccountId}:${apiGatewayArnRestApiId}/${apiGatewayArnStage}/*`;
-    
-    console.log('🔓 Using wildcard resource ARN:', wildcardArn);
     
     // Include userId in context AND in principalId
     return generatePolicy(userId, 'Allow', wildcardArn, { 
@@ -140,9 +120,6 @@ export const handler = async (event) => {
     });
     
   } catch (error) {
-    console.error('Authorization failed:', error.message);
-    console.error('Error details:', error);
-    
     // Return explicit deny policy instead of throwing error
     return generatePolicy('user', 'Deny', event.methodArn);
   }

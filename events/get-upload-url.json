@@ -1,0 +1,12 @@
+{
+  "body": "{\"fileName\":\"test-image.jpg\",\"fileType\":\"image/jpeg\",\"uploadType\":\"profile\",\"userId\":\"test-user-123\"}",
+  "requestContext": {
+    "http": {
+      "method": "POST",
+      "path": "/upload/url"
+    }
+  },
+  "headers": {
+    "content-type": "application/json"
+  }
+}

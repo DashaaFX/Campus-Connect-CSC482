@@ -15,7 +15,6 @@ const Header = () => {
     axios
       .get(CATEGORY_API_ENDPOINT)
       .then(res => {
-        console.log('Categories API response:', res.data);
         setCategories(res.data.categories || []);
       })
       .catch(err => {
@@ -64,3 +63,4 @@ const Header = () => {
 };
 
 export default Header;
+

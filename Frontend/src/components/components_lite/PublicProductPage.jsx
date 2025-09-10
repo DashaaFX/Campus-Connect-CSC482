@@ -45,7 +45,6 @@ const PublicProductPage = () => {
     axios
       .get(CATEGORY_API_ENDPOINT)
       .then(res => {
-        console.log('Categories API response:', res.data);
         setCategories(res.data.categories || []);
       })
       .catch(err => {
@@ -63,7 +62,6 @@ const PublicProductPage = () => {
     axios
       .get(`${CATEGORY_API_ENDPOINT}/${selectedCategory}/subcategories`)
       .then(res => {
-        console.log('Subcategories API response:', res.data);
         // Handle multiple formats: direct array, nested in data property, or object with numbered keys
         let subcategoriesData;
         if (Array.isArray(res.data)) {
@@ -78,9 +76,6 @@ const PublicProductPage = () => {
         } else {
           subcategoriesData = [];
         }
-        
-        console.log('Parsed subcategories data:', subcategoriesData);
-        console.log('Subcategories length:', subcategoriesData.length);
         setSubcategories(subcategoriesData);
       })
       .catch(err => {
@@ -220,3 +215,4 @@ const PublicProductPage = () => {
 };
 
 export default PublicProductPage;
+

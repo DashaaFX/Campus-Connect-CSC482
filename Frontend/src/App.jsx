@@ -7,7 +7,7 @@ import Layout from "./Layout";
 import Home from "./components/components_lite/Home";
 import Login from "./components/authentication/Login";
 import Register from "./components/authentication/Register";
-import Profile from "./components/components_lite/Profile";
+import ProfilePage from "./pages/ProfilePage";
 import PrivacyPolicy from "./components/components_lite/PrivacyPolicy";
 import TermsofService from "./components/components_lite/TermsofService";
 import Creator from "./components/creator/Creator";
@@ -31,7 +31,7 @@ const appRouter = createBrowserRouter([
       { path: "home", element: <Home /> },
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
-      { path: "profile", element: <Profile /> },
+      { path: "profile", element: <ProfilePage /> },
       { path: "PrivacyPolicy", element: <PrivacyPolicy /> },
       { path: "TermsOfService", element: <TermsofService /> },
       { path: "creator", element: <Creator /> },
@@ -66,3 +66,4 @@ function App() {
 }
 
 export default App;
+

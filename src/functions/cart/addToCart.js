@@ -87,7 +87,6 @@ export const handler = async (event) => {
       };
       
       cart.items.push(cartItem);
-      console.log('Added new item to cart:', cartItem);
     }
 
     // Recalculate total

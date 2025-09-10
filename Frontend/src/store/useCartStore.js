@@ -18,13 +18,9 @@ export const useCartStore = create(
         
         set({ loading: true, error: null });
         try {
-          console.log('Fetching cart data...');
           const res = await axios.get(CART_API_ENDPOINT, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          
-          console.log('Cart data received:', res.data);
-          
           // Process cart items to ensure they all have valid product data
           const processedItems = await Promise.all((res.data.items || []).map(async (item) => {
             // If item doesn't have a productId, skip it
@@ -35,7 +31,6 @@ export const useCartStore = create(
             
             // If product is missing or incomplete, fetch the product directly
             if (!item.product || !item.product.title || !item.product.price) {
-              console.log(`Fetching missing product data for ${item.productId}`);
               try {
                 // Fetch the product directly from the products API
                 const productRes = await axios.get(`${PRODUCT_API_ENDPOINT}/${item.productId}`, {
@@ -43,8 +38,6 @@ export const useCartStore = create(
                 });
                 
                 const fetchedProduct = productRes.data.product || productRes.data;
-                console.log(`Successfully fetched product: ${item.productId}`, fetchedProduct);
-                
                 // Use our helper to ensure all fields are processed correctly
                 return processCartItem({
                   ...item,
@@ -71,9 +64,6 @@ export const useCartStore = create(
           
           // Remove null items
           const filteredItems = processedItems.filter(Boolean);
-          
-          console.log('Processed cart items:', filteredItems);
-          
           // Check if any product is still loading/missing data
           const hasMissingProducts = filteredItems.some(
             item => !item.product || item.product.title === 'Loading product...'
@@ -84,7 +74,6 @@ export const useCartStore = create(
           
           // If we have incomplete products, retry after a delay
           if (hasMissingProducts) {
-            console.log('Some products have incomplete data, retrying in 1 second...');
             setTimeout(() => {
               get().fetchCart();
             }, 1000);
@@ -106,8 +95,6 @@ export const useCartStore = create(
           console.error('No product ID provided');
           throw new Error('Invalid product ID');
         }
-        
-        console.log(`Adding to cart - Product ID: ${productId}, Quantity: ${quantity}`);
         set({ loading: true, error: null });
         
         try {
@@ -116,9 +103,6 @@ export const useCartStore = create(
             { productId, quantity },
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          
-          console.log('Add to cart response:', res.data);
-          
           if (!res.data || !res.data.items) {
             console.warn('Unexpected response format:', res.data);
           }
@@ -131,7 +115,6 @@ export const useCartStore = create(
           set({ items: processedItems, loading: false });
           
           // After adding, fetch the cart to ensure we have complete data with products
-          console.log("Fetching complete cart data after add");
           setTimeout(async () => {
             try {
               await get().fetchCart();
@@ -161,8 +144,6 @@ export const useCartStore = create(
           
           // Check for cart.items first, then fall back to direct items property
           let updatedItems = res.data.cart?.items || res.data.items || [];
-          console.log('Updated cart items after remove:', updatedItems);
-          
           // Process the items to ensure they have complete product data
           updatedItems = updatedItems.map(item => {
             if (!item || !item.productId) return null;
@@ -220,7 +201,6 @@ export const useCartStore = create(
           });
           // Check for cart.items first, then fall back to direct items property
           const updatedItems = res.data.cart?.items || res.data.items || [];
-          console.log('Updated cart items after clear:', updatedItems);
           set({ items: updatedItems, loading: false });
         } catch (err) {
           console.error('Error clearing cart:', err);
@@ -236,3 +216,4 @@ export const useCartStore = create(
     }
   )
 );
+

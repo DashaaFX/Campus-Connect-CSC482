@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useForm } from "@/hooks/useForm";
 import ImageUploader from "../ui/ImageUploader";
+import axios from "axios";
+import { USER_API_ENDPOINT, UPLOAD_API_ENDPOINT } from "@/utils/data";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -42,25 +44,46 @@ const Register = () => {
     e.preventDefault();
     if (!validate()) return;
 
-    // Create JSON payload - we'll handle image upload after successful registration
-    const userData = {
-      ...input,
-      profilePicture: null // We'll upload the image after registration
-    };
+    let profilePictureUrl = null;
 
     try {
-      await register(userData);
-      
-      // If registration successful and there's a profile picture, upload it
-      if (profilePictureFile) {
-        // For now, we'll skip the profile picture upload during registration
-        // This can be implemented later as a separate step after login
-        console.log('Profile picture will be uploaded after login');
+      // First, handle profile picture upload if there's a file
+      if (profilePictureFile && profilePictureFile instanceof File) {
+        toast.info("Uploading profile picture...");
+        
+        // Use the registration-specific upload API endpoint (no auth required)
+        const uploadResponse = await axios.post(`${UPLOAD_API_ENDPOINT}/registration/url`, {
+          fileName: profilePictureFile.name,
+          fileType: profilePictureFile.type,
+          uploadType: 'profile',
+          userId: 'temp-registration-user',
+          isRegistration: true
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        // Upload the file directly to S3
+        await axios.put(uploadResponse.data.uploadUrl, profilePictureFile, {
+          headers: { 'Content-Type': profilePictureFile.type }
+        });
+        
+        profilePictureUrl = uploadResponse.data.fileUrl;
       }
+
+      // Create user data with the profile picture URL if available
+      const userData = {
+        ...input,
+        profilePicture: profilePictureUrl
+      };
+
+      // Register the user with the profile picture URL
+      const registerResult = await register(userData);
       
       toast.success("Registration successful!");
-      navigate("/login");
-    } catch {
+      navigate("/profile");
+    } catch (err) {
       toast.error(error || "Registration failed");
     }
   };
@@ -168,3 +191,4 @@ const Register = () => {
 };
 
 export default Register;
+

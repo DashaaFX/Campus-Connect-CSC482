@@ -18,8 +18,6 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
       try {
         const res = await axios.get(CATEGORY_API_ENDPOINT);
         if (!mounted) return;
-        
-        console.log('Categories API response:', res.data);
         const categoriesData = res.data.categories || [];
         setCategories(categoriesData);
 
@@ -32,8 +30,6 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
             const subRes = await axios.get(`${CATEGORY_API_ENDPOINT}/${catId}/subcategories`);
             
             if (!mounted) break;
-            
-            console.log('Subcategories API response:', subRes.data);
             // Handle both formats: direct array or nested in data property
             const subcategoriesData = Array.isArray(subRes.data) ? subRes.data : (subRes.data.data || subRes.data.subcategories || []);
             subMap[catId] = subcategoriesData;
@@ -119,3 +115,4 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
 };
 
 export default AdminSidebar;
+

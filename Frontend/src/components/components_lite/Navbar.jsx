@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
+import { getProfilePictureUrl } from "@/utils/userHelpers";
 import {
   LogOut,
   User2,
@@ -138,13 +139,13 @@ const logoutHandler = async () => {
             <Popover>
               <PopoverTrigger asChild>
                 <Avatar className="cursor-pointer">
-                  <AvatarImage src={user?.profile?.profilePhoto} alt="profile" />
+                  <AvatarImage src={getProfilePictureUrl(user)} alt="profile" />
                 </Avatar>
               </PopoverTrigger>
               <PopoverContent className="w-80">
                 <div className="flex items-center gap-4 space-y-2">
                   <Avatar>
-                    <AvatarImage src={user?.profile?.profilePhoto} alt="profile" />
+                    <AvatarImage src={getProfilePictureUrl(user)} alt="profile" />
                   </Avatar>
                   <div>
                     <h3 className="font-medium">{user?.fullname}</h3>
