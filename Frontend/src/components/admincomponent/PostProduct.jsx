@@ -131,12 +131,9 @@ const PostProduct = () => {
     };
     setLoading(true);
     try {
-      // Log authorization status before request
       const res = await axios.post(PRODUCT_API_ENDPOINT, productData, {
         headers: {
-          "Content-Type": "application/json",
-          // Explicitly add Authorization header for debugging
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         }
       });
       if (res.data.success) {

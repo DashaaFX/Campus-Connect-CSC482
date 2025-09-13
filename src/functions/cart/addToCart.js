@@ -50,8 +50,6 @@ export const handler = async (event) => {
     const cartModel = new CartModel();
     let cart = await cartModel.getByUserId(userId);
     
-    console.log('Retrieved cart for user', userId, ':', JSON.stringify(cart));
-    
     // Ensure cart has required properties
     if (!cart || !cart.items) {
       cart = { userId: userId, items: [], total: 0 };
@@ -68,7 +66,6 @@ export const handler = async (event) => {
       // Update quantity of existing item
       const newQuantity = cart.items[existingItemIndex].quantity + quantity;
       cart.items[existingItemIndex].quantity = newQuantity;
-      console.log(`Updated existing cart item quantity to ${newQuantity}`);
     } else {
       // Add new item with full product details for easier display
       const cartItem = {
@@ -96,8 +93,6 @@ export const handler = async (event) => {
     }, 0);
     
     cart.updatedAt = new Date().toISOString();
-    
-    console.log('Saving cart:', JSON.stringify(cart));
     
     // Ensure we have a properly formatted product object to store
     const productData = {

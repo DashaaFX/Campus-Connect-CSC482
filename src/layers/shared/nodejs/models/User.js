@@ -1,5 +1,6 @@
 import { BaseModel } from './BaseModel.js';
 import bcrypt from 'bcryptjs';
+import { generateAssetUrl, getCloudFrontDomain } from '../utils/urlUtils.js';
 
 export class UserModel extends BaseModel {
   constructor() {
@@ -12,9 +13,14 @@ export class UserModel extends BaseModel {
     
     let profilePicture = userData.profilePicture || null;
     
-    // Ensure profilePicture has the correct S3 URL format if provided
+    // Ensure profilePicture has the correct URL format if provided
     if (profilePicture && typeof profilePicture === 'string' && !profilePicture.startsWith('http')) {
-      profilePicture = `https://campus-connect-uploads-${process.env.ENVIRONMENT || 'dev'}.s3.amazonaws.com/${profilePicture}`;
+      profilePicture = generateAssetUrl(
+        profilePicture, 
+        process.env.ENVIRONMENT || 'dev',
+        process.env.AWS_REGION || 'us-east-1',
+        getCloudFrontDomain()
+      );
     }
     
     const user = {
@@ -74,10 +80,15 @@ export class UserModel extends BaseModel {
       return null;
     }
     
-    // Ensure profilePictureUrl has the correct S3 URL format if it's not a full URL
+    // Ensure profilePictureUrl has the correct URL format if it's not a full URL
     let formattedProfilePicUrl = profilePictureUrl;
     if (formattedProfilePicUrl && typeof formattedProfilePicUrl === 'string' && !formattedProfilePicUrl.startsWith('http')) {
-      formattedProfilePicUrl = `https://campus-connect-uploads-${process.env.ENVIRONMENT || 'dev'}.s3.amazonaws.com/${formattedProfilePicUrl}`;
+      formattedProfilePicUrl = generateAssetUrl(
+        formattedProfilePicUrl,
+        process.env.ENVIRONMENT || 'dev',
+        process.env.AWS_REGION || 'us-east-1',
+        getCloudFrontDomain()
+      );
     }
     
     // Create the updated profile object

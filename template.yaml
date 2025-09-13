@@ -5,7 +5,7 @@ Description: Campus Connect - Consolidated Serverless Backend with JWT Authorize
 Globals:
   Function:
     Timeout: 30
-    Runtime: nodejs18.x
+    Runtime: nodejs22.x
     MemorySize: 256
     Environment:
       Variables:
@@ -16,16 +16,19 @@ Globals:
         CATEGORIES_TABLE: !Ref CategoriesTable
         SUBCATEGORIES_TABLE: !Ref SubcategoriesTable
         UPLOADS_BUCKET: !Ref UploadsBucket
+        CLOUDFRONT_DOMAIN: !GetAtt StaticAssetsDistribution.DomainName
         JWT_SECRET: !Ref JWTSecret
+    Tags:
+      Environment: !Ref Environment
+      Project: campus-connect
 
 Parameters:
   Environment:
     Type: String
     Default: dev
-    AllowedValues: [dev, staging, prod]
+    AllowedValues: [local, dev, staging, prod]
 
 Resources:
-  # Lambda Layer with shared dependencies
   SharedLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -33,10 +36,9 @@ Resources:
       Description: Shared dependencies and utilities
       ContentUri: src/layers/shared/
       CompatibleRuntimes:
-        - nodejs18.x
+        - nodejs22.x
       RetentionPolicy: Delete
 
-  # JWT Authorizer Function
   JWTAuthorizer:
     Type: AWS::Serverless::Function
     Properties:
@@ -51,11 +53,6 @@ Resources:
               Action: secretsmanager:GetSecretValue
               Resource: !Ref JWTSecret
 
-  # =========================
-  # CONSOLIDATED FUNCTIONS
-  # =========================
-
-  # Auth Function - handles all /auth/* routes
   AuthFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -93,7 +90,6 @@ Resources:
             Auth:
               Authorizer: JWTAuth
 
-  # Products Function - handles all /products/* routes
   ProductsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -149,7 +145,6 @@ Resources:
             Auth:
               Authorizer: JWTAuth
 
-  # Cart Function - handles all /cart/* routes
   CartFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -221,7 +216,6 @@ Resources:
             Auth:
               Authorizer: JWTAuth
 
-  # Orders Function - handles all /orders/* routes
   OrdersFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -289,7 +283,6 @@ Resources:
             Auth:
               Authorizer: JWTAuth
 
-  # Admin Function - handles all /admin/* and /categories/* routes
   AdminFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -331,7 +324,7 @@ Resources:
             Method: post
             RestApiId: !Ref CampusConnectApi
             Auth:
-              Authorizer: JWTAuth
+              Authorizer: NONE
         SeedSubcategoriesApi:
           Type: Api
           Properties:
@@ -339,7 +332,7 @@ Resources:
             Method: post
             RestApiId: !Ref CampusConnectApi
             Auth:
-              Authorizer: JWTAuth
+              Authorizer: NONE
         CleanDuplicatesApi:
           Type: Api
           Properties:
@@ -348,6 +341,40 @@ Resources:
             RestApiId: !Ref CampusConnectApi
             Auth:
               Authorizer: JWTAuth
+        CreateCategoryApi:
+          Type: Api
+          Properties:
+            Path: /admin/categories
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        CreateCategoryOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/categories
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+        CreateSubcategoryApi:
+          Type: Api
+          Properties:
+            Path: /admin/subcategories
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        CreateSubcategoryOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/subcategories
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+        CleanDuplicatesOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/clean-duplicates
+            Method: options
+            RestApiId: !Ref CampusConnectApi
         MakeAdminApi:
           Type: Api
           Properties:
@@ -356,7 +383,6 @@ Resources:
             RestApiId: !Ref CampusConnectApi
             Auth:
               Authorizer: JWTAuth
-        # Category management routes
         GetCategoriesApi:
           Type: Api
           Properties:
@@ -392,7 +418,6 @@ Resources:
             Method: get
             RestApiId: !Ref CampusConnectApi
 
-  # Upload Function - handles all /upload/* routes
   UploadFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -420,11 +445,6 @@ Resources:
             Method: post
             RestApiId: !Ref CampusConnectApi
 
-  # =========================
-  # INFRASTRUCTURE RESOURCES
-  # =========================
-
-  # DynamoDB Tables
   UsersTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -541,23 +561,94 @@ Resources:
           Projection:
             ProjectionType: ALL
 
-  # S3 Bucket for uploads
   UploadsBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub campus-connect-uploads-${Environment}
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ['*']
             AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
             AllowedOrigins: ['*']
 
-  # JWT Secret in Secrets Manager
+  StaticAssetsDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub "Campus Connect Static Assets - ${Environment}"
+        DefaultRootObject: index.html
+        Enabled: true
+        PriceClass: PriceClass_100
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 404
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 300
+          - ErrorCode: 404
+            ResponseCode: 404
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 300
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt UploadsBucket.RegionalDomainName
+            OriginAccessControlId: !Ref OriginAccessControl
+            S3OriginConfig: {}
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD, OPTIONS]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+        CacheBehaviors:
+          - PathPattern: "products/*"
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+          - PathPattern: "profiles/*"
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+
+  OriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "campus-connect-oac-${Environment}"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  UploadsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref UploadsBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontAccess
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${UploadsBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${StaticAssetsDistribution}"
+
   JWTSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -569,7 +660,6 @@ Resources:
         PasswordLength: 64
         ExcludeCharacters: '"@/\'
 
-  # API Gateway
   CampusConnectApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -609,6 +699,24 @@ Outputs:
     Value: !Sub "https://${CampusConnectApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
     Export:
       Name: !Sub "${AWS::StackName}-ApiEndpoint"
+
+  CloudFrontDomain:
+    Description: CloudFront distribution domain for static assets
+    Value: !GetAtt StaticAssetsDistribution.DomainName
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFrontDomain"
+
+  CloudFrontDistributionId:
+    Description: CloudFront distribution ID
+    Value: !Ref StaticAssetsDistribution
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFrontDistributionId"
+
+  OriginAccessControlId:
+    Description: Origin Access Control ID
+    Value: !Ref OriginAccessControl
+    Export:
+      Name: !Sub "${AWS::StackName}-OriginAccessControlId"
 
   UsersTableName:
     Description: Users DynamoDB table name

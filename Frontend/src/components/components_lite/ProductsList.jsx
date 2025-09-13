@@ -7,8 +7,6 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useCartStore } from '@/store/useCartStore'; 
 import { getProductId, getProductTitle, getProductPrice, getProductImageUrl, getPlaceholderImage } from '@/utils/productHelpers';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5011';
-
 const ProductList = ({ products = [] }) => {  
   const [previewPdf, setPreviewPdf] = useState(null);
   const addToCart = useCartStore(state => state.addToCart);

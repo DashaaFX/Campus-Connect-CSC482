@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, AlertCircle } from 'lucide-react';
 import axios from '../../utils/axios';
-import { useAuthStore } from '../../store/useAuthStore';
 
 const CategoryManagement = () => {
   const [categories, setCategories] = useState([]);
@@ -15,8 +14,6 @@ const CategoryManagement = () => {
   const [showSubcategoryForm, setShowSubcategoryForm] = useState(false);
   const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
   const [subcategoryForm, setSubcategoryForm] = useState({ name: '', categoryId: '', description: '' });
-  
-  const { token } = useAuthStore();
 
   useEffect(() => {
     loadData();
@@ -55,9 +52,7 @@ const CategoryManagement = () => {
       setLoading(true);
       setError('');
       
-      await axios.post('/admin/categories', categoryForm, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post('/admin/categories', categoryForm);
       
       setSuccess('Category created successfully!');
       setCategoryForm({ name: '', description: '' });
@@ -76,9 +71,7 @@ const CategoryManagement = () => {
       setLoading(true);
       setError('');
       
-      await axios.post('/admin/subcategories', subcategoryForm, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post('/admin/subcategories', subcategoryForm);
       
       setSuccess('Subcategory created successfully!');
       setSubcategoryForm({ name: '', categoryId: '', description: '' });
@@ -100,9 +93,7 @@ const CategoryManagement = () => {
       setLoading(true);
       setError('');
       
-      const response = await axios.delete(`/admin/clean-duplicates?table=${table}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.post(`/admin/clean-duplicates?table=${table}`, {});
       
       setSuccess(`Removed ${response.data.duplicatesRemoved} duplicates from ${table}`);
       loadData();

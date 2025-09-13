@@ -4,8 +4,6 @@ import { SubcategoryModel } from '/opt/nodejs/models/subcategoryModel.js';
 
 export const handler = async (event) => {
   try {
-    console.log('GetSellerProducts event:', JSON.stringify(event, null, 2));
-    
     // Check if this is a CORS preflight request
     if (event.httpMethod === 'OPTIONS') {
       return {
@@ -35,8 +33,6 @@ export const handler = async (event) => {
     // Get seller's products
     const productModel = new ProductModel();
     const products = await productModel.getBySellerId(sellerId);
-    
-    console.log(`Found ${products?.length || 0} products for seller ${sellerId}`);
     
     // Ensure consistent ID format for all products
     if (products && products.length > 0) {

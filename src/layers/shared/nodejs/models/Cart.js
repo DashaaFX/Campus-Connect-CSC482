@@ -80,10 +80,7 @@ export class CartModel extends BaseModel {
   }
 
   async addItem(userId, productId, quantity = 1, productDetails = {}) {
-    console.log('CartModel.addItem called with', { userId, productId, quantity, productDetails });
-    
     let cart = await this.getByUserId(userId);
-    console.log('Current cart:', JSON.stringify(cart));
     
     if (!cart.items) {
       cart.items = [];
@@ -99,8 +96,6 @@ export class CartModel extends BaseModel {
       if (productDetails.product) {
         cart.items[existingItemIndex].product = productDetails.product;
       }
-      
-      console.log(`Updated item quantity to ${cart.items[existingItemIndex].quantity}`);
     } else {
       // Create new item with complete product data for easier rendering
       const newItem = {
@@ -111,10 +106,7 @@ export class CartModel extends BaseModel {
       };
       
       cart.items.push(newItem);
-      console.log('Added new item to cart:', newItem);
     }
-
-    console.log('Updated cart has', cart.items.length, 'items');
 
     // Check if cart already exists (has userId field means it exists)
     if (cart.userId && cart.createdAt) {

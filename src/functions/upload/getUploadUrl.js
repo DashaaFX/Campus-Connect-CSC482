@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
+import { generateAssetUrl, getCloudFrontDomain } from '/opt/nodejs/utils/urlUtils.js';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1'
@@ -65,11 +66,16 @@ export const handler = async (event) => {
       ? `profiles/${userId}/${uuidv4()}.${fileExtension}`
       : `products/${userId}/${uuidv4()}.${fileExtension}`;
 
-    // Generate presigned URL for upload
+    // Generate presigned URL for upload with cache-friendly headers
+    const cacheControl = type === 'profile' 
+      ? 'max-age=86400'      // Profile images: 1 day cache
+      : 'max-age=2592000';   // Product images: 30 days cache
+
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
       ContentType: fileType,
+      CacheControl: cacheControl,
       // Remove ACL to avoid permissions issues
     });
 
@@ -78,8 +84,13 @@ export const handler = async (event) => {
       expiresIn: 300 // 5 minutes
     });
     
-    // S3 URL structure
-    const fileUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+    // Generate CloudFront URL for the uploaded file (for reading)
+    const fileUrl = generateAssetUrl(
+      key,
+      process.env.ENVIRONMENT || 'dev',
+      process.env.AWS_REGION || 'us-east-1',
+      getCloudFrontDomain()
+    );
 
     return createSuccessResponse({
       uploadUrl,

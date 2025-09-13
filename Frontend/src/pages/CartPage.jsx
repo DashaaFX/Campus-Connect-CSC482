@@ -73,7 +73,6 @@ const CartPage = () => {
 
   // Calculate total, handling potentially missing product data
   const total = items.reduce((acc, item) => {
-    // Add debug info
     // Handle potentially missing product object
     if (!item || !item.product) {
       return acc;

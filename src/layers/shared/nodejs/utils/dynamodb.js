@@ -10,12 +10,6 @@ if (process.env.ENVIRONMENT === 'local') {
   endpoint = process.env.DYNAMODB_ENDPOINT || 'http://localhost:8000';
 }
 
-console.log('DynamoDB config:', {
-  region,
-  environment: process.env.ENVIRONMENT,
-  endpoint
-});
-
 const client = new DynamoDBClient({
   region,
   ...(process.env.ENVIRONMENT === 'local' && {

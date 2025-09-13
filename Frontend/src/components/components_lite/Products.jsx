@@ -9,8 +9,6 @@ import { useCartStore } from '@/store/useCartStore';
 import { formatSubcategory } from '@/utils/formatSubcategory';
 import { getProductId, getProductTitle, getProductPrice, getProductImageUrl, getPlaceholderImage } from '@/utils/productHelpers';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-
 const Products = () => {
   const { id } = useParams();
   const navigate = useNavigate();

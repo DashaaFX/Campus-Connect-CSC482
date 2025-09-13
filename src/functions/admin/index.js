@@ -14,6 +14,19 @@ export const handler = async (event) => {
     const path = event.path || event.resource;
     const method = event.httpMethod;
 
+    // Handle CORS preflight requests
+    if (method === 'OPTIONS') {
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+        },
+        body: ''
+      };
+    }
+
     // Route to appropriate handler based on path and method
     if (path === '/admin/products' && method === 'GET') {
       return await getSellerProducts.handler(event);
@@ -44,7 +57,7 @@ export const handler = async (event) => {
       return await getCategories.handler(event);
     }
     
-    if (path === '/categories' && method === 'POST') {
+    if (path === '/admin/categories' && method === 'POST') {
       return await createCategory.handler(event);
     }
     
@@ -56,7 +69,7 @@ export const handler = async (event) => {
       return await getSubcategories.handler(event);
     }
     
-    if (path === '/subcategories' && method === 'POST') {
+    if (path === '/admin/subcategories' && method === 'POST') {
       return await createSubcategory.handler(event);
     }
 

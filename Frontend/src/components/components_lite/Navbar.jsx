@@ -13,7 +13,7 @@ import {
   Home,
   Package,
   Info,
-  Settings,
+  Settings
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -151,6 +151,16 @@ const logoutHandler = async () => {
                       <Link to={"/profile"}>Profile</Link>
                     </Button>
                   </div>
+
+                  {/* Admin Navigation */}
+                  {user?.role === 'Admin' && (
+                    <div className="flex items-center gap-2 cursor-pointer w-fit">
+                      <Settings className="text-blue-500" />
+                      <Button variant="link" className="text-blue-500 hover:text-blue-600">
+                        <Link to={"/admin/categories"}>Manage Categories</Link>
+                      </Button>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 cursor-pointer w-fit">
                   <LogOut className="text-red-500" /> 

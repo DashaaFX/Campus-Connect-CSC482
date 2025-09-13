@@ -15,6 +15,11 @@ samconfig.toml
 .env.development.local
 .env.test.local
 .env.production.local
+Frontend/.env
+Frontend/.env.local
+Frontend/.env.development.local
+Frontend/.env.test.local
+Frontend/.env.production.local
 
 # IDE
 .vscode/

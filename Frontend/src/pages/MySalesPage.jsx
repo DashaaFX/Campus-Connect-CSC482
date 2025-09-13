@@ -2,6 +2,7 @@
   import { useNavigate } from 'react-router-dom';
   import axios from 'axios';
   import { PRODUCT_API_ENDPOINT } from '@/utils/data';
+  import { getProductImageUrl } from '@/utils/productHelpers';
 
   import AdminSidebar from './AdminSidebar';
   import { Button } from '@/components/ui/button';
@@ -117,11 +118,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
                     <DialogTrigger asChild>
                       {product.images?.length > 0 ? (
                         <img
-                          src={
-                            product.images[0] && typeof product.images[0] === 'string' && product.images[0].startsWith("http")
-                              ? product.images[0]
-                              : product.images[0] ? `${BASE_URL}${product.images[0]}` : '/placeholder-image.jpg'
-                          }
+                          src={getProductImageUrl({images: product.images})}
                           alt={product.title || product.name}
                           className="object-cover w-16 h-16 rounded cursor-pointer hover:opacity-80"
                         />
@@ -143,11 +140,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
                     <DialogContent className="w-full max-w-3xl h-[80vh]">
                       {product.images?.length > 0 ? (
                         <img
-                          src={
-                            product.images[0] && typeof product.images[0] === 'string' && product.images[0].startsWith("http")
-                              ? product.images[0]
-                              : product.images[0] ? `${BASE_URL}${product.images[0]}` : '/placeholder-image.jpg'
-                          }
+                          src={getProductImageUrl({images: product.images})}
                           alt={product.title || product.name}
                           className="object-contain w-full h-full rounded"
                         />

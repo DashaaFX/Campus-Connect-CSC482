@@ -2,6 +2,7 @@ import axios from 'axios';
 
 // Create axios instance
 const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -65,10 +66,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Only redirect for non-upload related 401 errors
-      // Let upload components handle their own auth errors
       if (!error.config?.url?.includes('/upload')) {
-        // Clear both old and new token storage
         localStorage.removeItem('token');
         localStorage.removeItem('auth-storage');
         window.location.href = '/login';

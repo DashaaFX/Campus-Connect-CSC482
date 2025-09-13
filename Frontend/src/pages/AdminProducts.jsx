@@ -8,6 +8,7 @@ import AdminSidebar from './AdminSidebar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
 import { formatSubcategory } from '@/utils/formatSubcategory';
+import { getProductImageUrl } from '@/utils/productHelpers';
 const AdminProducts = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -91,7 +92,7 @@ const AdminProducts = () => {
                     <div className="flex items-center gap-3">
                       {product.images?.[0] ? (
                         <img
-                          src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${product.images[0]}`}
+                          src={getProductImageUrl(product)}
                           alt={product.title}
                           className="h-10 w-10 object-cover rounded"
                           onError={(e) => { e.target.src = '/placeholder-image.jpg'; e.target.onerror = null; }}

@@ -3,8 +3,6 @@ import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequ
 
 export const handler = async (event) => {
   try {
-    console.log('CreateProduct event:', JSON.stringify(event, null, 2));
-    
     // Get authentication info from authorizer
     const userId = event.requestContext?.authorizer?.userId;
     const userEmail = event.requestContext?.authorizer?.email;
@@ -19,47 +17,13 @@ export const handler = async (event) => {
     let body;
     try {
       body = parseJSONBody(event.body);
-      console.log('📦 Request body:', body);
     } catch (e) {
       console.error('Error parsing body:', e);
       return createErrorResponse('Invalid request body', 400);
     }
     
-    // Extract user info from various sources
-    
     // Force sellerId to be the authenticated user
     body.sellerId = userId;
-    
-
-    
-
-    
-    // 3. Try from token
-    if (event.headers?.Authorization || event.headers?.authorization) {
-      const authHeader = event.headers?.Authorization || event.headers?.authorization;
-      try {
-        const token = authHeader.replace('Bearer ', '');
-        const tokenParts = token.split('.');
-        if (tokenParts.length === 3) {
-          const tokenPayload = tokenParts[1];
-          const decoded = JSON.parse(Buffer.from(tokenPayload, 'base64').toString());
-          
-          if (decoded.userId) {
-            userId = decoded.userId;
-            console.log('� Using userId from token:', userId);
-          }
-          
-          if (decoded.email) {
-            userEmail = decoded.email;
-            console.log('� Using email from token:', userEmail);
-          }
-        }
-      } catch (error) {
-        console.error('⚠️ Error extracting user info from token:', error);
-      }
-    }
-    
-    console.log('� Final user info: userId=', userId, 'email=', userEmail);
     
     // Validate required fields
     const requiredFields = ['title', 'description', 'price', 'category'];
@@ -106,14 +70,10 @@ export const handler = async (event) => {
       updatedAt: new Date().toISOString(),
       status: 'active'
     };
-
-    console.log('🛒 Final product data to create:', productData);
     
     // Create the product
     const productModel = new ProductModel();
     const product = await productModel.create(productData);
-    
-    console.log('✅ Product created successfully:', product);
 
     // Return success response
     return createSuccessResponse({

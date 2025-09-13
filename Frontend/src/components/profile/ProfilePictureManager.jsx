@@ -6,6 +6,7 @@ import ImageUploader from '@/components/ui/ImageUploader';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import axios from '@/utils/axios';
 import { USER_API_ENDPOINT } from '@/utils/data';
+import { getProfileImageUrl } from '@/utils/imageHelpers';
 
 const ProfilePictureManager = () => {
   const { user, token } = useAuthStore();
@@ -32,10 +33,10 @@ const ProfilePictureManager = () => {
     }
 
     try {
-      // Ensure the imageUrl is the complete S3 URL
+      // Store the S3 URL for backend (still upload to S3, just serve via CloudFront)
       const profilePictureUrl = imageUrl.startsWith('http') ? 
         imageUrl : 
-        `https://campus-connect-uploads-${import.meta.env.VITE_ENVIRONMENT || 'dev'}.s3.${import.meta.env.VITE_AWS_REGION || 'us-east-1'}.amazonaws.com/${imageUrl}`;
+        `https://campus-connect-uploads-${import.meta.env.VITE_ENVIRONMENT || 'local'}.s3.${import.meta.env.VITE_AWS_REGION || 'us-east-1'}.amazonaws.com/${imageUrl}`;
       
       // Update the user's profile picture in the backend
       const response = await axios.put(`${USER_API_ENDPOINT}/profile/picture`, {
@@ -97,7 +98,7 @@ const ProfilePictureManager = () => {
         <div className="flex flex-col items-center justify-center space-y-2">
           <Avatar className="w-20 h-20">
             <AvatarImage 
-              src={currentPicture} 
+              src={getProfileImageUrl(currentPicture)} 
               alt={user?.fullname || 'Profile picture'} 
               className="object-cover"
             />
