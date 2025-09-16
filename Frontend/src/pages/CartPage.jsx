@@ -4,7 +4,6 @@ import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ORDER_API_ENDPOINT } from '@/utils/data';
 import { Button } from '@/components/ui/button';
-// Removed popover import, using custom modal
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -149,14 +148,12 @@ const CartPage = () => {
       {/* Cart items */}
       {!loading && items.length > 0 && (
         <>
-          {items.map((item) => {
-            // Determine product status for UI
+          {items.map((item, idx) => {
             const isLoading = !item.product || item.product.title === 'Loading product...';
-            const isError = item.product?.title === 'Error loading product' || item.product?.title === 'Product not found';
-            
+            const isError = item.product && (item.product.title === 'Product not found' || item.product.title === 'Error loading product');
             return (
               <div
-                key={item.productId || item.product?._id || item.product?.id || Math.random().toString()}
+                key={item.productId || item.product?._id || idx}
                 className={`flex items-center justify-between py-4 border-b ${isLoading ? 'bg-gray-50' : ''} ${isError ? 'bg-red-50' : ''}`}
               >
                 <div className="flex items-center space-x-4">
@@ -169,8 +166,9 @@ const CartPage = () => {
                     ) : item.product ? (
                       <img
                         src={getProductImageUrl(item.product)}
-                        alt={(item.product?.title || item.product?.name || 'Product')}
+                        alt={item.product?.title || item.product?.name || 'Product'}
                         className="object-cover w-full h-full"
+                        loading="lazy"
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = getPlaceholderImage();
@@ -184,7 +182,6 @@ const CartPage = () => {
                       />
                     )}
                   </div>
-                  
                   {/* Product details */}
                   <div>
                     {isLoading ? (
@@ -231,34 +228,34 @@ const CartPage = () => {
           <div className="mt-6 text-lg font-semibold">
             Total: ${total.toFixed(2)}
           </div>
-            <div className="flex gap-2 mt-4">
-              <Button onClick={() => setModalOpen(true)}>
-                Proceed to Checkout
-              </Button>
-              <Button variant="outline" onClick={handleClear}>
-                Clear Cart
-              </Button>
-            </div>
-            {modalOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                <div className="flex flex-col items-center gap-4 p-8 bg-white shadow-xl rounded-xl w-80">
-                  <h2 className="text-lg font-semibold">Confirm Checkout</h2>
-                  <p className="text-center text-gray-600">Are you sure you want to proceed to checkout?</p>
-                  <div className="flex w-full gap-2 mt-2">
-                    <Button 
-                      onClick={() => { setModalOpen(false); handleCheckout(); }} 
-                      className="w-full px-4 py-2 font-semibold text-white bg-black rounded hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black">
-                        Yes, Proceed
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setModalOpen(false)} 
-                      className="w-full px-4 py-2"
-                    >Cancel</Button>
-                  </div>
+          <div className="flex gap-2 mt-4">
+            <Button onClick={() => setModalOpen(true)}>
+              Proceed to Checkout
+            </Button>
+            <Button variant="outline" onClick={handleClear}>
+              Clear Cart
+            </Button>
+          </div>
+          {modalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="flex flex-col items-center gap-4 p-8 bg-white shadow-xl rounded-xl w-80">
+                <h2 className="text-lg font-semibold">Confirm Checkout</h2>
+                <p className="text-center text-gray-600">Are you sure you want to proceed to checkout?</p>
+                <div className="flex w-full gap-2 mt-2">
+                  <Button 
+                    onClick={() => { setModalOpen(false); handleCheckout(); }} 
+                    className="w-full px-4 py-2 font-semibold text-white bg-black rounded hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black">
+                      Yes, Proceed
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setModalOpen(false)} 
+                    className="w-full px-4 py-2"
+                  >Cancel</Button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
         </>
       )}
     </div>

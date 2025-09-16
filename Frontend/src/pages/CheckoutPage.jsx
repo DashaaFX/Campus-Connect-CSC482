@@ -51,6 +51,11 @@ const CheckoutPage = () => {
       toast.error('Your cart is empty');
       return;
     }
+    if (!token) {
+      toast.error('You must be logged in to place an order.');
+      navigate('/login');
+      return;
+    }
 
     try {
       setIsProcessing(true);

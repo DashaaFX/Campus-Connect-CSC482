@@ -1,6 +1,11 @@
 import React from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
+//temporary fix for persisted auth state during developement
+if (import.meta.env.DEV && !sessionStorage.getItem('cleared-auth')) {
+  localStorage.removeItem('auth-storage');
+  sessionStorage.setItem('cleared-auth', 'true');
+}
 
 // Pages & Components
 import Layout from "./Layout";
