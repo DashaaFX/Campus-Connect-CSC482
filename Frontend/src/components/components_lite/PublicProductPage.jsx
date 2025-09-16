@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useAuthStore } from '@/store/useAuthStore';
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
@@ -19,6 +20,7 @@ const PublicProductPage = () => {
   const [searchParams] = useSearchParams();
 
   const [products, setProducts] = useState([]);
+  const { user } = useAuthStore();
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [search, setSearch] = useState("");
@@ -93,7 +95,14 @@ const PublicProductPage = () => {
       if (sort) params.append('sort', sort);
 
       const res = await axios.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
-      setProducts(res.data.products || []);
+      let allProducts = res.data.products || [];
+      // Filter out products created by the logged-in user
+      if (user && user.id) {
+        allProducts = allProducts.filter(
+          (p) => p.sellerId !== user.id && p.userId !== user.id
+        );
+      }
+      setProducts(allProducts);
     } catch (err) {
       console.error("Failed to fetch products", err);
     }
