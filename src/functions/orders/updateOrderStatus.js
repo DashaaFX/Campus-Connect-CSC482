@@ -23,31 +23,39 @@ export const handler = async (event) => {
     }
 
     const { status } = body;
-    const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['requested', 'pending', 'approved', 'shipped', 'completed', 'cancelled'];
     
     if (!validStatuses.includes(status)) {
       return createErrorResponse('Invalid status. Must be one of: ' + validStatuses.join(', '), 400);
     }
 
     // Get existing order to verify ownership
-    const existingOrder = await orderModel.get(orderId);
+  const existingOrder = await orderModel.get(orderId); // uses alias to getById
     if (!existingOrder) {
       return createErrorResponse('Order not found', 404);
     }
 
     // Check authorization - only buyer can cancel, sellers can update other statuses
     const isBuyer = existingOrder.userId === userId;
-    const isSeller = existingOrder.items && existingOrder.items.some(item => 
-      item.sellerId === userId
-    );
+    const isSeller = (existingOrder.sellerId === userId) || 
+                     (existingOrder.items && existingOrder.items.some(item => 
+                       (item.sellerId === userId) || 
+                       (item.product && item.product.sellerId === userId)
+                     ));
 
     if (!isBuyer && !isSeller) {
       return createErrorResponse('Not authorized to update this order', 403);
     }
 
-    // Buyers can only cancel orders
-    if (isBuyer && !isSeller && status !== 'cancelled') {
-      return createErrorResponse('Buyers can only cancel orders', 403);
+    // Buyers can only cancel orders that are not already completed or shipped
+    if (isBuyer && !isSeller) {
+      if (status !== 'cancelled') {
+        return createErrorResponse('Buyers can only cancel orders', 403);
+      }
+      
+      if (['completed', 'shipped'].includes(existingOrder.status)) {
+        return createErrorResponse('Cannot cancel order that has been shipped or completed', 403);
+      }
     }
 
     const updateData = {

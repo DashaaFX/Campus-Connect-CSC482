@@ -16,20 +16,20 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
   const handleFileUpload = async (file) => {
     if (!file) return;
 
-    // Check if user is logged in
+  // User authentication check
     if (!user || !token) {
       setError("Please log in to upload images");
       return;
     }
 
-    // Validate file type
+  // File type validation
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       setError("Please select a valid image file (JPEG, PNG, GIF, WebP)");
       return;
     }
 
-    // Validate file size (5MB max)
+  // File size validation (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       setError("File size must be less than 5MB");
       return;
@@ -39,7 +39,7 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
     setError("");
 
     try {
-      // Get presigned URL with authentication
+  // Get presigned URL
       const token = useAuthStore.getState().token;
       const uploadResponse = await axios.post(`${UPLOAD_API_ENDPOINT}/url`, {
         fileName: file.name,
@@ -55,9 +55,8 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
       await axios.put(uploadUrl, file, {
         headers: {
           'Content-Type': file.type,
-          // Don't send Authorization header for S3 upload
+          // S3 upload does not require Authorization header
         },
-        // Important: S3 PUT requests should not use the interceptor's auth headers
         withCredentials: false,
       });
 
@@ -66,7 +65,7 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
       onUploadComplete(newImages);
       
     } catch (err) {
-      console.error('Upload error:', err);
+  // Upload error - handled by error state
       if (err.response?.status === 401) {
         setError('Authentication required. Please log in again.');
       } else {
@@ -82,7 +81,6 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
     if (file) {
       handleFileUpload(file);
     }
-    // Reset input value to allow selecting same file again
     e.target.value = '';
   };
 

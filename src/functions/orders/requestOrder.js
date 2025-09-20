@@ -45,6 +45,7 @@ export const handler = async (event) => {
     const orderData = {
       userId: userId,
       userEmail: email,
+      sellerId: product.sellerId, // Use sellerId consistently
       items: [{
         productId: body.productId,
         product: product,

@@ -53,6 +53,11 @@ export class CartModel extends BaseModel {
     return result.Attributes;
   }
 
+  // Alias for getById for code clarity
+  async getByUserId(userId) {
+    return this.getById(userId);
+  }
+
   async create(item) {
     const timestamp = new Date().toISOString();
     

@@ -40,11 +40,16 @@ export const handler = async (event) => {
       return createErrorResponse('Cart is empty', 400);
     }
 
+    // Extract seller ID from the first item (assuming grouped by seller)
+    // If multiple sellers, this would need to be handled differently
+    const sellerId = cart.items[0]?.product?.sellerId || cart.items[0]?.sellerId;
+
     const orderData = {
       userId: userId,
       userEmail: email,
       items: cart.items,
       total: cart.total,
+      sellerId: sellerId, // Add sellerId for SellerIndex GSI
       shippingAddress: body.shippingAddress,
       status: 'pending',
       createdAt: new Date().toISOString(),
@@ -87,3 +92,5 @@ export const handler = async (event) => {
     return errorResponse;
   }
 };
+
+

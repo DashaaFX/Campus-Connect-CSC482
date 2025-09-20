@@ -1,4 +1,3 @@
-import * as getSellerProducts from './getSellerProducts.js';
 import * as seedCategories from './seedCategories.js';
 import * as seedSubcategories from './seedSubcategories.js';
 import * as cleanDuplicates from './cleanDuplicates.js';
@@ -28,13 +27,6 @@ export const handler = async (event) => {
     }
 
     // Route to appropriate handler based on path and method
-    if (path === '/admin/products' && method === 'GET') {
-      return await getSellerProducts.handler(event);
-    }
-    
-    if (path.includes('/products/seller/') && method === 'GET') {
-      return await getSellerProducts.handler(event);
-    }
     
     if (path === '/admin/seed/categories' && method === 'POST') {
       return await seedCategories.handler(event);

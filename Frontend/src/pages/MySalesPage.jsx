@@ -23,8 +23,9 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
     const { user, token, fetchUser } = useAuthStore();
 
     useEffect(() => {
-  if (!user) fetchUser();
-  }, [user, fetchUser]);
+      if (!user) fetchUser();
+    }, [user, fetchUser]);
+    
     useEffect(() => {
       const fetchMyProducts = async () => {
         if (!token) return;
@@ -38,8 +39,9 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
             },
             withCredentials: false
           });
-          // Ensure products have consistent ID format
-          const processedProducts = (res.data.products || []).map(product => {
+          // Handle the new response format with success wrapper and ensure products have consistent ID format
+          const productsData = res.data?.success ? res.data.products : res.data.products || [];
+          const processedProducts = productsData.map(product => {
             // Make sure each product has both id and _id fields
             return {
               ...product,
@@ -200,6 +202,10 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
                   </TableBody>
                 </Table>
               </div>
+              
+              <p className="text-gray-600 mt-8">
+                View and manage order requests for specific products using the "Status" button on each product.
+              </p>
             </>
           )}
         </div>

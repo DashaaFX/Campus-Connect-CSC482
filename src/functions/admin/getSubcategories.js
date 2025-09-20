@@ -7,11 +7,9 @@ export const handler = async (event) => {
     
     let subcategories;
     if (categoryId) {
-      // Get subcategories for a specific category
       subcategories = await SubcategoryModel.getByCategoryId(categoryId);
     } else {
-      // Get all subcategories
-      subcategories = await SubcategoryModel.getAll();
+      return createErrorResponse('Category ID is required', 400);
     }
 
     // Ensure subcategories is an array

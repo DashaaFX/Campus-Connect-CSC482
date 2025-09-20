@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Campus Connect - Consolidated Serverless Backend with JWT Authorizer
+Description: Campus Connect -Serverless Backend with JWT Authorizer
 
 Globals:
   Function:
     Timeout: 30
-    Runtime: nodejs22.x
+    Runtime: nodejs20.x
     MemorySize: 256
     Environment:
       Variables:
@@ -25,8 +25,8 @@ Globals:
 Parameters:
   Environment:
     Type: String
-    Default: dev
-    AllowedValues: [local, dev, staging, prod]
+    Default: dev2
+    AllowedValues: [dev2, dev, staging, prod]
 
 Resources:
   SharedLayer:
@@ -118,6 +118,12 @@ Resources:
           Type: Api
           Properties:
             Path: /products/{id}
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+        GetSellerProductsApi:
+          Type: Api
+          Properties:
+            Path: /products/seller/{id}
             Method: get
             RestApiId: !Ref CampusConnectApi
         CreateProductApi:
@@ -229,7 +235,7 @@ Resources:
             TableName: !Ref OrdersTable
         - DynamoDBReadPolicy:
             TableName: !Ref ProductsTable
-        - DynamoDBReadPolicy:
+        - DynamoDBCrudPolicy:
             TableName: !Ref CartsTable
         - DynamoDBReadPolicy:
             TableName: !Ref UsersTable
@@ -254,6 +260,14 @@ Resources:
           Type: Api
           Properties:
             Path: /orders
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        GetSellerOrdersApi:
+          Type: Api
+          Properties:
+            Path: /orders/seller-orders
             Method: get
             RestApiId: !Ref CampusConnectApi
             Auth:
@@ -291,6 +305,9 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedLayer
+      Environment:
+        Variables:
+          PRODUCTS_LAMBDA_ARN: !GetAtt ProductsFunction.Arn
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ProductsTable
@@ -300,39 +317,24 @@ Resources:
             TableName: !Ref SubcategoriesTable
         - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
+        - Statement:
+          - Effect: Allow
+            Action: 
+              - 'lambda:InvokeFunction'
+            Resource: !GetAtt ProductsFunction.Arn
       Events:
-        GetSellerProductsApi:
-          Type: Api
-          Properties:
-            Path: /admin/products
-            Method: get
-            RestApiId: !Ref CampusConnectApi
-            Auth:
-              Authorizer: JWTAuth
-        GetSellerProductsByIdApi:
-          Type: Api
-          Properties:
-            Path: /products/seller/{id}
-            Method: get
-            RestApiId: !Ref CampusConnectApi
-            Auth:
-              Authorizer: JWTAuth
         SeedCategoriesApi:
           Type: Api
           Properties:
             Path: /admin/seed/categories
             Method: post
             RestApiId: !Ref CampusConnectApi
-            Auth:
-              Authorizer: NONE
         SeedSubcategoriesApi:
           Type: Api
           Properties:
             Path: /admin/seed/subcategories
             Method: post
             RestApiId: !Ref CampusConnectApi
-            Auth:
-              Authorizer: NONE
         CleanDuplicatesApi:
           Type: Api
           Properties:
@@ -389,7 +391,7 @@ Resources:
             Path: /categories
             Method: get
             RestApiId: !Ref CampusConnectApi
-        CreateCategoryApi:
+        PublicCreateCategoryApi:
           Type: Api
           Properties:
             Path: /categories
@@ -403,7 +405,7 @@ Resources:
             Path: /subcategories
             Method: get
             RestApiId: !Ref CampusConnectApi
-        CreateSubcategoryApi:
+        PublicCreateSubcategoryApi:
           Type: Api
           Properties:
             Path: /subcategories
@@ -505,6 +507,8 @@ Resources:
           AttributeType: S
         - AttributeName: userId
           AttributeType: S
+        - AttributeName: sellerId
+          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
@@ -512,6 +516,12 @@ Resources:
         - IndexName: UserIndex
           KeySchema:
             - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: SellerIndex
+          KeySchema:
+            - AttributeName: sellerId
               KeyType: HASH
           Projection:
             ProjectionType: ALL

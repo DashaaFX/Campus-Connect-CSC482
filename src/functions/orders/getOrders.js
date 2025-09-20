@@ -1,4 +1,4 @@
-import { OrderModel } from '/opt/nodejs/models/Order.js';
+import { OrderModel, orderModel } from '/opt/nodejs/models/Order.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
@@ -23,13 +23,26 @@ export const handler = async (event) => {
       return createErrorResponse('User authentication required', 401);
     }
 
-    const orderModel = new OrderModel();
-    const orders = await orderModel.getByUserId(userId);
+    // Check if this is a seller orders request
+    const isSeller = event.path === '/orders/seller-orders';
     
-    console.log(`Found ${orders?.length || 0} orders for user ${userId}`);
+    let orders = [];
+    
+    if (isSeller) {
+      // Get orders where the user is the seller
+      console.log(`Fetching seller orders for user ${userId}`);
+      orders = await orderModel.getBySeller(userId);
+      console.log(`Found ${orders?.length || 0} seller orders for user ${userId}`);
+    } else {
+      // Get orders where the user is the buyer
+      console.log(`Fetching buyer orders for user ${userId} using UserIndex`);
+      orders = await orderModel.getByBuyer(userId);
+      console.log(`Found ${orders?.length || 0} buyer orders for user ${userId}`);
+    }
 
     const response = createSuccessResponse({
-      orders: orders || []
+      orders: orders || [],
+      isSeller: isSeller
     });
     
     // Add CORS headers

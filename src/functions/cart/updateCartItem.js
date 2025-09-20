@@ -1,5 +1,5 @@
 import { CartModel } from '/opt/nodejs/models/Cart.js';
-import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
+import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
   // Handle CORS preflight requests
@@ -14,11 +14,11 @@ export const handler = async (event) => {
       body: JSON.stringify({})
     };
   }
-  
+
   try {
     // Get user info from JWT authorizer context
     const userId = event.requestContext?.authorizer?.userId;
-    
+
     if (!userId) {
       return createErrorResponse('User authentication required', 401);
     }
@@ -62,7 +62,6 @@ export const handler = async (event) => {
       const price = item.product?.price || item.price || 0;
       return sum + (price * item.quantity);
     }, 0);
-    cart.updatedAt = new Date().toISOString();
 
     await cartModel.update(userId, cart);
 
@@ -70,29 +69,25 @@ export const handler = async (event) => {
       message: 'Cart item updated successfully',
       cart
     });
-    
-    // Add CORS headers
+
     response.headers = {
-      ...response.headers,
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
       'Access-Control-Allow-Methods': 'PUT,OPTIONS'
     };
-    
+
     return response;
 
   } catch (error) {
     console.error('Update cart item error:', error);
     const errorResponse = createErrorResponse(error.message, 500);
-    
-    // Add CORS headers to error response too
+
     errorResponse.headers = {
-      ...errorResponse.headers,
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
       'Access-Control-Allow-Methods': 'PUT,OPTIONS'
     };
-    
+
     return errorResponse;
   }
 };

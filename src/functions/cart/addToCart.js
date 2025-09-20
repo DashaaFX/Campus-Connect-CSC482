@@ -45,6 +45,12 @@ export const handler = async (event) => {
     if (quantity <= 0) {
       return createErrorResponse('Quantity must be greater than 0', 400);
     }
+    
+    // Check if stock is sufficient
+    const productStock = parseInt(product.stock || 0);
+    if (productStock < quantity) {
+      return createErrorResponse(`Insufficient stock. Only ${productStock} units available.`, 400);
+    }
 
     // Get current cart
     const cartModel = new CartModel();
@@ -65,6 +71,12 @@ export const handler = async (event) => {
     if (existingItemIndex >= 0) {
       // Update quantity of existing item
       const newQuantity = cart.items[existingItemIndex].quantity + quantity;
+      
+      // Check if total quantity exceeds available stock
+      if (typeof product.stock !== 'undefined' && product.stock < newQuantity) {
+        return createErrorResponse(`Cannot add ${quantity} more units. Only ${product.stock} total units available and you already have ${cart.items[existingItemIndex].quantity} in your cart.`, 400);
+      }
+      
       cart.items[existingItemIndex].quantity = newQuantity;
     } else {
       // Add new item with full product details for easier display

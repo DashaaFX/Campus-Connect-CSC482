@@ -28,6 +28,9 @@ const CartPage = () => {
 
   const navigate = useNavigate();
 
+  // State to track if this is the initial load
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
   useEffect(() => {
     // Force a new cart fetch when the component mounts
     const fetchCartData = async () => {
@@ -35,6 +38,11 @@ const CartPage = () => {
         // Set loading state explicitly before fetch
         useCartStore.setState({ loading: true });
         await useCartStore.getState().fetchCart();
+        
+        // If this is initial load, set to false after first successful fetch
+        if (isInitialLoad) {
+          setIsInitialLoad(false);
+        }
       } catch (error) {
         console.error('Error fetching cart from useEffect:', error);
       }
@@ -63,10 +71,32 @@ const CartPage = () => {
         fetchCartData();
       }
     }, 2500);
+
+    // Set up interval to refresh cart data periodically while the component is mounted
+    const refreshInterval = setInterval(() => {
+      fetchCartData();
+    }, 30000); // Refresh every 30 seconds
     
     return () => {
       clearTimeout(initialRetryTimeout);
       clearTimeout(secondRetryTimeout);
+      clearInterval(refreshInterval);
+    };
+  }, [isInitialLoad]);
+
+  // Add a special effect to handle visibility changes (when user returns to the tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Refresh cart when the user returns to the tab
+        useCartStore.getState().fetchCart();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -194,6 +224,18 @@ const CartPage = () => {
                     <p className="text-gray-600">
                       ${parseFloat(item.product?.price || 0).toFixed(2)} × {item.quantity || 1}
                     </p>
+                    
+                    {/* Stock information */}
+                    {item.product && typeof item.product.stock !== 'undefined' && (
+                      <p className={`text-xs ${parseInt(item.product.stock) < parseInt(item.quantity || 1) ? 'text-red-600 font-semibold' : 'text-green-600'}`}>
+                        {parseInt(item.product.stock) < parseInt(item.quantity || 1) ? (
+                          <>⚠️ Only {item.product.stock} in stock</>
+                        ) : (
+                          <>✓ In stock ({item.product.stock} available)</>
+                        )}
+                      </p>
+                    )}
+                    
                     {(item.product?.title === 'Loading product...' || !item.product?.title) && (
                       <div className="flex items-center text-xs text-amber-600">
                         <svg className="w-3 h-3 mr-1 animate-spin" viewBox="0 0 24 24">

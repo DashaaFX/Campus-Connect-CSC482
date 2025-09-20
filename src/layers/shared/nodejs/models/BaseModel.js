@@ -28,7 +28,8 @@ export class BaseModel {
     const command = new PutCommand({
       TableName: this.tableName,
       Item: itemWithMetadata,
-      ConditionExpression: 'attribute_not_exists(id)'
+      ConditionExpression: 'attribute_not_exists(id)',
+      marshallOptions: { removeUndefinedValues: true }
     });
 
     await docClient.send(command);
@@ -88,26 +89,34 @@ export class BaseModel {
     return true;
   }
 
-  async getAll(limit = 50) {
-    const command = new ScanCommand({
-      TableName: this.tableName,
-      Limit: limit
-    });
+  async getAll(limit = 100) {
+    try {
+      const command = new ScanCommand({
+        TableName: this.tableName,
+        Limit: limit
+      });
 
-    const result = await docClient.send(command);
-    return result.Items || [];
+      const result = await docClient.send(command);
+      return result.Items || [];
+    } catch (error) {
+      return [];
+    }
   }
 
   async queryByIndex(indexName, keyConditionExpression, expressionAttributeValues, expressionAttributeNames = {}) {
-    const command = new QueryCommand({
-      TableName: this.tableName,
-      IndexName: indexName,
-      KeyConditionExpression: keyConditionExpression,
-      ExpressionAttributeValues: expressionAttributeValues,
-      ...(Object.keys(expressionAttributeNames).length > 0 && { ExpressionAttributeNames: expressionAttributeNames })
-    });
+    try {
+      const command = new QueryCommand({
+        TableName: this.tableName,
+        IndexName: indexName,
+        KeyConditionExpression: keyConditionExpression,
+        ExpressionAttributeValues: expressionAttributeValues,
+        ...(Object.keys(expressionAttributeNames).length > 0 && { ExpressionAttributeNames: expressionAttributeNames })
+      });
 
-    const result = await docClient.send(command);
-    return result.Items || [];
+      const result = await docClient.send(command);
+      return result.Items || [];
+    } catch (error) {
+      return [];
+    }
   }
 }

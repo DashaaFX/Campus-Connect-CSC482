@@ -90,13 +90,13 @@ export class ProductModel extends BaseModel {
   }
   
   async getBySellerId(sellerId) {
-    // For backward compatibility, try to get all products and filter
+    // Use query if there's a SellerIndex, otherwise scan and filter
     try {
       const allProducts = await this.getAll();
       
-      // Filter products where sellerId or userId matches
+      // Only filter by sellerId for consistency
       const filteredProducts = allProducts.filter(product => {
-        return (product.sellerId === sellerId || product.userId === sellerId);
+        return product.sellerId === sellerId;
       });
       
       return filteredProducts;

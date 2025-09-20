@@ -1,32 +1,48 @@
 import { UserModel } from '/opt/nodejs/models/User.js';
-import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
+import { createResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
   try {
-    // This should be protected and only used for initial setup
-    const { email } = JSON.parse(event.body);
-
+    // Get the current user from the JWT authorizer
+    const requestingUser = event.requestContext.authorizer.user;
+    
+    // Verify the requesting user is an admin
+    if (!requestingUser || requestingUser.role !== 'Admin') {
+      return createErrorResponse('Unauthorized: Only administrators can perform this action', 403);
+    }
+    
+    // Parse the body to get the email of the user to promote
+    const body = JSON.parse(event.body || '{}');
+    const { email } = body;
+    
     if (!email) {
-      return createErrorResponse('Email is required', 400);
+      return createErrorResponse('Missing required parameter: email', 400);
     }
-
-    const userModel = new UserModel();
-    const user = await userModel.getByEmail(email);
-
-    if (!user) {
-      return createErrorResponse('User not found', 404);
+    
+    // Find the user to be promoted
+    const userToPromote = await UserModel.getByEmail(email);
+    
+    if (!userToPromote) {
+      return createErrorResponse(`User with email ${email} not found`, 404);
     }
-
-    // Update user role to Admin
-    await userModel.update(user.id, { role: 'Admin' });
-
-    return createSuccessResponse({
-      message: `User ${email} is now an admin`,
-      userId: user.id
+    
+    // Update the user's role to Admin
+    const updatedUser = await UserModel.update({
+      id: userToPromote.id,
+      role: 'Admin'
     });
-
+    
+    return createResponse({
+      message: `User ${email} has been promoted to Admin`,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role
+      }
+    }, 200);
+    
   } catch (error) {
     console.error('Make admin error:', error);
-    return createErrorResponse(error.message, 500);
+    return createErrorResponse('Internal server error', 500);
   }
 };

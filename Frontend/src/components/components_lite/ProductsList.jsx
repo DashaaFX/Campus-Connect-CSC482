@@ -1,4 +1,4 @@
-// src/components/components_lite/ProductsList.jsx
+// ...existing code...
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -20,13 +20,18 @@ const ProductList = ({ products = [] }) => {
     try {
       const productId = getProductId(product);
       if (!productId) {
-        throw new Error('Invalid product ID');
+        toast.error('Invalid product ID');
+        return;
       }
       
-      await addToCart({ productId, quantity: 1 });
-      toast.success(`${getProductTitle(product)} added to cart`);
+      const result = await addToCart({ productId, quantity: 1 });
+      if (result.success) {
+        toast.success(`${getProductTitle(product)} added to cart`);
+      } else {
+        toast.error(result.error || 'Failed to add to cart');
+      }
     } catch (err) {
-      console.error('Error adding to cart:', err);
+      // Error adding to cart - handled by error state
       toast.error('Failed to add to cart');
     }
   };
@@ -46,7 +51,7 @@ const ProductList = ({ products = [] }) => {
                   alt={getProductTitle(product)}
                   className="object-cover w-full h-48 rounded-md"
                   onError={(e) => {
-                    console.error('Image failed to load:', e.target.src);
+                    // Image failed to load - handled by UI fallback
                     e.target.onerror = null;
                     e.target.src = getPlaceholderImage();
                   }}

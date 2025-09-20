@@ -3,12 +3,12 @@ version = 0.1
 [default]
 [default.deploy]
 [default.deploy.parameters]
-stack_name = "campus-connect-local"
-s3_prefix = "campus-connect-local"  
+stack_name = "campus-connect-dev2"
+s3_prefix = "campus-connect-dev2"  
 region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "Environment=\"local\""
+parameter_overrides = "Environment=\"dev2\""
 resolve_s3 = true
-disable_rollback = true
+disable_rollback = false
 image_repositories = []

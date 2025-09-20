@@ -19,7 +19,7 @@ export const handler = async (event) => {
       return await requestOrder.handler(event);
     }
     
-    if ((path === '/orders' || path === '/orders/my-orders') && method === 'GET') {
+    if ((path === '/orders' || path === '/orders/my-orders' || path === '/orders/seller-orders') && method === 'GET') {
       return await getOrders.handler(event);
     }
     

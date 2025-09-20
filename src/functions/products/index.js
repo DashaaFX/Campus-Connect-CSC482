@@ -3,6 +3,7 @@ import * as getProduct from './getProduct.js';
 import * as createProduct from './createProduct.js';
 import * as updateProduct from './updateProduct.js';
 import * as deleteProduct from './deleteProduct.js';
+import * as getSellerProducts from './getSellerProducts.js';
 import { createErrorResponse } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
@@ -20,8 +21,6 @@ export const handler = async (event) => {
     }
     
     if (path.includes('/products/seller/') && method === 'GET') {
-      // Import and use the getSellerProducts function
-      const { getSellerProducts } = await import('../../admin/getSellerProducts.js');
       return await getSellerProducts.handler(event);
     }
     

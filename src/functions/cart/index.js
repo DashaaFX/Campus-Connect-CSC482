@@ -5,19 +5,18 @@ import * as removeFromCart from './removeFromCart.js';
 import * as clearCart from './clearCart.js';
 import { createErrorResponse } from '/opt/nodejs/utils/response.js';
 
-export const handler = async (event) => {
-  try {
-    const path = event.path || event.resource;
-    const method = event.httpMethod;
+const cartHandler = async (event) => {
+  const path = event.path || event.resource;
+  const method = event.httpMethod;
 
-    // Route to appropriate handler based on path and method
-    if (path === '/cart' && method === 'GET') {
-      return await getCart.handler(event);
-    }
-    
-    if ((path === '/cart' || path === '/cart/add') && method === 'POST') {
-      return await addToCart.handler(event);
-    }
+  // Route to appropriate handler based on path and method
+  if (path === '/cart' && method === 'GET') {
+    return await getCart.handler(event);
+  }
+  
+  if ((path === '/cart' || path === '/cart/add') && method === 'POST') {
+    return await addToCart.handler(event);
+  }
     
     if (path.includes('/cart/') && method === 'PUT') {
       return await updateCartItem.handler(event);
@@ -31,11 +30,15 @@ export const handler = async (event) => {
       return await removeFromCart.handler(event);
     }
 
-    // If no route matches
-    return createErrorResponse(`Route not found: ${method} ${path}`, 404);
-    
-  } catch (error) {
-    console.error('Cart handler error:', error);
-    return createErrorResponse('Internal server error', 500);
-  }
+  // If no route matches
+  const errorResponse = createErrorResponse(`Route not found: ${method} ${path}`, 404);
+  errorResponse.headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+    'Access-Control-Allow-Methods': 'GET,POST,DELETE,PUT,OPTIONS'
+  };
+  return errorResponse;
 };
+
+// Export the handler directly
+export const handler = cartHandler;

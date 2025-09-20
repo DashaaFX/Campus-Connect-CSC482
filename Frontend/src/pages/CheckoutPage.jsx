@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { getProductImageUrl, getPlaceholderImage } from '@/utils/productHelpers';
 
 const CheckoutPage = () => {
-  const { items, loading, error, clearCart } = useCartStore(); 
+  const { items, loading, error, clearCart } = useCartStore();
   const { token } = useAuthStore();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -26,15 +26,15 @@ const CheckoutPage = () => {
         toast.error('Failed to load cart items');
       }
     };
-    
+
     // Immediate initial fetch
     fetchCartData();
-    
+
     // Re-fetch cart once after a short delay to ensure products load correctly
     const initialRetryTimeout = setTimeout(() => {
       fetchCartData();
     }, 800);
-    
+
     return () => {
       clearTimeout(initialRetryTimeout);
     };
@@ -46,6 +46,7 @@ const CheckoutPage = () => {
     return acc + (parseFloat(item.product.price) * (parseInt(item.quantity) || 1));
   }, 0);
 
+  // Track campus location
   const placeOrder = async () => {
     if (items.length === 0) {
       toast.error('Your cart is empty');
@@ -59,15 +60,43 @@ const CheckoutPage = () => {
 
     try {
       setIsProcessing(true);
-      await axios.post(`${ORDER_API_ENDPOINT}/place`, {}, { 
+      // Use the correct endpoint (without /place) and include required shipping address
+      const response = await axios.post(`${ORDER_API_ENDPOINT}`, {
+        shippingAddress: {
+          address: "Campus Exchange", // Using a default value since this is a campus pickup system
+          city: "University Campus",
+          state: "CA",
+          zipCode: "90210",
+          country: "USA"
+        }
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      // Check if the order creation was successful using the new response format
+      if (!response.data.success && response.data.message) {
+        throw new Error(response.data.message);
+      }
+
       toast.success('Order placed successfully!');
       await clearCart(); // clear cart via Zustand
       navigate('/my-orders');
     } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'Checkout failed');
+      // Handle authentication errors specially
+      if (err.response?.status === 401) {
+        toast.error('Your session has expired. Please sign in again.');
+        navigate('/login', { state: { from: '/checkout' } });
+        return;
+      }
+
+      // More detailed error reporting for other errors
+      if (err.response) {
+        toast.error(`Error ${err.response.status}: ${err.response.data?.message || 'Checkout failed'}`);
+      } else if (err.request) {
+        toast.error('Server did not respond. Please try again later.');
+      } else {
+        toast.error('Error preparing request: ' + err.message);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -76,20 +105,19 @@ const CheckoutPage = () => {
   return (
     <div className="max-w-4xl py-8 mx-auto">
       <h1 className="mb-6 text-3xl font-extrabold text-center text-gray-800">Checkout</h1>
-      
       {loading && (
         <div className="flex items-center justify-center py-8">
           <div className="w-10 h-10 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
           <p className="ml-3 text-gray-600">Loading cart items...</p>
         </div>
       )}
-      
+
       {error && (
         <div className="p-4 mb-6 text-red-700 bg-red-100 rounded-lg">
           <p>{error}</p>
         </div>
       )}
-      
+
       {!loading && items.length === 0 ? (
         <div className="p-8 text-center bg-white border border-gray-200 shadow-sm rounded-xl">
           <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mx-auto mb-4 text-gray-400">
@@ -97,7 +125,7 @@ const CheckoutPage = () => {
           </svg>
           <h2 className="mb-2 text-xl font-semibold">Your cart is empty</h2>
           <p className="mb-4 text-gray-500">Add items to your cart before checkout.</p>
-          <button 
+          <button
             onClick={() => navigate('/')}
             className="px-4 py-2 font-medium text-blue-600 border border-blue-600 rounded hover:bg-blue-50"
           >
@@ -109,7 +137,7 @@ const CheckoutPage = () => {
           <div className="md:col-span-2">
             <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-xl">
               <h2 className="mb-4 text-xl font-semibold">Order Items</h2>
-              
+
               <div className="space-y-4">
                 {items.map(item => (
                   <div key={item.productId} className="flex items-center p-3 border border-gray-100 rounded-lg">
@@ -133,7 +161,7 @@ const CheckoutPage = () => {
                     <div className="flex-1 ml-4">
                       <h3 className="font-medium">{item.product?.title || 'Product'}</h3>
                       <p className="text-sm text-gray-500">
-                        Quantity: {item.quantity} × ${parseFloat(item.product?.price || 0).toFixed(2)}
+                        Quantity: {item.quantity} A- ${parseFloat(item.product?.price || 0).toFixed(2)}
                       </p>
                     </div>
                     <div className="font-medium">
@@ -144,19 +172,19 @@ const CheckoutPage = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="h-fit">
             <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-xl">
               <h2 className="mb-4 text-xl font-semibold">Order Summary</h2>
-              
+
               <div className="py-4 space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
                   <span>${total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Shipping</span>
-                  <span>Free</span>
+                  <span className="text-gray-600">Delivery</span>
+                  <span>In-person exchange</span>
                 </div>
                 <div className="pt-2 mt-2 border-t border-gray-200">
                   <div className="flex justify-between">
@@ -165,16 +193,29 @@ const CheckoutPage = () => {
                   </div>
                 </div>
               </div>
-              
+
+              <div className="mb-4 mt-4">
+                <p className="text-sm text-gray-600">
+                  You'll arrange a meeting location with the seller after they approve your order request.
+                </p>
+              </div>
+
+              <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-md">
+                <p className="text-sm">
+                  <strong>How it works:</strong> After placing your order request, sellers will be notified.
+                  You'll coordinate with them directly to arrange the exchange details.
+                </p>
+              </div>
+
               <button
                 onClick={placeOrder}
                 disabled={isProcessing || items.length === 0}
-                className={`w-full px-4 py-3 mt-4 font-medium text-white bg-black rounded-lg 
-                  ${isProcessing || items.length === 0 ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-800'}`}
+                className={`w-full px-4 py-3 mt-4 font-medium text-white bg-black rounded-lg
+                ${isProcessing || items.length === 0 ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-800'}`}
               >
-                {isProcessing ? 'Processing...' : 'Place Order'}
+                {isProcessing ? 'Processing...' : 'Request Order'}
               </button>
-              
+
               <button
                 onClick={() => navigate('/cart')}
                 className="w-full px-4 py-2 mt-2 font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -190,4 +231,3 @@ const CheckoutPage = () => {
 };
 
 export default CheckoutPage;
-

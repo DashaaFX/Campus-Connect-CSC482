@@ -133,7 +133,8 @@ const PostProduct = () => {
     try {
       const res = await axios.post(PRODUCT_API_ENDPOINT, productData, {
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         }
       });
       if (res.data.success) {

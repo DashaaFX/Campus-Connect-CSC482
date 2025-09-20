@@ -14,11 +14,11 @@ export const handler = async (event) => {
       body: JSON.stringify({})
     };
   }
-  
+
   try {
     // Get user info from JWT authorizer context
     const userId = event.requestContext?.authorizer?.userId;
-    
+
     if (!userId) {
       return createErrorResponse('User authentication required', 401);
     }
@@ -43,47 +43,41 @@ export const handler = async (event) => {
       const price = item.product?.price || item.price || 0;
       return sum + (price * item.quantity);
     }, 0);
-    
-    // Only pass the fields we want to update
-    // Don't include userId or any key fields
+
     const updates = {
       items: updatedItems,
       total: updatedTotal
     };
-    
+
     await cartModel.update(userId, updates);
 
     // Get the updated cart after changes
     const updatedCart = await cartModel.getByUserId(userId);
-    
+
     const response = createSuccessResponse({
       message: 'Item removed from cart successfully',
       cart: updatedCart,
       items: updatedCart.items || [] // Ensure items are returned for frontend compatibility
     });
-    
-    // Add CORS headers
+
     response.headers = {
-      ...response.headers,
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
       'Access-Control-Allow-Methods': 'DELETE,OPTIONS'
     };
-    
+
     return response;
 
   } catch (error) {
     console.error('Remove from cart error:', error);
     const errorResponse = createErrorResponse(error.message, 500);
-    
-    // Add CORS headers to error response too
+
     errorResponse.headers = {
-      ...errorResponse.headers,
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
       'Access-Control-Allow-Methods': 'DELETE,OPTIONS'
     };
-    
+
     return errorResponse;
   }
 };

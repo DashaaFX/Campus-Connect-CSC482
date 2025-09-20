@@ -4,21 +4,8 @@ import { SubcategoryModel } from '/opt/nodejs/models/subcategoryModel.js';
 
 export const handler = async (event) => {
   try {
-    // Check if this is a CORS preflight request
-    if (event.httpMethod === 'OPTIONS') {
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-          'Access-Control-Allow-Methods': 'GET,OPTIONS'
-        },
-        body: JSON.stringify({})
-      };
-    }
-
     // Get user info from JWT authorizer context or path parameters
-    let sellerId = event.pathParameters?.sellerId;
+    let sellerId = event.pathParameters?.id;
     
     // If no sellerId in path params, use authenticated user
     if (!sellerId) {
@@ -63,38 +50,17 @@ export const handler = async (event) => {
             }
           } catch (error) {
             console.error('Error fetching subcategory:', error);
-            // Keep original subcategory ID if error occurs
           }
         }
       }
     }
 
-    const response = createSuccessResponse({
+    return createSuccessResponse({
       products: products || []
     });
-    
-    // Add CORS headers to the response
-    response.headers = {
-      ...response.headers,
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-      'Access-Control-Allow-Methods': 'GET,OPTIONS'
-    };
-
-    return response;
 
   } catch (error) {
     console.error('Get seller products error:', error);
-    const errorResponse = createErrorResponse(error.message, 500);
-    
-    // Add CORS headers to error response too
-    errorResponse.headers = {
-      ...errorResponse.headers,
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-      'Access-Control-Allow-Methods': 'GET,OPTIONS'
-    };
-    
-    return errorResponse;
+    return createErrorResponse('Internal server error', 500);
   }
 };

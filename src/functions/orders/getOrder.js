@@ -10,24 +10,23 @@ export const handler = async (event) => {
       return createErrorResponse('User authentication required', 401);
     }
 
+    // Order retrieval by ID
     const orderId = event.pathParameters?.id;
     if (!orderId) {
       return createErrorResponse('Order ID required', 400);
     }
 
-    const order = await orderModel.get(orderId);
+    const order = await orderModel.get(orderId); // alias to getById in model
     if (!order) {
       return createErrorResponse('Order not found', 404);
     }
 
-    // Users can only view their own orders
-    if (order.userId !== userId) {
+    // Users can only view their own orders (as buyer or seller)
+    if (order.userId !== userId && order.sellerId !== userId) {
       return createErrorResponse('Not authorized to view this order', 403);
     }
 
-    return createSuccessResponse({
-      order
-    });
+    return createSuccessResponse({ order });
 
   } catch (error) {
     console.error('Get order error:', error);

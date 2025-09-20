@@ -66,7 +66,6 @@ const verifyToken = async (token) => {
 };
 
 export const handler = async (event) => {
-  // For AuthorizerPayloadFormatVersion 1.0, check the methodArn for OPTIONS
   if (event.methodArn && event.methodArn.includes('/OPTIONS/')) {
     return generatePolicy('anonymous', 'Allow', event.methodArn);
   }
@@ -93,9 +92,10 @@ export const handler = async (event) => {
     
     const decoded = await verifyToken(cleanToken);
     
-    // Extract userId and email from the decoded token
+    // Extract userId, email and role from the decoded token
     const userId = decoded.userId || decoded.sub || decoded.id;
     const email = decoded.email;
+    const role = decoded.role || 'User'; // Default to User if not specified
     
     // Authentication successful
     
@@ -112,10 +112,12 @@ export const handler = async (event) => {
     return generatePolicy(userId, 'Allow', wildcardArn, { 
       userId, 
       email,
-      // Include additional user info if available
+      role,
+      // Include additional user info if available, with role consistently
       user: JSON.stringify({
         id: userId,
-        email: email
+        email: email,
+        role: role
       })
     });
     

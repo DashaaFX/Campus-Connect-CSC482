@@ -41,11 +41,16 @@ const Products = () => {
       // Use the utility function to get a consistent ID
       const productId = getProductId(product);
       if (!productId) {
-        throw new Error('Invalid product ID');
+        toast.error('Invalid product ID');
+        return;
       }
       
-      await addToCart({ productId, quantity });
-      toast.success(`${getProductTitle(product)} added to cart`);
+      const result = await addToCart({ productId, quantity });
+      if (result.success) {
+        toast.success(`${getProductTitle(product)} added to cart`);
+      } else {
+        toast.error(result.error || 'Failed to add to cart');
+      }
     } catch (err) {
       console.error('Failed to add to cart:', err);
       toast.error('Failed to add to cart');

@@ -38,7 +38,7 @@ const MyOrdersPage = () => {
               <div className="mt-2">
                 {order.items.map(item => (
                   <div key={item.product} className="flex justify-between py-1 text-sm border-b">
-                    <div>{item.title}</div>
+                    <div>{item.product?.title || item.title || 'Product Title'}</div>
                     <div>Qty: {item.quantity} @ ${Number(item.price || 0).toFixed(2)}</div>
                   </div>
                 ))}
