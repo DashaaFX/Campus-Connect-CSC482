@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useForm } from "@/hooks/useForm";
 import ImageUploader from "../ui/ImageUploader";
-import axios from "axios";
-import { USER_API_ENDPOINT, UPLOAD_API_ENDPOINT } from "@/utils/data";
+import api from "@/utils/axios"; 
+import {  UPLOAD_API_ENDPOINT } from "@/utils/data";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -40,10 +40,17 @@ const Register = () => {
     if (user) navigate("/");
   }, [user, navigate]);
 
+  const validateAdelphiEmail = (email) => {
+  return typeof email === "string" && email.trim().toLowerCase().endsWith("@mail.adelphi.edu");
+  };
   const submitHandler = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
+    if (!validateAdelphiEmail(input.email)) {
+    toast.error("Please use your Adelphi University email (@mail.adelphi.edu)");
+    return;
+    }
     let profilePictureUrl = null;
 
     try {
@@ -52,7 +59,7 @@ const Register = () => {
         toast.info("Uploading profile picture...");
         
         // Use the registration-specific upload API endpoint (no auth required)
-        const uploadResponse = await axios.post(`${UPLOAD_API_ENDPOINT}/registration/url`, {
+        const uploadResponse = await api.post(`${UPLOAD_API_ENDPOINT}/registration/url`, {
           fileName: profilePictureFile.name,
           fileType: profilePictureFile.type,
           uploadType: 'profile',
@@ -64,8 +71,7 @@ const Register = () => {
           }
         });
         
-        // Upload the file directly to S3
-        await axios.put(uploadResponse.data.uploadUrl, profilePictureFile, {
+        await api.put(uploadResponse.data.uploadUrl, profilePictureFile, {
           headers: { 'Content-Type': profilePictureFile.type }
         });
         
@@ -81,8 +87,8 @@ const Register = () => {
       // Register the user with the profile picture URL
       const registerResult = await register(userData);
       
-      toast.success("Registration successful!");
-      navigate("/");
+      toast.success("Registration successful, Please log in");
+      navigate("/login");
     } catch (err) {
       toast.error(error || "Registration failed");
     }
@@ -97,7 +103,7 @@ const Register = () => {
         <h1 className="mb-5 text-xl font-bold text-center text-blue-600">Register</h1>
 
         <div className="my-2">
-          <Label>Fullname</Label>
+          <Label>Full Name</Label>
           <Input
             type="text"
             name="fullname"
@@ -184,7 +190,7 @@ const Register = () => {
           <Link to="/login" className="font-semibold text-blue-700">
             Login
           </Link>
-        </p>
+        </p>  
       </form>
     </div>
   );

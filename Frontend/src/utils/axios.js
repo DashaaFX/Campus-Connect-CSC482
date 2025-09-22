@@ -69,7 +69,7 @@ api.interceptors.response.use(
       if (!error.config?.url?.includes('/upload')) {
         localStorage.removeItem('token');
         localStorage.removeItem('auth-storage');
-        window.location.href = '/login';
+        //window.location.href = '/login';
       }
     }
     return Promise.reject(error);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { Button } from '../components/ui/button';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
@@ -15,7 +15,7 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
     
     const fetchCategories = async () => {
       try {
-        const res = await axios.get(CATEGORY_API_ENDPOINT);
+        const res = await api.get(CATEGORY_API_ENDPOINT);
         if (!mounted) return;
         const categoriesData = res.data.categories || [];
         setCategories(categoriesData);
@@ -26,7 +26,7 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
           
           try {
             const catId = cat.id || cat._id;
-            const subRes = await axios.get(`${CATEGORY_API_ENDPOINT}/${catId}/subcategories`);
+            const subRes = await api.get(`${CATEGORY_API_ENDPOINT}/${catId}/subcategories`);
             
             if (!mounted) break;
             // Handle both formats: direct array or nested in data property

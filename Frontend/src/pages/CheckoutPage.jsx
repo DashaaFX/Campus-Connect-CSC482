@@ -1,6 +1,6 @@
 // src/pages/CheckoutPage.jsx
 import React from 'react';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ORDER_API_ENDPOINT } from '@/utils/data';
@@ -49,6 +49,11 @@ const CheckoutPage = () => {
   const placeOrder = async () => {
     if (items.length === 0) {
       toast.error('Your cart is empty');
+      return;
+    }
+    if (!token) {
+      toast.error('You must be logged in to place an order.');
+      navigate('/login');
       return;
     }
 

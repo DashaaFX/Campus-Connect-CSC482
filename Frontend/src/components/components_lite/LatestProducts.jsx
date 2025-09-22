@@ -1,27 +1,40 @@
 // src/components/products/LatestProducts.jsx
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { PRODUCT_API_ENDPOINT } from '@/utils/data';
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { useCartStore } from '@/store/useCartStore';
 import { toast } from 'sonner';
+
+import { useAuthStore } from '@/store/useAuthStore';
 import { formatPrice } from '@/utils/formatPrice';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const LatestProducts = ({ limit = 6 }) => {
+
   const [products, setProducts] = useState([]);
   const { addToCart } = useCartStore();
+  const { user } = useAuthStore();
 
   useEffect(() => {
-    axios
+    api
       .get(`${PRODUCT_API_ENDPOINT}?limit=${limit}&sort=-createdAt`)
       .then(res => {
-        setProducts(res.data.products || []);
+        let allProducts = res.data.products || [];
+        // Filter out products created by the logged-in user
+        if (user && user.id) {
+          allProducts = allProducts.filter(
+            (p) => p.sellerId !== user.id && p.userId !== user.id
+          );
+        }
+        // Sort by createdAt descending
+        allProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setProducts(allProducts.slice(0, limit));
       })
       .catch(err => console.error('Failed to load products', err));
-  }, [limit]);
+  }, [limit, user]);
 
   const handleAddToCart = async (productId) => {
     try {
@@ -64,7 +77,7 @@ const LatestProducts = ({ limit = 6 }) => {
               />
             )}
 
-            <h3 className="mt-4 text-lg font-semibold">{product.title}</h3>
+            <h3 className="mt-4 text-lg font-semibold">{product.name}</h3>
 
             {product.pdf?.length > 0 && (
               <span className="mt-1 inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">
@@ -94,4 +107,3 @@ const LatestProducts = ({ limit = 6 }) => {
 };
 
 export default LatestProducts;
-

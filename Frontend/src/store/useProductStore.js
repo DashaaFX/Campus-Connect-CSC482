@@ -1,7 +1,7 @@
 // src/store/useProductStore.js
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import axios from "axios";
+import api from "@/utils/axios";
 import { PRODUCT_API_ENDPOINT } from "@/utils/data";
 
 export const useProductStore = create(
@@ -39,7 +39,7 @@ export const useProductStore = create(
       fetchProducts: async (page = 1) => {
         set({ loading: true, error: null });
         try {
-          const res = await axios.get(`${PRODUCT_API_ENDPOINT}?page=${page}`);
+          const res = await api.get(`${PRODUCT_API_ENDPOINT}?page=${page}`);
           const data = res.data;
           set({
             products: data.products || [],
@@ -60,7 +60,7 @@ export const useProductStore = create(
       fetchProductById: async (id) => {
         set({ loading: true, error: null });
         try {
-          const res = await axios.get(`${PRODUCT_API_ENDPOINT}/${id}`);
+          const res = await api.get(`${PRODUCT_API_ENDPOINT}/${id}`);
           set({ product: res.data.product || res.data, loading: false });
         } catch (err) {
           set({
@@ -74,7 +74,7 @@ export const useProductStore = create(
       createNewProduct: async ({ formData, token }) => {
         set({ loading: true, error: null });
         try {
-          const res = await axios.post(PRODUCT_API_ENDPOINT, formData, {
+          const res = await api.post(PRODUCT_API_ENDPOINT, formData, {
             headers: {
               "Content-Type": "multipart/form-data",
               Authorization: `Bearer ${token}`,
@@ -98,7 +98,7 @@ export const useProductStore = create(
       updateExistingProduct: async ({ id, productData, token }) => {
         set({ loading: true, error: null });
         try {
-          const res = await axios.put(`${PRODUCT_API_ENDPOINT}/${id}`, productData, {
+          const res = await api.put(`${PRODUCT_API_ENDPOINT}/${id}`, productData, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -123,7 +123,7 @@ export const useProductStore = create(
       deleteProduct: async ({ id, token }) => {
         set({ loading: true, error: null });
         try {
-          await axios.delete(`${PRODUCT_API_ENDPOINT}/${id}`, {
+          await api.delete(`${PRODUCT_API_ENDPOINT}/${id}`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -145,7 +145,7 @@ export const useProductStore = create(
       updateProductStock: async ({ id, quantity }) => {
         set({ loading: true, error: null });
         try {
-          const res = await axios.patch(`${PRODUCT_API_ENDPOINT}/${id}/stock`, { quantity });
+          const res = await api.patch(`${PRODUCT_API_ENDPOINT}/${id}/stock`, { quantity });
           const updatedProduct = res.data;
           set((state) => ({
             product: updatedProduct,

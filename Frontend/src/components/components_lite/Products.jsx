@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { PRODUCT_API_ENDPOINT } from '@/utils/data';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -17,9 +17,10 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [currentImgIdx, setCurrentImgIdx] = useState(0); // <-- Move hook to top level
 
   useEffect(() => {
-    axios.get(`${PRODUCT_API_ENDPOINT}/${id}`)
+    api.get(`${PRODUCT_API_ENDPOINT}/${id}`)
       .then(res => {
         const productData = res.data.product || res.data;
         setProduct(productData);
@@ -52,6 +53,18 @@ const Products = () => {
     }
   };
 
+  const handlePrev = () => {
+    setCurrentImgIdx((prev) =>
+      product && product.images ? (prev === 0 ? product.images.length - 1 : prev - 1) : 0
+    );
+  };
+
+  const handleNext = () => {
+    setCurrentImgIdx((prev) =>
+      product && product.images ? (prev === product.images.length - 1 ? 0 : prev + 1) : 0
+    );
+  };
+
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
@@ -64,18 +77,53 @@ const Products = () => {
       </div>
       <div className="container px-4 py-8 mx-auto">
         <div className="flex flex-col gap-8 md:flex-row">
-          <div className="w-full md:w-1/2">
-            {product.images?.length > 0 ? (
+          <div className="flex flex-col items-center w-full md:w-1/2">
+            {product.images?.length === 1 ? (
               <img
-                src={getProductImageUrl(product)}
+                src={product.images[0]}
                 alt={getProductTitle(product)}
-                className="object-cover w-full h-auto rounded"
+                className="object-cover w-full mb-2 rounded h-96"
                 onError={(e) => {
-                  console.error('Image failed to load:', e.target.src);
                   e.target.onerror = null;
                   e.target.src = getPlaceholderImage();
                 }}
               />
+            ) : product.images?.length > 1 ? (
+              <div className="relative flex flex-col items-center w-full">
+                <img
+                  src={product.images[currentImgIdx]}
+                  alt={`${getProductTitle(product)} ${currentImgIdx + 1}`}
+                  className="object-cover w-full mb-2 rounded h-96"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = getPlaceholderImage();
+                  }}
+                />
+                <button
+                  type="button"
+                  className="absolute p-2 text-white transform -translate-y-1/2 bg-gray-700 rounded-full left-2 top-1/2"
+                  onClick={handlePrev}
+                  aria-label="Previous image"
+                >
+                  &#8592;
+                </button>
+                <button
+                  type="button"
+                  className="absolute p-2 text-white transform -translate-y-1/2 bg-gray-700 rounded-full right-2 top-1/2"
+                  onClick={handleNext}
+                  aria-label="Next image"
+                >
+                  &#8594;
+                </button>
+                <div className="flex justify-center gap-2 mt-2">
+                  {product.images.map((_, idx) => (
+                    <span
+                      key={idx}
+                      className={`inline-block w-3 h-3 rounded-full ${idx === currentImgIdx ? "bg-yellow-500" : "bg-gray-300"}`}
+                    />
+                  ))}
+                </div>
+              </div>
             ) : product.pdf?.length > 0 ? (
               <iframe
                 src={`https://docs.google.com/viewer?url=${encodeURIComponent(product.pdf[0])}&embedded=true`}
@@ -88,13 +136,13 @@ const Products = () => {
               <img
                 src={getPlaceholderImage()}
                 alt="placeholder"
-                className="object-cover w-full h-auto rounded"
+                className="object-cover w-full rounded h-96"
               />
             )}
           </div>
 
           <div className="flex-1">
-            <h1 className="mb-4 text-3xl font-bold">{product.title}</h1>
+            <h1 className="mb-4 text-3xl font-bold">{product.name}</h1>
             {product.pdf?.length > 0 && (
               <span className="inline-block mb-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">
                 Digital PDF Material
@@ -139,4 +187,3 @@ const Products = () => {
 };
 
 export default Products;
-

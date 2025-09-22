@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
+import api from "@/utils/axios";
 import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
 import ProductList from "./ProductsList";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,10 @@ const PublicProductPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [sort, setSort] = useState("");
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const PRODUCTS_PER_PAGE = 9;
   useEffect(() => {
-    const initialSearch = searchParams.get('q') || "";
+    const initialSearch = searchParams.get('search') || "";
     const initialCategory = searchParams.get('category') || "";
     const initialSubcategory = searchParams.get('subcategory') || "";
     const initialSort = searchParams.get('sort') || "";
@@ -42,7 +43,7 @@ const PublicProductPage = () => {
 
   // Load categories
   useEffect(() => {
-    axios
+    api
       .get(CATEGORY_API_ENDPOINT)
       .then(res => {
         setCategories(res.data.categories || []);
@@ -59,7 +60,7 @@ const PublicProductPage = () => {
       setSubcategories([]);
       return;
     }
-    axios
+    api
       .get(`${CATEGORY_API_ENDPOINT}/${selectedCategory}/subcategories`)
       .then(res => {
         // Handle multiple formats: direct array, nested in data property, or object with numbered keys
@@ -89,12 +90,16 @@ const PublicProductPage = () => {
     try {
       const params = new URLSearchParams();
 
-      if (search) params.append('q', search);
+      if (search) params.append('search', search);
       if (selectedCategory) params.append('category', selectedCategory);
-      if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
+      //if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
       if (sort) params.append('sort', sort);
 
+<<<<<<< HEAD
       const res = await axios.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
+=======
+      const res = await api.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
+>>>>>>> e845458571f7fce87cec8c79a7cc936ad8c05c14
       let allProducts = res.data.products || [];
       // Filter out products created by the logged-in user
       if (user && user.id) {
@@ -102,6 +107,17 @@ const PublicProductPage = () => {
           (p) => p.sellerId !== user.id && p.userId !== user.id
         );
       }
+<<<<<<< HEAD
+=======
+      //filter subcategory separately 
+       if (selectedSubcategory) {
+          allProducts = allProducts.filter(p =>
+            p.subcategory === selectedSubcategory ||
+            p.subcategory?.id === selectedSubcategory ||
+            p.subcategory?._id === selectedSubcategory
+          );
+        }
+>>>>>>> e845458571f7fce87cec8c79a7cc936ad8c05c14
       setProducts(allProducts);
     } catch (err) {
       console.error("Failed to fetch products", err);
@@ -115,7 +131,7 @@ const PublicProductPage = () => {
   //  When user changes filters, update URL
   const updateUrlParams = () => {
     const params = new URLSearchParams();
-    if (search) params.set('q', search);
+    if (search) params.set('search', search);
     if (selectedCategory) params.set('category', selectedCategory);
     if (selectedSubcategory) params.set('subcategory', selectedSubcategory);
     if (sort) params.set('sort', sort);
@@ -134,7 +150,15 @@ const PublicProductPage = () => {
     setSelectedSubcategory("");
     setSort("");
   };
+    useEffect(() => {
+    setCurrentPage(1);
+    }, [search, selectedCategory, selectedSubcategory, sort]);
 
+  const paginatedProducts = products.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+   currentPage * PRODUCTS_PER_PAGE
+  );
+  const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
   return (
     <> 
     
@@ -213,8 +237,36 @@ const PublicProductPage = () => {
             <h2 className="mb-2 text-2xl font-semibold">No products found</h2>
             <p>Try adjusting your search or filters.</p>
           </div>
-        ) : (
-          <ProductList products={products} />
+        ) :  (
+          <>
+            <ProductList products={paginatedProducts} />
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <Button
+                variant="outline"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                ←
+              </Button>
+              {Array.from({ length: totalPages }, (_, idx) => (
+                <Button
+                  key={idx + 1}
+                  variant={currentPage === idx + 1 ? "default" : "outline"}
+                  onClick={() => setCurrentPage(idx + 1)}
+                  className="px-3"
+                >
+                  {idx + 1}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                →
+              </Button>
+            </div>
+          </>
         )}
       </div>
     </>

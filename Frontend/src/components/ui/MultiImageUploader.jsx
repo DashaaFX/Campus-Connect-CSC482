@@ -106,12 +106,12 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
               <img 
                 src={imageUrl} 
                 alt={`Product ${index + 1}`} 
-                className="w-full h-24 object-cover rounded-lg border"
+                className="object-cover w-full h-24 border rounded-lg"
               />
               <button
                 type="button"
                 onClick={() => removeImage(index)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute p-1 text-white transition-opacity bg-red-500 rounded-full opacity-0 -top-2 -right-2 hover:bg-red-600 group-hover:opacity-100"
               >
                 <X size={16} />
               </button>
@@ -121,16 +121,16 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
       )}
 
       {/* Add new image button */}
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+      <div className="p-4 text-center border-2 border-gray-300 border-dashed rounded-lg">
         <div className="flex flex-col items-center space-y-2">
-          <Plus className="h-8 w-8 text-gray-400" />
+          <Plus className="w-8 h-8 text-gray-400" />
           <p className="text-gray-500">Add Product Image</p>
           <Input
             type="file"
             accept="image/*"
             onChange={handleFileChange}
             disabled={uploading}
-            className="cursor-pointer w-full"
+            className="w-full cursor-pointer"
           />
           {uploading && (
             <p className="text-blue-500">Uploading...</p>

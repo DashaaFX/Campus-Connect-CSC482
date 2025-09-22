@@ -6,7 +6,7 @@ import { ORDER_API_ENDPOINT } from '@/utils/data';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { 
   getProductImageUrl, 
   getPlaceholderImage, 
@@ -138,7 +138,7 @@ const CartPage = () => {
   const handleBuyRequest = async (productId) => {
     if (!window.confirm('Buy this product?')) return;
     try {
-      await axios.post(`${ORDER_API_ENDPOINT}/request`, { productId }, { 
+      await api.post(`${ORDER_API_ENDPOINT}/request`, { productId }, { 
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Request sent');
