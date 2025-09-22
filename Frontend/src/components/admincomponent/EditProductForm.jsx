@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
+import api from "@/utils/axios"; // Use custom axios instance
 import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,7 @@ const EditProductForm = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await axios.get(CATEGORY_API_ENDPOINT);
+        const res = await api.get(CATEGORY_API_ENDPOINT);
         setCategories(res.data.categories || []);
       } catch (err) {
         console.error('Failed to load categories:', err);
@@ -52,7 +52,7 @@ const EditProductForm = () => {
     const fetchSubcategories = async () => {
       if (!formData.category) return;
       try {
-        const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
+        const res = await api.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
         const subcategoriesData = Array.isArray(res.data) ? res.data : (res.data.data || res.data.subcategories || []);
         setSubcategories(subcategoriesData);
       } catch (err) {
@@ -67,7 +67,7 @@ const EditProductForm = () => {
     const fetchProduct = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${PRODUCT_API_ENDPOINT}/${id}`, {
+        const res = await api.get(`${PRODUCT_API_ENDPOINT}/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const product = res.data.product || res.data;
@@ -102,7 +102,7 @@ const EditProductForm = () => {
     setError("");
 
     try {
-      await axios.put(
+      await api.put(
         `${PRODUCT_API_ENDPOINT}/${id}`,
         formData,
         {
@@ -123,7 +123,7 @@ const EditProductForm = () => {
     if (!confirm("Are you sure you want to delete this product?")) return;
     setLoading(true);
     try {
-      await axios.delete(`${PRODUCT_API_ENDPOINT}/${id}`, {
+      await api.delete(`${PRODUCT_API_ENDPOINT}/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       navigate("/my-sales");

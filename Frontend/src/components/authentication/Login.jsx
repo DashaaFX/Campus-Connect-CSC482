@@ -30,16 +30,28 @@ const Login = () => {
     if (user) navigate("/");
   }, [user, navigate]);
 
+  const validateAdelphiEmail = (email) => {
+  return typeof email === "string" && email.trim().toLowerCase().endsWith("@mail.adelphi.edu");
+  };
   const submitHandler = async (e) => {
     e.preventDefault();
     if (!validate()) return;
+
+    if (!validateAdelphiEmail(input.email)) {
+      toast.error("Please use your Adelphi University email (@mail.adelphi.edu)");
+      return;
+    }
 
     try {
       await login({ email: input.email, password: input.password });
       toast.success("Logged in successfully!");
       navigate("/");
-    } catch {
-      toast.error("Login failed");
+    } catch (err) {
+        const errorMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Email not registered or password incorrect";
+      toast.error(errorMsg);
     }
   };
 

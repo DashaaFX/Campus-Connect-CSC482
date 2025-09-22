@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { Button } from '@/components/ui/button';
 import { ORDER_API_ENDPOINT } from '@/utils/data';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -13,7 +13,7 @@ const ProductStatus = () => {
 
   useEffect(() => {
     if (!token) return;
-    axios.get(`${ORDER_API_ENDPOINT}/product/${productId}`, { 
+    api.get(`${ORDER_API_ENDPOINT}/product/${productId}`, { 
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => {
@@ -32,7 +32,7 @@ const ProductStatus = () => {
   }, [productId, token]);
 
   const handleStatusUpdate = (orderId, status) => {
-    axios.patch(
+    api.patch(
       `${ORDER_API_ENDPOINT}/${orderId}/status`,
       { status }, // ✅ correct payload
       { headers: { Authorization: `Bearer ${token}` } } // ✅ correct config

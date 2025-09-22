@@ -11,6 +11,7 @@
     "test-local": "./test-local.bat"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.879.0"
+    "@aws-sdk/client-dynamodb": "^3.879.0",
+    "firebase": "^12.2.1"
   }
 }

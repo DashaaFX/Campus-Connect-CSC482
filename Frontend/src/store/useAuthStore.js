@@ -1,7 +1,6 @@
-// src/store/useAuthStore.js
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import axios from "axios";
+import api from "@/utils/axios";
 import { USER_API_ENDPOINT } from "@/utils/data";
 
 export const useAuthStore = create(
@@ -19,10 +18,10 @@ export const useAuthStore = create(
       register: async (userData) => {
         set({ loading: true, error: null });
         try {
-          const res = await axios.post(`${USER_API_ENDPOINT}/register`, userData, {
+          const res = await api.post(`${USER_API_ENDPOINT}/register`, userData, {
             headers: { "Content-Type": "application/json" },
           });
-          set({ user: res.data.user, token: res.data.token, loading: false });
+          set({ loading: false }); 
           if (!res.data.success) throw new Error(res.data.message);
           return res.data;
         } catch (err) {
@@ -35,18 +34,16 @@ export const useAuthStore = create(
       login: async ({ email, password }) => {
         set({ loading: true, error: null });
         try {
-          const res = await axios.post(
+          const res = await api.post(
             `${USER_API_ENDPOINT}/login`,
             { email, password }
           );
           
-          // Make sure the user object has the id in a consistent format
           const user = res.data.user;
           if (!user.id && user._id) {
             user.id = user._id;
           }
           
-          // Ensure profile picture is set consistently
           if (!user.profilePicture && user.profile?.profilePhoto) {
             user.profilePicture = user.profile.profilePhoto;
           }
@@ -69,7 +66,7 @@ export const useAuthStore = create(
         
         set({ loading: true, error: null });
         try {
-          const res = await axios.get(`${USER_API_ENDPOINT}/me`, {
+          const res = await api.get(`${USER_API_ENDPOINT}/me`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           
@@ -101,16 +98,15 @@ export const useAuthStore = create(
         set({ loading: true, error: null });
         try {
           // Call the API to update profile picture
-          const res = await axios.put(
+          const res = await api.put(
             `${USER_API_ENDPOINT}/profile/picture`,
             { profilePicture: imageUrl },
             { headers: { Authorization: `Bearer ${token}` } }
           );
           
-          // Update the user in state with the new profile picture
           const updatedUser = { 
             ...user, 
-            profilePicture: imageUrl, // Update the main profilePicture field
+            profilePicture: imageUrl, 
             profile: { 
               ...(user.profile || {}), 
               profilePhoto: imageUrl 
@@ -126,8 +122,8 @@ export const useAuthStore = create(
       },
     }),
     {
-      name: "auth-storage", // persist key
-      partialize: (state) => ({ user: state.user, token: state.token }), // persist user and token
+      name: "auth-storage", 
+      partialize: (state) => ({ user: state.user, token: state.token }), 
     }
   )
 );

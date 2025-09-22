@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "@/utils/axios";
 import { useNavigate } from "react-router-dom";
 import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
 import { Button } from "@/components/ui/button";
@@ -40,10 +40,10 @@ const PostProduct = () => {
 
   useEffect(() => {
     let mounted = true;
-    
+
     const fetchCategories = async () => {
       try {
-        const res = await axios.get(CATEGORY_API_ENDPOINT);
+        const res = await api.get(CATEGORY_API_ENDPOINT);
         if (!mounted) return;
         setCategories(res.data.categories || []);
       } catch (err) {
@@ -53,9 +53,9 @@ const PostProduct = () => {
         }
       }
     };
-    
+
     fetchCategories();
-    
+
     return () => {
       mounted = false;
     };
@@ -66,14 +66,13 @@ const PostProduct = () => {
       setSubcategories([]);
       return;
     }
-    
+
     let mounted = true;
-    
+
     const fetchSubcategories = async () => {
       try {
-        const res = await axios.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
+        const res = await api.get(`${CATEGORY_API_ENDPOINT}/${formData.category}/subcategories`);
         if (!mounted) return;
-        // Handle multiple formats: direct array, nested in data property, or object with numbered keys
         let subcategoriesData;
         if (Array.isArray(res.data)) {
           subcategoriesData = res.data;
@@ -82,7 +81,6 @@ const PostProduct = () => {
         } else if (res.data.subcategories && Array.isArray(res.data.subcategories)) {
           subcategoriesData = res.data.subcategories;
         } else if (res.data && typeof res.data === 'object') {
-          // Convert object with numbered keys to array
           subcategoriesData = Object.values(res.data).filter(item => item && typeof item === 'object' && item.id);
         } else {
           subcategoriesData = [];
@@ -95,9 +93,9 @@ const PostProduct = () => {
         }
       }
     };
-    
+
     fetchSubcategories();
-    
+
     return () => {
       mounted = false;
     };
@@ -118,24 +116,19 @@ const PostProduct = () => {
       return;
     }
 
-    // Create JSON payload instead of FormData
-    // Make sure we have the userId in the correct format
     const userId = user?.id || user?._id || user?.userId;
-    
+
     const productData = {
       ...formData,
-      images: productImages, // Array of uploaded image URLs
+      images: productImages,
       userId: userId,
-      // Include sellerId explicitly as userId for backend consistency
       sellerId: userId
     };
     setLoading(true);
     try {
-      // Log authorization status before request
-      const res = await axios.post(PRODUCT_API_ENDPOINT, productData, {
+      const res = await api.post(PRODUCT_API_ENDPOINT, productData, {
         headers: {
           "Content-Type": "application/json",
-          // Explicitly add Authorization header for debugging
           "Authorization": `Bearer ${token}`
         }
       });
@@ -214,7 +207,6 @@ const PostProduct = () => {
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {console.log('Rendering subcategories in PostProduct:', subcategories)}
               {subcategories.map((sub) => (
                 <SelectItem key={sub.id || sub._id} value={sub.id || sub._id}>
                   {sub.name}

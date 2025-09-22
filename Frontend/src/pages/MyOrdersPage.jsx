@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { ORDER_API_ENDPOINT } from '@/utils/data';
 import { format } from 'date-fns';
 import { ORDER_STATUS_COLORS } from '@/constants/order-status.jsx';
@@ -12,7 +12,7 @@ const MyOrdersPage = () => {
 
   useEffect(() => {
     if (!token) return;
-    axios.get(`${ORDER_API_ENDPOINT}/my-orders`, { 
+    api.get(`${ORDER_API_ENDPOINT}/my-orders`, { 
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => setOrders(res.data.orders || res.data))

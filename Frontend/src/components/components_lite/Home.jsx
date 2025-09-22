@@ -3,7 +3,7 @@ import Header from './Header';
 import { Button } from '../ui/button';
 import { useNavigate } from 'react-router-dom';
 import Footer from './Footer';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { PRODUCT_API_ENDPOINT } from '@/utils/data';
 import LatestProducts from './LatestProducts';
 
@@ -14,7 +14,7 @@ const Home = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios
+    api
       .get(`${PRODUCT_API_ENDPOINT}?limit=6&sort=-createdAt`)
       .then(res => {
         setRecentProducts(res.data.data || res.data);

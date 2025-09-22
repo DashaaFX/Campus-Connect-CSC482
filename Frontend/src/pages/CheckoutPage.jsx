@@ -1,6 +1,6 @@
 // src/pages/CheckoutPage.jsx
 import React from 'react';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ORDER_API_ENDPOINT } from '@/utils/data';
@@ -59,7 +59,7 @@ const CheckoutPage = () => {
 
     try {
       setIsProcessing(true);
-      await axios.post(`${ORDER_API_ENDPOINT}/place`, {}, { 
+      await api.post(`${ORDER_API_ENDPOINT}/place`, {}, { 
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Order placed successfully!');

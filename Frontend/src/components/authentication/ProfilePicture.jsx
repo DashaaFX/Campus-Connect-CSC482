@@ -1,7 +1,7 @@
 import React from "react";
 import ImageUploader from "../ui/ImageUploader";
 import { useAuthStore } from "@/store/useAuthStore";
-import axios from "../../utils/axios";
+import api from "@/utils/axios";
 import { USER_API_ENDPOINT } from "../../utils/data";
 import { toast } from "sonner";
 
@@ -13,7 +13,7 @@ const ProfilePicture = () => {
     if (fileUrl && token) {
       try {
         // Update the user's profile picture in the database
-        await axios.put(`${USER_API_ENDPOINT}/profile/picture`, {
+        await api.put(`${USER_API_ENDPOINT}/profile/picture`, {
           profilePicture: fileUrl
         }, {
           headers: { Authorization: `Bearer ${token}` }

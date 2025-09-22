@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PiBuildingOfficeBold } from 'react-icons/pi';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { CATEGORY_API_ENDPOINT } from '@/utils/data';
 import { useNavigate } from 'react-router-dom';
 import Carousel1 from '@/components/ui/Carousel1';
@@ -11,7 +11,7 @@ const Header = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios
+    api
       .get(CATEGORY_API_ENDPOINT)
       .then(res => setCategories(res.data.categories || []))
       .catch(err => console.error('Failed to load categories', err));

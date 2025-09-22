@@ -74,7 +74,7 @@ const ProductList = ({ products = [] }) => {
           <div className="flex flex-col justify-between flex-1 mt-4">
             <div>
               <Link to={`/products/${product.id || product._id}`}>
-                <h2 className="mb-1 text-lg font-semibold">{product.title}</h2>
+                <h2 className="mb-1 text-lg font-semibold">{product.name}</h2>
               </Link>
 
               {product.pdf?.length > 0 && (

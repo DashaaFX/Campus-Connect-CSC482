@@ -1,6 +1,6 @@
   import React, { useEffect, useState } from 'react';
   import { useNavigate } from 'react-router-dom';
-  import axios from 'axios';
+  import api from "@/utils/axios";
   import { PRODUCT_API_ENDPOINT } from '@/utils/data';
 
   import AdminSidebar from './AdminSidebar';
@@ -30,7 +30,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
         try {
           // Try the user ID in different formats
           const userId = user?._id || user?.id || user?.userId;
-          const res = await axios.get(`${PRODUCT_API_ENDPOINT}/seller/${userId}`, {
+          const res = await api.get(`${PRODUCT_API_ENDPOINT}/seller/${userId}`, {
             headers: { 
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -172,7 +172,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
                   </Dialog>
 
                   <div>
-                    <div>{product.title}</div>
+                    <div>{product.name}</div>
                     <div className="text-sm text-gray-500">
                       {product.description?.slice(0, 20)}...
                     </div>

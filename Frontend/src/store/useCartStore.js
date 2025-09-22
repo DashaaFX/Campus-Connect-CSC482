@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import axios from "axios";
+import api from "@/utils/axios";
 import { CART_API_ENDPOINT, PRODUCT_API_ENDPOINT } from "@/utils/data";
 import { useAuthStore } from "./useAuthStore";
 import { processCartItem } from "@/utils/productHelpers";
@@ -17,7 +17,7 @@ export const useCartStore = create(
         if (!token) return;
         set({ loading: true, error: null });
         try {
-          const res = await axios.get(CART_API_ENDPOINT, {
+          const res = await api.get(CART_API_ENDPOINT, {
             headers: { Authorization: `Bearer ${token}` }
           });
           const processedItems = await Promise.all((res.data.items || []).map(async (item) => {
@@ -27,7 +27,7 @@ export const useCartStore = create(
             }
             if (!item.product || !item.product.title || !item.product.price) {
               try {
-                const productRes = await axios.get(`${PRODUCT_API_ENDPOINT}/${item.productId}`, {
+                const productRes = await api.get(`${PRODUCT_API_ENDPOINT}/${item.productId}`, {
                   headers: { Authorization: `Bearer ${token}` }
                 });
                 const fetchedProduct = productRes.data.product || productRes.data;
@@ -90,7 +90,7 @@ export const useCartStore = create(
           }
         });
         try {
-          await axios.post(`${CART_API_ENDPOINT}/add`, { productId, quantity }, {
+          await api.post(`${CART_API_ENDPOINT}/add`, { productId, quantity }, {
             headers: { Authorization: `Bearer ${token}` }
           });
           // Re-fetch cart to sync with backend
@@ -106,7 +106,7 @@ export const useCartStore = create(
         if (!token) return;
         set({ loading: true, error: null });
         try {
-          const res = await axios.delete(`${CART_API_ENDPOINT}/remove/${productId}`, {
+          const res = await api.delete(`${CART_API_ENDPOINT}/remove/${productId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           let updatedItems = res.data.cart?.items || res.data.items || [];
@@ -139,7 +139,7 @@ export const useCartStore = create(
         if (!token) return;
         set({ loading: true, error: null });
         try {
-          const res = await axios.patch(`${CART_API_ENDPOINT}/decrease/${productId}`, {}, {
+          const res = await api.patch(`${CART_API_ENDPOINT}/decrease/${productId}`, {}, {
             headers: { Authorization: `Bearer ${token}` }
           });
           set({ items: res.data.items || [], loading: false });
@@ -153,7 +153,7 @@ export const useCartStore = create(
         if (!token) return;
         set({ loading: true, error: null });
         try {
-          const res = await axios.delete(`${CART_API_ENDPOINT}/clear`, {
+          const res = await api.delete(`${CART_API_ENDPOINT}/clear`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           const updatedItems = res.data.cart?.items || res.data.items || [];

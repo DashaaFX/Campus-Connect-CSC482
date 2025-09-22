@@ -13,11 +13,8 @@ import {
   Home,
   Package,
   Info,
-  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
-import { USER_API_ENDPOINT } from "@/utils/data";
 import { useCartStore } from "@/store/useCartStore"; // Zustand store
 import { useAuthStore } from "@/store/useAuthStore"; // Zustand auth store
 

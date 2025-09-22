@@ -1,12 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import ProfilePictureManager from '@/components/profile/ProfilePictureManager';
+import EditProfileModal from '@/components/components_lite/EditProfileModal';
 
 const ProfilePage = () => {
   const { user, token, loading } = useAuthStore();
   const navigate = useNavigate();
-
+  const [editOpen, setEditOpen] = useState(false);
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!token && !loading) {
@@ -29,8 +30,16 @@ const ProfilePage = () => {
 
   return (
     <div className="max-w-3xl px-4 py-8 mx-auto">
-      <h1 className="mb-6 text-3xl font-bold">My Profile</h1>
-      
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">My Profile</h1>
+        <button
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
+          onClick={() => setEditOpen(true)}
+        >
+          Edit Profile
+        </button>
+      </div>
+      <EditProfileModal open={editOpen} setOpen={setEditOpen} />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {/* Left column: Profile picture */}
         <div className="md:col-span-1">

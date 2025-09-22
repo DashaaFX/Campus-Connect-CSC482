@@ -1,6 +1,6 @@
 // src/components/products/LatestProducts.jsx
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from "@/utils/axios";
 import { PRODUCT_API_ENDPOINT } from '@/utils/data';
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -19,7 +19,7 @@ const LatestProducts = ({ limit = 6 }) => {
   const { user } = useAuthStore();
 
   useEffect(() => {
-    axios
+    api
       .get(`${PRODUCT_API_ENDPOINT}?limit=${limit}&sort=-createdAt`)
       .then(res => {
         let allProducts = res.data.products || [];
@@ -29,6 +29,8 @@ const LatestProducts = ({ limit = 6 }) => {
             (p) => p.sellerId !== user.id && p.userId !== user.id
           );
         }
+        // Sort by createdAt descending
+        allProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setProducts(allProducts.slice(0, limit));
       })
       .catch(err => console.error('Failed to load products', err));
@@ -75,7 +77,7 @@ const LatestProducts = ({ limit = 6 }) => {
               />
             )}
 
-            <h3 className="mt-4 text-lg font-semibold">{product.title}</h3>
+            <h3 className="mt-4 text-lg font-semibold">{product.name}</h3>
 
             {product.pdf?.length > 0 && (
               <span className="mt-1 inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">

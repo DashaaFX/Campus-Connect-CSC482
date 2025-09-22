@@ -1,9 +1,9 @@
+//Built with Copilot, used to upload profile and product images.
 import React, { useState } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { Button } from "../ui/button";
 import { Upload, X } from "lucide-react";
-import axios from "../../utils/axios";
+import api from "@/utils/axios";
 import { UPLOAD_API_ENDPOINT } from "../../utils/data";
 import { useAuthStore } from "../../store/useAuthStore";
 
@@ -41,7 +41,7 @@ const ImageUploader = ({ onUploadComplete, uploadType = "profile", currentImage 
     try {
       if (requireAuth) {
         // Use presigned URL for authenticated uploads
-        const uploadResponse = await axios.post(`${UPLOAD_API_ENDPOINT}/url`, {
+        const uploadResponse = await api.post(`${UPLOAD_API_ENDPOINT}/url`, {
           fileName: file.name,
           fileType: file.type,
           uploadType: uploadType, // Explicitly using the passed uploadType
@@ -53,7 +53,7 @@ const ImageUploader = ({ onUploadComplete, uploadType = "profile", currentImage 
         const { uploadUrl, fileUrl } = uploadResponse.data;
 
         // Upload file to S3
-        await axios.put(uploadUrl, file, {
+        await api.put(uploadUrl, file, {
           headers: {
             'Content-Type': file.type,
           },
@@ -108,20 +108,20 @@ const ImageUploader = ({ onUploadComplete, uploadType = "profile", currentImage 
           <img 
             src={previewUrl} 
             alt="Preview" 
-            className="w-32 h-32 object-cover rounded-lg border"
+            className="object-cover w-32 h-32 border rounded-lg"
           />
           <button
             type="button"
             onClick={removeImage}
-            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+            className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
           >
             <X size={16} />
           </button>
         </div>
       ) : (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-          <Upload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-          <p className="text-gray-500 mb-3">
+        <div className="p-6 text-center border-2 border-gray-300 border-dashed rounded-lg">
+          <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+          <p className="mb-3 text-gray-500">
             {uploadType === 'profile' ? 'Upload your profile picture' : 'Upload product images'}
           </p>
           <Input
@@ -132,7 +132,7 @@ const ImageUploader = ({ onUploadComplete, uploadType = "profile", currentImage 
             className="cursor-pointer"
           />
           {uploading && (
-            <p className="text-blue-500 mt-2">Uploading...</p>
+            <p className="mt-2 text-blue-500">Uploading...</p>
           )}
         </div>
       )}

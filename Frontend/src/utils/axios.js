@@ -71,7 +71,7 @@ api.interceptors.response.use(
         // Clear both old and new token storage
         localStorage.removeItem('token');
         localStorage.removeItem('auth-storage');
-        window.location.href = '/login';
+        //window.location.href = '/login';
       }
     }
     return Promise.reject(error);
