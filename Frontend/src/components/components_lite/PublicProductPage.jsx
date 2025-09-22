@@ -95,11 +95,7 @@ const PublicProductPage = () => {
       //if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
       if (sort) params.append('sort', sort);
 
-<<<<<<< HEAD
-      const res = await axios.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
-=======
       const res = await api.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
->>>>>>> e845458571f7fce87cec8c79a7cc936ad8c05c14
       let allProducts = res.data.products || [];
       // Filter out products created by the logged-in user
       if (user && user.id) {
@@ -107,8 +103,6 @@ const PublicProductPage = () => {
           (p) => p.sellerId !== user.id && p.userId !== user.id
         );
       }
-<<<<<<< HEAD
-=======
       //filter subcategory separately 
        if (selectedSubcategory) {
           allProducts = allProducts.filter(p =>
@@ -117,7 +111,6 @@ const PublicProductPage = () => {
             p.subcategory?._id === selectedSubcategory
           );
         }
->>>>>>> e845458571f7fce87cec8c79a7cc936ad8c05c14
       setProducts(allProducts);
     } catch (err) {
       console.error("Failed to fetch products", err);
