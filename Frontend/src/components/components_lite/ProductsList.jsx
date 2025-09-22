@@ -26,8 +26,7 @@ const ProductList = ({ products = [] }) => {
       await addToCart({ productId, quantity: 1 });
       toast.success(`${getProductTitle(product)} added to cart`);
     } catch (err) {
-  // Error adding to cart - handled by error state
-      toast.error('Failed to add to cart');
+      toast.error(err.message || 'Failed to add to cart');
     }
   };
 

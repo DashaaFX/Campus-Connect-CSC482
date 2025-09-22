@@ -25,7 +25,7 @@ export const useCartStore = create(
           });
 
           // Handle reverted response format
-          const cartItems = res.data.cart?.items || [];
+          const cartItems = res.data.cart?.items || res.data.items || [];
           
           const processedItems = await Promise.all(cartItems.map(async (item) => {
             if (!item || !item.productId) {
@@ -76,49 +76,46 @@ export const useCartStore = create(
 
       addToCart: async ({ productId, quantity = 1 }) => {
         const { token } = useAuthStore.getState();
-        if (!token) {
-          console.error('No auth token available');
-          throw new Error('You must be logged in to add items to cart');
-        }
-        
-        if (!productId) {
-          console.error('No product ID provided');
-          throw new Error('Invalid product ID');
-        }
-        
-        // First, check if product has enough stock before adding to cart
+  if (!token) { const msg = 'Login required'; set({ error: msg }); throw new Error(msg); }
+  if (!productId || quantity <= 0) { const msg = 'Invalid cart request'; set({ error: msg }); throw new Error(msg); }
+
+        // Lightweight pre-check using current cart + fetched product
+        let existingQty = 0;
+        const existing = get().items.find(i => i.productId === productId);
+        if (existing) existingQty = existing.quantity || 0;
+
+        set({ loading: true, error: null });
         try {
           const productRes = await axios.get(`${PRODUCT_API_ENDPOINT}/${productId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          
           const product = productRes.data.product || productRes.data;
-          
-          if (product.stock !== undefined && product.stock < quantity) {
-            set({ error: `Insufficient stock. Only ${product.stock} units available.`, loading: false });
-            return;
+          if (!product) { const msg = 'Product not found'; set({ error: msg, loading: false }); throw new Error(msg); }
+
+            if (typeof product.stock !== 'undefined') {
+            const totalRequested = existingQty + quantity;
+            if (product.stock === 0) { const msg = 'This product is out of stock'; set({ error: msg, loading: false }); throw new Error(msg); }
+            if (totalRequested > product.stock) { 
+              const msg = `Cannot add more. Only ${product.stock} total units available and you already have ${existingQty} in your cart.`; 
+              set({ error: msg, loading: false }); 
+              throw new Error(msg); 
+            }
           }
+
+          const res = await axios.post(`${CART_API_ENDPOINT}/add`, { productId, quantity: parseInt(quantity) }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          const raw = res.data.cart?.items || res.data.items || [];
+          set({ items: raw.map(processCartItem), loading: false });
+          // Re-sync from backend for authoritative state (silently)
+          try { await get().fetchCart(); } catch {}
         } catch (err) {
-          console.error('Error checking product stock:', err);
-          // Continue with add to cart even if stock check fails
-        }
-        
-        set({ loading: true, error: null });
-        
-        try {
-          const res = await axios.post(
-            `${CART_API_ENDPOINT}/add`,
-            { productId, quantity: parseInt(quantity) },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          
-          // Handle reverted response format
-          const items = res.data.cart?.items || [];
-          const processedItems = items.map(item => processCartItem(item));
-          set({ items: processedItems, loading: false });
-        } catch (err) {
-          console.error('Error adding to cart:', err);
-          set({ error: err.response?.data?.message || "Failed to add item to cart", loading: false });
+          // Preserve backend stock/validation message if present
+          const backendMsg = err.response?.data?.message;
+          const msg = backendMsg || err.message || 'Failed to add item';
+          set({ error: msg, loading: false });
+          throw new Error(msg);
         }
       },
 
@@ -166,6 +163,30 @@ export const useCartStore = create(
           set({ items: res.data.items || [], loading: false });
         } catch (err) {
           set({ error: err.response?.data?.message || "Failed to update cart", loading: false });
+        }
+      },
+
+      removeOne: async (productId) => {
+        const { token } = useAuthStore.getState();
+        if (!token) return;
+        const current = get().items.find(i => i.productId === productId);
+        if (!current) return;
+        // If quantity > 1, decrement via update endpoint; else remove fully
+        if (current.quantity > 1) {
+          set({ loading: true, error: null });
+          try {
+            // Use update endpoint (PUT /cart/{id}) to set new quantity
+            await axios.put(`${CART_API_ENDPOINT}/${productId}`, { quantity: current.quantity - 1 }, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            await get().fetchCart();
+          } catch (err) {
+            set({ error: err.response?.data?.message || 'Failed to decrement item', loading: false });
+            throw err;
+          }
+        } else {
+          // Quantity is 1 -> remove item
+            await get().removeFromCart(productId);
         }
       },
 

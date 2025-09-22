@@ -114,10 +114,11 @@ const CartPage = () => {
 
   const handleRemove = async (id) => {
     try {
-      await removeFromCart(id);
-      toast.success('Item removed');
-    } catch {
-      toast.error('Failed to remove item');
+      // Prefer decrement semantics
+      await useCartStore.getState().removeOne(id);
+      toast.success('Updated cart');
+    } catch (e) {
+      toast.error(e.message || 'Failed to update cart');
     }
   };
 

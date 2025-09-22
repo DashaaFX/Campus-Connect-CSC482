@@ -1,5 +1,5 @@
 import { CartModel } from '/opt/nodejs/models/Cart.js';
-import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
+import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
   // Handle CORS preflight requests
@@ -23,7 +23,8 @@ export const handler = async (event) => {
       return createErrorResponse('User authentication required', 401);
     }
 
-    const productId = event.pathParameters?.productId;
+    // Support both /cart/{productId} and /cart/{id} as defined in template.yaml (uses {id})
+    const productId = event.pathParameters?.productId || event.pathParameters?.id;
     if (!productId) {
       return createErrorResponse('Product ID required', 400);
     }

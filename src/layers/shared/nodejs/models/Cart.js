@@ -24,9 +24,11 @@ export class CartModel extends BaseModel {
     const expressionAttributeNames = {};
     const expressionAttributeValues = { ':updatedAt': timestamp };
 
-    // Ensure we're not trying to update any key fields
-    const safeUpdates = { ...updates };
-    delete safeUpdates.userId;  // Remove primary key if present
+  // Ensure we're not trying to update any key/meta fields that we manage separately
+  const safeUpdates = { ...updates };
+  delete safeUpdates.userId;      // Primary key
+  delete safeUpdates.updatedAt;   // Will always be injected below
+  delete safeUpdates.createdAt;   // Immutable once set
     
     Object.keys(safeUpdates).forEach((key, index) => {
       const attributeName = `#attr${index}`;

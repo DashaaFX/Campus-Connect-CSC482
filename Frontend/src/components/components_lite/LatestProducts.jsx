@@ -36,12 +36,13 @@ const LatestProducts = ({ limit = 6 }) => {
       .catch(err => console.error('Failed to load products', err));
   }, [limit, user]);
 
-  const handleAddToCart = async (productId) => {
+  const handleAddToCart = async (product) => {
     try {
+      const productId = product.id || product._id;
       await addToCart({ productId, quantity: 1 });
-      toast.success('Added to cart');
-    } catch {
-      toast.error('Failed to add to cart');
+      toast.success(`${product.name || product.title || 'Product'} added to cart`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to add to cart');
     }
   };
 
@@ -98,7 +99,7 @@ const LatestProducts = ({ limit = 6 }) => {
             <Link to={`/products/${product.id || product._id}`}>
               <Button size="sm" variant="outline">View</Button>
             </Link>
-            <Button size="sm" onClick={() => handleAddToCart(product.id || product._id)}>Add to Cart</Button>
+            <Button size="sm" onClick={() => handleAddToCart(product)}>Add to Cart</Button>
           </div>
         </div>
       ))}

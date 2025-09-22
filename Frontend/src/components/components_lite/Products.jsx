@@ -33,23 +33,18 @@ const Products = () => {
   }, [id]);
 
   const handleAddToCart = async () => {
-    if (quantity > product.stock) {
-      toast.error('Requested quantity exceeds stock available');
+    if (typeof product.stock === 'number' && quantity > product.stock) {
+      toast.error(`Cannot add ${quantity}. Only ${product.stock} available.`);
       return;
     }
 
     try {
-      // Use the utility function to get a consistent ID
       const productId = getProductId(product);
-      if (!productId) {
-        throw new Error('Invalid product ID');
-      }
-      
+      if (!productId) throw new Error('Invalid product ID');
       await addToCart({ productId, quantity });
       toast.success(`${getProductTitle(product)} added to cart`);
     } catch (err) {
-      console.error('Failed to add to cart:', err);
-      toast.error('Failed to add to cart');
+      toast.error(err.message || 'Failed to add to cart');
     }
   };
 
