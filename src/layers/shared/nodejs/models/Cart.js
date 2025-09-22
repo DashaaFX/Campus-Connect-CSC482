@@ -22,11 +22,16 @@ export class CartModel extends BaseModel {
     const timestamp = new Date().toISOString();
     const updateExpression = [];
     const expressionAttributeNames = {};
-    const expressionAttributeValues = { ':updatedAt': timestamp };
+    const expressionAttributeValues = {};
 
     // Ensure we're not trying to update any key fields
     const safeUpdates = { ...updates };
     delete safeUpdates.userId;  // Remove primary key if present
+    
+    // Ensure updatedAt is included only once
+    if (!safeUpdates.updatedAt) {
+      safeUpdates.updatedAt = timestamp;
+    }
     
     Object.keys(safeUpdates).forEach((key, index) => {
       const attributeName = `#attr${index}`;
@@ -36,9 +41,6 @@ export class CartModel extends BaseModel {
       expressionAttributeNames[attributeName] = key;
       expressionAttributeValues[attributeValue] = safeUpdates[key];
     });
-
-    updateExpression.push('#updatedAt = :updatedAt');
-    expressionAttributeNames['#updatedAt'] = 'updatedAt';
 
     const command = new UpdateCommand({
       TableName: this.tableName,
