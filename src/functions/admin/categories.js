@@ -15,7 +15,6 @@ export const handler = async (event) => {
     const path = event.path || event.resource;
     const method = event.httpMethod;
 
-    // Route to appropriate handler based on path and method
     if (path === '/categories' && method === 'GET') {
       return await getCategories.handler(event);
     }

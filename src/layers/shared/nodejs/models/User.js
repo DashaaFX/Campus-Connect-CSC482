@@ -51,12 +51,10 @@ export class UserModel extends BaseModel {
   }
 
   async getByIdNum(idnum) {
-    const users = await this.queryByIndex(
-      'IdNumIndex',
-      'idnum = :idnum',
-      { ':idnum': idnum }
-    );
-    return users[0] || null;
+    // Since idnum might not be indexed, we'll scan for it
+    // In production, consider adding an index for this
+    const allUsers = await this.getAll();
+    return allUsers.find(user => user.idnum === idnum) || null;
   }
 
   async verifyPassword(user, password) {

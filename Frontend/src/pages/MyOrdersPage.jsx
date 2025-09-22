@@ -36,15 +36,31 @@ const MyOrdersPage = () => {
                 <span>{format(new Date(order.createdAt), 'PPpp')}</span>
               </div>
               <div className="mt-2">
-                {order.items.map(item => (
+                {(order.items || []).map(item => (
                   <div key={item.product} className="flex justify-between py-1 text-sm border-b">
                     <div>{item.product?.title || item.title || 'Product Title'}</div>
-                    <div>Qty: {item.quantity} @ ${Number(item.price || 0).toFixed(2)}</div>
+                    <div>Qty: {item.quantity} @ ${Number(item.product?.price || item.price || 0).toFixed(2)}</div>
                   </div>
                 ))}
               </div>
               <div className="flex justify-between mt-3 font-semibold">
-                <span>Total: ${Number(order.totalAmount || 0).toFixed(2)}</span>
+                <span>
+                  {/* Calculate total from items if no total field exists */}
+                  Total: ${(() => {
+                    // Try using the existing total field if available
+                    if (order.total) return Number(order.total).toFixed(2);
+                    if (order.totalAmount) return Number(order.totalAmount).toFixed(2);
+                    
+                    // Calculate total from items as fallback
+                    const calculatedTotal = (order.items || []).reduce((sum, item) => {
+                      const price = Number(item.product?.price || item.price || 0);
+                      const quantity = Number(item.quantity || 1);
+                      return sum + (price * quantity);
+                    }, 0);
+                    
+                    return calculatedTotal.toFixed(2);
+                  })()}
+                </span>
                 <span>
                   Status: <span className={`capitalize px-2 py-1 rounded ${ORDER_STATUS_COLORS[order.status] || 'bg-gray-200 text-gray-700'}`}>
                     {order.status}

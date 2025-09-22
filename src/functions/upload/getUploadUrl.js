@@ -68,8 +68,8 @@ export const handler = async (event) => {
 
     // Generate presigned URL for upload with cache-friendly headers
     const cacheControl = type === 'profile' 
-      ? 'max-age=86400'      // Profile images: 1 day cache
-      : 'max-age=2592000';   // Product images: 30 days cache
+      ? 'max-age=86400'      // 1 day cache
+      : 'max-age=2592000';   // 30 days cache
 
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,

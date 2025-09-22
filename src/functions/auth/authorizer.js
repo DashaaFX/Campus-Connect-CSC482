@@ -92,10 +92,9 @@ export const handler = async (event) => {
     
     const decoded = await verifyToken(cleanToken);
     
-    // Extract userId, email and role from the decoded token
+    // Extract userId and email from the decoded token
     const userId = decoded.userId || decoded.sub || decoded.id;
     const email = decoded.email;
-    const role = decoded.role || 'User'; // Default to User if not specified
     
     // Authentication successful
     
@@ -112,12 +111,10 @@ export const handler = async (event) => {
     return generatePolicy(userId, 'Allow', wildcardArn, { 
       userId, 
       email,
-      role,
-      // Include additional user info if available, with role consistently
+      // Include additional user info if available
       user: JSON.stringify({
         id: userId,
-        email: email,
-        role: role
+        email: email
       })
     });
     

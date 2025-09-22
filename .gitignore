@@ -6,7 +6,6 @@ yarn-error.log*
 
 # AWS SAM
 .aws-sam/
-# Uncomment the next line if you want to exclude samconfig.toml
 samconfig.toml
 
 # Environment variables

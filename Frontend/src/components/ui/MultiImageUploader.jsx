@@ -16,20 +16,20 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
   const handleFileUpload = async (file) => {
     if (!file) return;
 
-  // User authentication check
+    // Check if user is logged in
     if (!user || !token) {
       setError("Please log in to upload images");
       return;
     }
 
-  // File type validation
+    // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       setError("Please select a valid image file (JPEG, PNG, GIF, WebP)");
       return;
     }
 
-  // File size validation (5MB max)
+    // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       setError("File size must be less than 5MB");
       return;
@@ -39,7 +39,7 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
     setError("");
 
     try {
-  // Get presigned URL
+      // Get presigned URL with authentication
       const token = useAuthStore.getState().token;
       const uploadResponse = await axios.post(`${UPLOAD_API_ENDPOINT}/url`, {
         fileName: file.name,
@@ -55,7 +55,7 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
       await axios.put(uploadUrl, file, {
         headers: {
           'Content-Type': file.type,
-          // S3 upload does not require Authorization header
+          // Don't send Authorization header for S3 upload
         },
         withCredentials: false,
       });
@@ -65,7 +65,7 @@ const MultiImageUploader = ({ onUploadComplete, uploadType = "product", currentI
       onUploadComplete(newImages);
       
     } catch (err) {
-  // Upload error - handled by error state
+      console.error('Upload error:', err);
       if (err.response?.status === 401) {
         setError('Authentication required. Please log in again.');
       } else {

@@ -49,8 +49,7 @@ export const processCartItem = (item) => {
       id: item.productId,
       title: 'Loading product...',
       price: parseFloat(item.price || 0),
-      images: [],
-      stock: 0
+      images: []
     };
   }
   
@@ -61,7 +60,6 @@ export const processCartItem = (item) => {
   product.id = getProductId(product) || item.productId;
   product.title = getProductTitle(product);
   product.price = getProductPrice(product, item.price || 0);
-  product.stock = typeof product.stock === 'number' ? product.stock : parseInt(product.stock || 0);
   
   // Make sure images array exists
   if (!product.images || !Array.isArray(product.images)) {

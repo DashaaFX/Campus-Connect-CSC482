@@ -6,7 +6,6 @@ import { Link } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { useCartStore } from '@/store/useCartStore';
 import { toast } from 'sonner';
-import { useAuthStore } from '@/store/useAuthStore';
 import { formatPrice } from '@/utils/formatPrice';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -14,33 +13,21 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 const LatestProducts = ({ limit = 6 }) => {
   const [products, setProducts] = useState([]);
   const { addToCart } = useCartStore();
-  const { user } = useAuthStore();
 
   useEffect(() => {
     axios
       .get(`${PRODUCT_API_ENDPOINT}?limit=${limit}&sort=-createdAt`)
       .then(res => {
-        let allProducts = res.data.products || [];
-        // Filter out products created by the logged-in user
-        if (user && user.id) {
-          allProducts = allProducts.filter(
-            (p) => p.sellerId !== user.id && p.userId !== user.id
-          );
-        }
-        setProducts(allProducts.slice(0, limit));
+        setProducts(res.data.products || []);
       })
       .catch(err => console.error('Failed to load products', err));
-  }, [limit, user]);
+  }, [limit]);
 
   const handleAddToCart = async (productId) => {
     try {
-      const result = await addToCart({ productId, quantity: 1 });
-      if (result.success) {
-        toast.success('Added to cart');
-      } else {
-        toast.error(result.error || 'Failed to add to cart');
-      }
-    } catch (err) {
+      await addToCart({ productId, quantity: 1 });
+      toast.success('Added to cart');
+    } catch {
       toast.error('Failed to add to cart');
     }
   };

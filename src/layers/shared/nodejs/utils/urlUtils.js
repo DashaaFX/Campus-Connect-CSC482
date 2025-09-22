@@ -2,7 +2,6 @@
 export const generateAssetUrl = (key, environment = 'dev', region = 'us-east-1', cloudFrontDomain = null) => {
   if (!key) return null;
   
-  // If already a full URL, return as is
   if (key.startsWith('http')) return key;
   
   // Clean up the key

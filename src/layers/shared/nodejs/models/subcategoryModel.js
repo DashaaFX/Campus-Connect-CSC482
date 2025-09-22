@@ -33,12 +33,9 @@ export class SubcategoryModel {
     return result.Item;
   }
 
-  static async getAll(limit = 100) {
-    const command = new QueryCommand({
-      TableName: SUBCATEGORIES_TABLE,
-      IndexName: 'DefaultIndex',
-      KeyConditionExpression: 'attribute_exists(id)',
-      Limit: limit
+  static async getAll() {
+    const command = new ScanCommand({
+      TableName: SUBCATEGORIES_TABLE
     });
 
     const result = await docClient.send(command);
@@ -50,7 +47,9 @@ export class SubcategoryModel {
       TableName: SUBCATEGORIES_TABLE,
       IndexName: 'CategoryIndex',
       KeyConditionExpression: 'categoryId = :categoryId',
-      ExpressionAttributeValues: { ':categoryId': categoryId }
+      ExpressionAttributeValues: {
+        ':categoryId': categoryId
+      }
     });
 
     const result = await docClient.send(command);

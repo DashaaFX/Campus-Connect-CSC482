@@ -59,8 +59,7 @@ export const handler = async (event) => {
 };
 
 async function checkCategoryExists(name) {
-  // Since we don't have a GSI on name, we'll do a scan (not ideal for production)
-  // In production, you'd want a GSI on name for efficiency
+  // Since we don't have a GSI on name, we'll do a scan
   try {
     const params = {
       TableName: CATEGORIES_TABLE,

@@ -30,7 +30,7 @@ export const handler = async (event) => {
     }
 
     // Get existing order to verify ownership
-  const existingOrder = await orderModel.get(orderId); // uses alias to getById
+    const existingOrder = await orderModel.get(orderId);
     if (!existingOrder) {
       return createErrorResponse('Order not found', 404);
     }

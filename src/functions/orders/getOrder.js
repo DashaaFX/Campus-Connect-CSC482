@@ -10,13 +10,27 @@ export const handler = async (event) => {
       return createErrorResponse('User authentication required', 401);
     }
 
-    // Order retrieval by ID
+    // Check if this is a product-orders request
+    if (event.path === '/orders/product-orders') {
+      const productId = event.queryStringParameters?.productId;
+      if (!productId) {
+        return createErrorResponse('Product ID required as query parameter', 400);
+      }
+
+      // Get orders for a specific product (only if the user is the seller)
+      const orders = await orderModel.getByProductAndSeller(productId, userId);
+      return createSuccessResponse({
+        orders: orders || []
+      });
+    }
+
+    // Regular order retrieval by ID
     const orderId = event.pathParameters?.id;
     if (!orderId) {
       return createErrorResponse('Order ID required', 400);
     }
 
-    const order = await orderModel.get(orderId); // alias to getById in model
+    const order = await orderModel.get(orderId);
     if (!order) {
       return createErrorResponse('Order not found', 404);
     }
@@ -26,7 +40,9 @@ export const handler = async (event) => {
       return createErrorResponse('Not authorized to view this order', 403);
     }
 
-    return createSuccessResponse({ order });
+    return createSuccessResponse({
+      order
+    });
 
   } catch (error) {
     console.error('Get order error:', error);

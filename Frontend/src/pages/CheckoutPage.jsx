@@ -54,7 +54,27 @@ const CheckoutPage = () => {
 
     try {
       setIsProcessing(true);
-      await axios.post(`${ORDER_API_ENDPOINT}/place`, {}, { 
+      // Calculate total price from cart items to ensure it's included with the order
+      const totalPrice = items.reduce((acc, item) => {
+        if (!item?.product?.price) return acc;
+        return acc + (parseFloat(item.product.price) * (parseInt(item.quantity) || 1));
+      }, 0);
+      
+      // Make sure each item has the price directly on the item object
+      const itemsWithPrice = items.map(item => ({
+        ...item,
+        price: item.product?.price || 0,  // Ensure price is directly on the item
+        productTitle: item.product?.title // Keep product title for reference
+      }));
+      
+      // Send the order with calculated total and shippingAddress
+      await axios.post(ORDER_API_ENDPOINT, { 
+        shippingAddress: {}, // Required field
+        total: totalPrice,   // Send as total (matching backend field)
+        totalAmount: totalPrice, // Send as totalAmount too for compatibility
+        calculatedTotal: totalPrice, // Send as calculatedTotal as well
+        enhancedItems: itemsWithPrice // Send items with explicit price field
+      }, { 
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Order placed successfully!');

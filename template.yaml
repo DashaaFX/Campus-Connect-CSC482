@@ -26,7 +26,7 @@ Parameters:
   Environment:
     Type: String
     Default: dev2
-    AllowedValues: [dev2, dev, staging, prod]
+    AllowedValues: [dev2, local, dev, staging, prod]
 
 Resources:
   SharedLayer:

@@ -1,8 +1,4 @@
-/**
- * Formats a subcategory value for display, handling different data structures
- * @param {*} subcategory - The subcategory value (can be string ID, object, or null)
- * @returns {string} Formatted subcategory name for display
- */
+
 export const formatSubcategory = (subcategory) => {
   if (!subcategory) return 'Not specified';
   

@@ -34,8 +34,8 @@ const ProductStatus = () => {
   const handleStatusUpdate = (orderId, status) => {
     axios.patch(
       `${ORDER_API_ENDPOINT}/${orderId}/status`,
-      { status }, // ✅ correct payload
-      { headers: { Authorization: `Bearer ${token}` } } // ✅ correct config
+      { status },  
+      { headers: { Authorization: `Bearer ${token}` } } 
     )
       .then(() => {
         setRequests(prev =>

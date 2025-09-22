@@ -47,9 +47,8 @@ export const handler = async (event) => {
     }
     
     // Check if stock is sufficient
-    const productStock = parseInt(product.stock || 0);
-    if (productStock < quantity) {
-      return createErrorResponse(`Insufficient stock. Only ${productStock} units available.`, 400);
+    if (typeof product.stock !== 'undefined' && product.stock < quantity) {
+      return createErrorResponse(`Insufficient stock. Only ${product.stock} units available.`, 400);
     }
 
     // Get current cart

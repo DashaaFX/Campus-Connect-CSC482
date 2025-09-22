@@ -17,7 +17,7 @@ export const handler = async (event) => {
       return await login.handler(event);
     }
     
-    if (path.includes('/auth/profile/picture') && method === 'PUT') {
+    if (path.includes('/auth/profile-picture') && method === 'PUT') {
       return await updateProfilePicture.handler(event);
     }
 

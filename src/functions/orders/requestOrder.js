@@ -45,7 +45,7 @@ export const handler = async (event) => {
     const orderData = {
       userId: userId,
       userEmail: email,
-      sellerId: product.sellerId, // Use sellerId consistently
+      sellerId: product.sellerId || product.userId, // Add sellerId for SellerIndex GSI
       items: [{
         productId: body.productId,
         product: product,

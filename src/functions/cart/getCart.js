@@ -58,17 +58,8 @@ export const handler = async (event) => {
           
           try {
             console.log(`Fetching product ${item.productId}...`);
-            let product = await productModel.getById(item.productId);
+            const product = await productModel.getById(item.productId);
             console.log(`Product ${item.productId} result:`, product ? 'Found' : 'Not found');
-            
-            // Ensure product has both id and _id for frontend compatibility
-            if (product) {
-              product = {
-                ...product,
-                id: product.id || product._id,
-                _id: product._id || product.id
-              };
-            }
             
             if (!product) {
               console.warn(`Product ${item.productId} not found in database`);
