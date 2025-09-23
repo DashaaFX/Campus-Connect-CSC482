@@ -64,66 +64,50 @@ export const handler = async (event) => {
       cart.items = [];
     }
 
-    // Find existing item or add new one
-    const existingItemIndex = cart.items.findIndex(item => item.productId === productId);
-    
-    if (existingItemIndex >= 0) {
-      // Update quantity of existing item
-      const newQuantity = cart.items[existingItemIndex].quantity + quantity;
-      
-      // Check if total quantity exceeds available stock
-      if (typeof product.stock !== 'undefined' && product.stock < newQuantity) {
-        return createErrorResponse(`Cannot add ${quantity} more units. Only ${product.stock} total units available and you already have ${cart.items[existingItemIndex].quantity} in your cart.`, 400);
+    // Before persisting, enforce cumulative stock limit if item already in cart
+    const existing = Array.isArray(cart.items) ? cart.items.find(it => it.productId === productId) : null;
+    if (existing && typeof product.stock !== 'undefined') {
+      const newTotalQty = existing.quantity + quantity;
+      if (newTotalQty > product.stock) {
+        return createErrorResponse(`Cannot add ${quantity} more units. Only ${product.stock} total units available and you already have ${existing.quantity} in your cart.`, 400);
       }
-      
-      cart.items[existingItemIndex].quantity = newQuantity;
-    } else {
-      // Add new item with full product details for easier display
-      const cartItem = {
-        productId: productId,
-        product: {
-          _id: product.id || product._id,
-          id: product.id || product._id,
-          name: product.name || product.title,
-          title: product.title || product.name,
-          price: product.price,
-          images: product.images || [],
-          description: product.description
-        },
-        quantity: quantity,
-        addedAt: new Date().toISOString()
-      };
-      
-      cart.items.push(cartItem);
     }
 
-    // Recalculate total
-    cart.total = cart.items.reduce((sum, item) => {
-      const price = item.product?.price || item.price || 0;
-      return sum + (price * item.quantity);
-    }, 0);
-    
-    cart.updatedAt = new Date().toISOString();
-    
-    // Ensure we have a properly formatted product object to store
-    const productData = {
+    // Build normalized product payload including seller metadata
+    const normalizedProduct = {
       _id: product.id || product._id,
       id: product.id || product._id,
       title: product.title || product.name,
       name: product.name || product.title,
       price: product.price,
       images: product.images || [],
-      description: product.description || ""
+      description: product.description || "",
+      sellerId: product.sellerId || product.userId,
+      userId: product.userId || product.sellerId,
+      sellerEmail: product.sellerEmail || product.userEmail || undefined
     };
-    
-    // Save the cart using addItem which handles create or update logic
-    await cartModel.addItem(userId, productId, quantity, { 
-      product: productData
+
+    // Persist via model helper (this will upsert and handle existing quantity increment)
+    await cartModel.addItem(userId, productId, quantity, {
+      product: normalizedProduct,
+      sellerId: normalizedProduct.sellerId
     });
+
+    // Re-fetch latest cart (to return unified view) after mutation
+    const updatedCart = await cartModel.getByUserId(userId);
+
+    // Recalculate total defensively (in case model addItem does not maintain total yet)
+    updatedCart.total = Array.isArray(updatedCart.items)
+      ? updatedCart.items.reduce((sum, item) => {
+          const price = item.product?.price || item.price || 0;
+          return sum + (price * item.quantity);
+        }, 0)
+      : 0;
+    updatedCart.updatedAt = new Date().toISOString();
 
     const response = createSuccessResponse({
       message: 'Item added to cart successfully',
-      cart
+      cart: updatedCart
     });
     
     // Add CORS headers

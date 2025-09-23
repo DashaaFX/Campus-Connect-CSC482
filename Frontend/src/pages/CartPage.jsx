@@ -139,10 +139,18 @@ const CartPage = () => {
   const handleBuyRequest = async (productId) => {
     if (!window.confirm('Buy this product?')) return;
     try {
-      await api.post(`${ORDER_API_ENDPOINT}/request`, { productId }, { 
+      await api.post(`${ORDER_API_ENDPOINT}/request`, { productId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Request sent');
+      // Remove item locally for immediate feedback
+      useCartStore.setState(state => ({
+        items: state.items.filter(it => it.productId !== productId)
+      }));
+      // Background re-sync (ignore errors)
+      setTimeout(() => {
+        useCartStore.getState().fetchCart();
+      }, 150);
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to send request';
       toast.error(msg);

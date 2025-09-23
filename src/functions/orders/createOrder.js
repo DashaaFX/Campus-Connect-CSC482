@@ -1,6 +1,8 @@
 import { OrderModel } from '/opt/nodejs/models/Order.js';
 import { CartModel } from '/opt/nodejs/models/Cart.js';
+import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
+import { ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
 
 export const handler = async (event) => {
   // Handle CORS preflight requests
@@ -40,32 +42,83 @@ export const handler = async (event) => {
       return createErrorResponse('Cart is empty', 400);
     }
 
-    // Extract seller ID from the first item (assuming grouped by seller)
-    // If multiple sellers, this would need to be handled differently
-    const sellerId = cart.items[0]?.product?.sellerId || cart.items[0]?.sellerId;
+    // Group cart items by sellerId (derive when missing)
+    const productModel = new ProductModel();
+    const items = cart.items;
 
-    const orderData = {
-      userId: userId,
-      userEmail: email,
-      items: cart.items,
-      total: cart.total,
-      sellerId: sellerId, // Add sellerId for SellerIndex GSI
-      shippingAddress: body.shippingAddress,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    // Ensure each item has sellerId at item level and in product
+    for (const it of items) {
+      const existingSeller = it.sellerId || it.product?.sellerId || it.product?.userId;
+      if (!existingSeller) {
+        // Fallback: fetch product once to enrich (no extensive logging per instructions)
+        try {
+          const pId = it.productId || it.product?.id || it.product?._id;
+          if (pId) {
+            const full = await productModel.getById(pId);
+            if (full && (full.sellerId || full.userId)) {
+              const sid = full.sellerId || full.userId;
+              it.sellerId = sid;
+              if (it.product) {
+                it.product.sellerId = it.product.sellerId || sid;
+              }
+            }
+          }
+        } catch (_) { /* silent */ }
+      } else {
+        it.sellerId = existingSeller;
+        if (it.product) {
+          it.product.sellerId = it.product.sellerId || existingSeller;
+        }
+      }
+    }
+
+    // Validate every item has a sellerId after enrichment
+    const missingSeller = items.find(it => !it.sellerId);
+    if (missingSeller) {
+      return createErrorResponse('One or more items are missing seller information. Refresh cart and try again.', 500);
+    }
+
+    // Group strictly by sellerId
+    const groups = items.reduce((acc, it) => {
+      acc[it.sellerId] = acc[it.sellerId] || [];
+      acc[it.sellerId].push(it);
+      return acc;
+    }, {});
 
     const orderModel = new OrderModel();
-    const order = await orderModel.create(orderData);
+    const createdOrders = [];
+    const now = new Date().toISOString();
 
-    // Clear the cart after successful order
-    await cartModel.update(userId, { userId: userId, items: [], total: 0 });
+    for (const [sid, groupItems] of Object.entries(groups)) {
+      const total = groupItems.reduce((sum, it) => {
+        const price = it.product?.price || it.price || 0;
+        return sum + (price * it.quantity);
+      }, 0);
+      const orderData = {
+        userId,
+        userEmail: email,
+        items: groupItems,
+        total,
+        sellerId: sid,
+        shippingAddress: body.shippingAddress,
+        status: ORDER_STATUSES.PENDING,
+        createdAt: now,
+        updatedAt: now
+      };
+      const order = await orderModel.create(orderData);
+      createdOrders.push(order);
+    }
 
-    const response = createSuccessResponse({
-      message: 'Order created successfully',
-      order
-    }, 201);
+    // Clear cart only if at least one order created
+    if (createdOrders.length > 0) {
+      await cartModel.update(userId, { userId, items: [], total: 0 });
+    }
+
+    const payload = createdOrders.length === 1
+      ? { message: 'Order created successfully', order: createdOrders[0], orders: createdOrders }
+      : { message: 'Orders created successfully', orders: createdOrders };
+
+    const response = createSuccessResponse(payload, 201);
     
     // Add CORS headers
     response.headers = {

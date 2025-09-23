@@ -73,7 +73,7 @@ const CheckoutPage = () => {
       }));
       
       // Send the order with calculated total and shippingAddress
-      await axios.post(ORDER_API_ENDPOINT, { 
+      await api.post(ORDER_API_ENDPOINT, { 
         shippingAddress: {}, // Required field
         total: totalPrice,   // Send as total (matching backend field)
         totalAmount: totalPrice, // Send as totalAmount too for compatibility

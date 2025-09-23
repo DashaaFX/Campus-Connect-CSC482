@@ -1,5 +1,6 @@
 import { orderModel } from '/opt/nodejs/models/Order.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
+import { ORDER_STATUS_LIST } from '/opt/nodejs/constants/orderStatus.js';
 
 export const handler = async (event) => {
   try {
@@ -23,7 +24,7 @@ export const handler = async (event) => {
     }
 
     const { status } = body;
-    const validStatuses = ['requested', 'pending', 'approved', 'shipped', 'completed', 'cancelled'];
+  const validStatuses = ORDER_STATUS_LIST;
     
     if (!validStatuses.includes(status)) {
       return createErrorResponse('Invalid status. Must be one of: ' + validStatuses.join(', '), 400);
@@ -60,8 +61,8 @@ export const handler = async (event) => {
 
     const updateData = {
       status,
-      updatedAt: new Date().toISOString(),
-      statusUpdatedBy: userId
+      statusUpdatedBy: userId,
+      statusUpdatedAt: new Date().toISOString()
     };
 
     const updatedOrder = await orderModel.update(orderId, updateData);

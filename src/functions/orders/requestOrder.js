@@ -1,6 +1,8 @@
 import { OrderModel } from '/opt/nodejs/models/Order.js';
 import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
+import { ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
+import { CartModel } from '/opt/nodejs/models/Cart.js';
 
 export const handler = async (event) => {
   // Handle CORS preflight requests
@@ -41,19 +43,25 @@ export const handler = async (event) => {
       return createErrorResponse('Product not found', 404);
     }
 
-    // Create order request
+    const derivedSellerId = product.sellerId || product.userId;
+    if (product && !product.sellerId && product.userId) {
+      product.sellerId = product.userId; // normalize snapshot
+    }
+
+    // Create order request (single-item order)
     const orderData = {
       userId: userId,
       userEmail: email,
-      sellerId: product.sellerId || product.userId, // Add sellerId for SellerIndex GSI
+      sellerId: derivedSellerId, // For SellerIndex
       items: [{
         productId: body.productId,
         product: product,
         quantity: body.quantity || 1,
-        price: product.price
+        price: product.price,
+        sellerId: derivedSellerId
       }],
       total: (body.quantity || 1) * product.price,
-      status: 'requested',
+      status: ORDER_STATUSES.PENDING,
       requestNotes: body.notes || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -61,6 +69,20 @@ export const handler = async (event) => {
 
     const orderModel = new OrderModel();
     const order = await orderModel.create(orderData);
+
+    // Remove or decrement the item from the user's cart (buy-this semantics remove it)
+    try {
+      const cartModel = new CartModel();
+      const cart = await cartModel.getByUserId(userId);
+      if (cart && Array.isArray(cart.items)) {
+        const remaining = cart.items.filter(it => it.productId !== body.productId);
+        if (remaining.length !== cart.items.length) {
+          await cartModel.update(userId, { items: remaining, total: remaining.reduce((sum, it) => {
+            const price = it.product?.price || it.price || 0; return sum + price * (it.quantity || 1);
+          }, 0) });
+        }
+      }
+    } catch (_) { /* silent cart adjustment failure */ }
 
     const response = createSuccessResponse({
       message: 'Order request created successfully',
