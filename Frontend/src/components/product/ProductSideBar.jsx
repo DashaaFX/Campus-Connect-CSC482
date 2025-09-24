@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import api from "@/utils/axios";
-import { Button } from '../components/ui/button';
+import { Button } from '../ui/button';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { CATEGORY_API_ENDPOINT } from '@/utils/data';
 
 const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory, selectedSubcategory }) => {

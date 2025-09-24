@@ -16,17 +16,19 @@ import ProfilePage from "./pages/ProfilePage";
 import PrivacyPolicy from "./components/components_lite/PrivacyPolicy";
 import TermsofService from "./components/components_lite/TermsofService";
 import Creator from "./components/creator/Creator";
-import PostProduct from "./components/admincomponent/PostProduct";
-import EditProductForm from "./components/admincomponent/EditProductForm";
-import CategoryManagement from "./components/admincomponent/CategoryManagement";
-import AdminRoute from "./components/auth/AdminRoute";
-import PublicProductPage from "./components/components_lite/PublicProductPage";
-import Products from "./components/components_lite/Products";
+import PostProduct from "./components/product/PostProduct";
+import EditProductForm from "./components/product/EditProductForm";
+import CategoryManagement from "./components/admin/CategoryManagement";
+import AdminRoute from "./components/admin/AdminRoute";
+import PublicProductPage from "./pages/ProductPage";
+import Products from "./components/product/Products";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import MyOrdersPage from "./pages/MyOrdersPage";
 import MySalesPage from "./pages/MySalesPage";
-import ProductStatus from "./pages/ProductStatus";
+import ProductStatus from "./components/product/ProductStatus";
+import OrderDetailPage from "./pages/OrderDetailPage";
+
 const appRouter = createBrowserRouter([
   {
     path: "/",
@@ -50,6 +52,7 @@ const appRouter = createBrowserRouter([
 
       
       { path: "my-orders", element: <MyOrdersPage /> },
+      { path: "order/:orderId", element: <OrderDetailPage /> }, 
       { path: "my-sales", element: <MySalesPage /> },
       { path: "products/create", element: <PostProduct /> },
       { path: "admin/products/:id", element: <EditProductForm /> },

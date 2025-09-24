@@ -1,28 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import api from "@/utils/axios";
-import { ORDER_API_ENDPOINT } from '@/utils/data';
+import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { ORDER_STATUS_COLORS } from '@/constants/order-status.jsx';
-import { useAuthStore } from '@/store/useAuthStore';
-
+import { useOrderStore } from '@/store/useOrderStore';
+import { useNavigate } from 'react-router-dom'; 
+import { Button } from '@/components/ui/button';
 const MyOrdersPage = () => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { token } = useAuthStore();
-
+  
+  const { orders, fetchOrders, loading, error } = useOrderStore();
+  const navigate = useNavigate();
   useEffect(() => {
-    if (!token) return;
-    api.get(`${ORDER_API_ENDPOINT}/my-orders`, { 
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => setOrders(res.data.orders || res.data))
-      .catch(err => console.error('Failed to fetch orders', err))
-      .finally(() => setLoading(false));
-  }, [token]);
+    fetchOrders();
+  }, []);
 
   return (
     <div className="max-w-5xl px-4 py-6 mx-auto">
       <h1 className="mb-4 text-2xl font-bold">My Orders</h1>
+      {error && (
+      <div className="my-4 font-semibold text-red-500">
+        {error}
+      </div>
+      )}
       {loading ? (
         <p>Loading...</p>
       ) : orders.length === 0 ? (
@@ -66,6 +63,15 @@ const MyOrdersPage = () => {
                     {order.status}
                   </span>
                 </span>
+              </div>
+              <div className="mt-3 text-right">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => navigate(`/order/${ order.id}`)}
+                >
+                  View Details
+                </Button>
               </div>
             </div>
           ))}

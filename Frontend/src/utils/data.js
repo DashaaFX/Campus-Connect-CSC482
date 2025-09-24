@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://f6ae6g3h2f.execute-api.us-east-1.amazonaws.com/dev2";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const USER_API_ENDPOINT = `${API_BASE_URL}/auth`;
 export const PRODUCT_API_ENDPOINT = `${API_BASE_URL}/products`;

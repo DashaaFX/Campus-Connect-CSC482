@@ -1,64 +1,50 @@
 
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import api from "@/utils/axios";
+import { useParams , useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ORDER_API_ENDPOINT } from '@/utils/data';
-import { useAuthStore } from '@/store/useAuthStore';
 import { ORDER_STATUS_COLORS } from '@/constants/order-status';
+import { useOrderStore } from '@/store/useOrderStore';
+import { toast } from 'sonner';
 
 const ProductStatus = () => {
   const { productId } = useParams();
-  const [requests, setRequests] = useState([]);
-  const { token } = useAuthStore();
+  const { orders, fetchSales, updateOrderStatus, loading, error } = useOrderStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!token) return;
-    // Fetch all seller orders then filter client-side for this product
-    api.get(`${ORDER_API_ENDPOINT}/seller-orders`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        const raw = res.data?.orders || res.data?.data || [];
-        if (!Array.isArray(raw)) {
-          console.error('Unexpected response for seller-orders:', res.data);
-          setRequests([]);
-          return;
-        }
-        // Filter orders that include this productId in items
-        const filtered = raw.filter(o => Array.isArray(o.items) && o.items.some(it => {
-          return (
-            it.productId === productId ||
-            it.product?.id === productId ||
-            it.product?._id === productId ||
-            it.product?.productId === productId
-          );
-        }));
-        setRequests(filtered);
-      })
-      .catch(err => {
-        console.error('Error loading seller orders:', err);
-        setRequests([]);
-      });
-  }, [productId, token]);
+    fetchSales();
+  }, []);
 
-  const handleStatusUpdate = (orderId, status) => {
-    api.put(
-      `${ORDER_API_ENDPOINT}/${orderId}/status`,
-      { status },
-      { headers: { Authorization: `Bearer ${token}` } }
+  const requests = orders.filter(o =>
+    Array.isArray(o.items) && o.items.some(it =>
+      it.productId === productId ||
+      it.product?.id === productId ||
+      it.product?._id === productId ||
+      it.product?.productId === productId
     )
-      .then(() => {
-        setRequests(prev => prev.map(o => (o._id === orderId ? { ...o, status } : o)));
-      })
-      .catch(err => console.error('Error updating status:', err));
+  );
+  
+  const handleStatusUpdate = async (orderId, status) => {
+    try {
+      await updateOrderStatus(orderId, status);
+      toast.success(`Order ${status === 'approved' ? 'approved' : 'cancelled'} successfully!`);
+    } catch (err) {
+     toast.error(err?.response?.data?.message || 'Failed to update order status');
+    }
   };
 
 
   return (
     <div className="max-w-3xl px-4 py-6 mx-auto">
+      <div className="mb-4">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          ← Back
+        </Button>
+      </div>
       <h1 className="mb-4 text-2xl font-bold">Purchase Requests</h1>
-      {requests.length === 0 ? (
+       {loading ? (
+        <p>Loading...</p>
+      ) : requests.length === 0 ? (
         <p>No requests found for this product.</p>
       ) : (
         <div className="space-y-4">
@@ -81,6 +67,7 @@ const ProductStatus = () => {
           })}
         </div>
       )}
+      {error && <p className="mt-4 text-red-500">{error}</p>}
     </div>
   );
 };

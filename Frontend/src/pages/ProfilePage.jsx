@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import ProfilePictureManager from '@/components/profile/ProfilePictureManager';
-import EditProfileModal from '@/components/components_lite/EditProfileModal';
+import EditProfileModal from '@/components/profile/EditProfileModal';
 
 const ProfilePage = () => {
   const { user, token, loading } = useAuthStore();

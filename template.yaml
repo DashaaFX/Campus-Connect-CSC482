@@ -25,8 +25,8 @@ Globals:
 Parameters:
   Environment:
     Type: String
-    Default: dev2
-    AllowedValues: [dev2, local, dev, staging, prod]
+    Default: dev1
+    AllowedValues: [dev2, dev1, dev, staging, prod]
 
 Resources:
   SharedLayer:
