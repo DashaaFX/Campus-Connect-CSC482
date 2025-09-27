@@ -1,3 +1,4 @@
+//Chat component- Not complete yet
 import React, { useEffect, useState } from "react";
 import { sendMessage, subscribeToMessages } from "../../hooks/useChat";
 import { auth } from "../firebase";

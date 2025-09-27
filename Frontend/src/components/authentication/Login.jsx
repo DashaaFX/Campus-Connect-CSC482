@@ -1,3 +1,4 @@
+//Dashnyam - Login component for Sprint 1 - Checks for Adelphi email
 import React, { useEffect } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";

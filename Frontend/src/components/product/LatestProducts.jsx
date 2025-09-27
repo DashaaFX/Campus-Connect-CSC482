@@ -1,4 +1,4 @@
-// src/components/products/LatestProducts.jsx
+//Shows Latest Products on the Home page, excluding those created by the logged-in user
 import React, { useEffect, useState } from 'react';
 import api from "@/utils/axios";
 import { PRODUCT_API_ENDPOINT } from '@/utils/data';

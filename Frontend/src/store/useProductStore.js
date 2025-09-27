@@ -1,4 +1,5 @@
-// src/store/useProductStore.js
+//Zustand store for product management and related logics
+// Dashnyam
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/utils/axios";

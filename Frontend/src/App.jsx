@@ -1,3 +1,4 @@
+// App router component to set up all the routes for components and pages
 import React from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 

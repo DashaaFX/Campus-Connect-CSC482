@@ -1,3 +1,6 @@
+//Component for editing an existing product
+//Dashnyam
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "@/utils/axios"; // Use custom axios instance

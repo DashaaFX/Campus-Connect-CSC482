@@ -1,4 +1,4 @@
-//Built with Copilot, used to upload profile and product images.
+//Baljinnyam, this component is used for uploading images, either for profile pictures or product images.
 import React, { useState } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";

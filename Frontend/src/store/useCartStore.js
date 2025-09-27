@@ -1,3 +1,5 @@
+//Zustand store for Cart management
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import axios from "axios";
@@ -5,8 +7,7 @@ import { CART_API_ENDPOINT, PRODUCT_API_ENDPOINT } from "@/utils/data";
 import { useAuthStore } from "./useAuthStore";
 import { processCartItem } from "@/utils/productHelpers";
 
-// For debugging - let's log the endpoint
-console.log("CART_API_ENDPOINT:", CART_API_ENDPOINT);
+
 
 export const useCartStore = create(
   persist(

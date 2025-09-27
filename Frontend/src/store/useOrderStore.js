@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import api from "@/utils/axios";
 import { ORDER_API_ENDPOINT } from "@/utils/data";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -77,6 +78,10 @@ export const useOrderStore = create((set) => ({
       throw err;
     }
   },
-}));
+}),
+{
+  name: "order-storage",
+  partialize: (state) => ({ orders: state.orders }),
+});
 
 export default useOrderStore;

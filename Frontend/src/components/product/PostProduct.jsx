@@ -1,3 +1,5 @@
+
+//Main component to post a new product
 import React, { useState, useEffect } from "react";
 import api from "@/utils/axios";
 import { useNavigate } from "react-router-dom";

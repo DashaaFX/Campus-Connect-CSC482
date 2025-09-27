@@ -1,3 +1,4 @@
+//About page component - Not polished yet
 import React from 'react'
 import Navbar from '../components_lite/Navbar'
 import dash from './dash.jpg';

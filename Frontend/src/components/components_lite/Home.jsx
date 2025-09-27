@@ -1,3 +1,4 @@
+//Dashnyam - Home component 
 import React, { useEffect, useState } from 'react';
 import Header from './Header';
 import { Button } from '../ui/button';
@@ -25,7 +26,7 @@ const Home = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-
+      {/* Co-Edited with Copilot for improved layout and styling using Tailwind CSS */}
       <section className="relative flex flex-col items-center justify-center py-20 overflow-hidden bg-gradient-to-br from-gray-900 via-purple-900 to-gray-800 animate-fade-in">
         <div className="absolute inset-0 pointer-events-none">
           <svg className="w-full h-full opacity-10" viewBox="0 0 1440 320"><path fill="#fff" fillOpacity="0.2" d="M0,224L48,197.3C96,171,192,117,288,117.3C384,117,480,171,576,197.3C672,224,768,224,864,197.3C960,171,1056,117,1152,128C1248,139,1344,213,1392,250.7L1440,288L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>

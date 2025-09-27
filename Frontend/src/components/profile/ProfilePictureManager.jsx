@@ -1,3 +1,6 @@
+
+// Handles profile picture uploads to backend - AWS S3
+// and updates user profile picture URL in auth store
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';

@@ -1,3 +1,5 @@
+//on My sales page, shows product categories and subcategories in a sidebar
+
 import React, { useEffect, useState } from 'react';
 import api from "@/utils/axios";
 import { Button } from '../ui/button';

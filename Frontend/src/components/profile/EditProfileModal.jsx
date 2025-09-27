@@ -1,3 +1,6 @@
+//Editing profile page is currently not working as intended.
+//Able to change profile information, but can't save for now.
+
 import React, { useState } from "react";
 import {
   Dialog,

@@ -1,3 +1,4 @@
+//Custom hook for chat - not completed
 import { db } from "../firebase";
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
 

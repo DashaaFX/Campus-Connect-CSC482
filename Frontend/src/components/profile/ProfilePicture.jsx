@@ -1,3 +1,4 @@
+// Dashnyam - shows profile picture
 import React from "react";
 import ImageUploader from "../ui/ImageUploader";
 import { useAuthStore } from "@/store/useAuthStore";
