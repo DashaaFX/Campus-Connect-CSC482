@@ -3,7 +3,7 @@ import * as login from './login.js';
 import * as updateProfilePicture from './updateProfilePicture.js';
 import * as linkFirebaseAccount from './linkFirebaseAccount.js';
 import { createErrorResponse } from '/opt/nodejs/utils/response.js';
-import { verifyFirebaseIdToken } from '/opt/nodejs/utils/firebaseAdmin.js';
+// Firebase admin utils will be imported lazily only for the verify route
 
 export const handler = async (event) => {
   try {
@@ -31,6 +31,8 @@ export const handler = async (event) => {
     if (path.includes('/auth/firebase/verify') && method === 'POST') {
       try {
         const body = JSON.parse(event.body || '{}');
+        if (!body.token) return createErrorResponse('Missing token', 400);
+        const { verifyFirebaseIdToken } = await import('/opt/nodejs/utils/firebaseAdmin.js');
         const decoded = await verifyFirebaseIdToken(body.token);
         return {
           statusCode: 200,
