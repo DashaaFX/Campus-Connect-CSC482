@@ -37,6 +37,7 @@ Resources:
       ContentUri: src/layers/shared/
       CompatibleRuntimes:
         - nodejs22.x
+        - nodejs20.x
       RetentionPolicy: Delete
 
   FirebaseServiceAccount:
@@ -99,6 +100,14 @@ Resources:
           Properties:
             Path: /auth/profile/picture
             Method: put
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        LinkFirebaseAccountApi:
+          Type: Api
+          Properties:
+            Path: /auth/firebase/link
+            Method: post
             RestApiId: !Ref CampusConnectApi
             Auth:
               Authorizer: JWTAuth

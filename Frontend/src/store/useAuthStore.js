@@ -5,6 +5,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/utils/axios";
 import { USER_API_ENDPOINT } from "@/utils/data";
+import { auth } from "@/../firebase"; // adjust path because firebase.js is at Frontend root
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export const useAuthStore = create(
   persist(
@@ -52,6 +54,38 @@ export const useAuthStore = create(
           }
 
           set({ user: user, token: res.data.token, loading: false });
+
+          // Optional Firebase integration behind feature flag
+          if (import.meta.env.VITE_ENABLE_FIREBASE_CHAT === 'true') {
+            try {
+              // Sign into Firebase (only if not already signed in or different user)
+              if (!auth.currentUser || auth.currentUser.email !== email) {
+                await signInWithEmailAndPassword(auth, email, password);
+              }
+              const idToken = await auth.currentUser.getIdToken();
+
+              // Verify token with backend (non-blocking on failure)
+              try {
+                await api.post(`${USER_API_ENDPOINT}/firebase/verify`, { token: idToken });
+              } catch (verifyErr) {
+                console.warn('Firebase verify failed (continuing):', verifyErr.response?.data || verifyErr.message);
+              }
+
+              // Attempt linking if user not already linked (firebaseUid missing)
+              if (!user.firebaseUid) {
+                try {
+                  const linkRes = await api.post(`${USER_API_ENDPOINT}/firebase/link`, { token: idToken });
+                  if (linkRes.data?.user) {
+                    set({ user: { ...linkRes.data.user } });
+                  }
+                } catch (linkErr) {
+                  console.warn('Firebase link skipped:', linkErr.response?.data || linkErr.message);
+                }
+              }
+            } catch (firebaseAuthErr) {
+              console.warn('Firebase sign-in skipped:', firebaseAuthErr.message);
+            }
+          }
           return res.data;
         } catch (err) {
           set({ loading: false, error: err.response?.data?.message || err.message });

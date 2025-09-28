@@ -1,6 +1,7 @@
 import * as register from './register.js';
 import * as login from './login.js';
 import * as updateProfilePicture from './updateProfilePicture.js';
+import * as linkFirebaseAccount from './linkFirebaseAccount.js';
 import { createErrorResponse } from '/opt/nodejs/utils/response.js';
 import { verifyFirebaseIdToken } from '/opt/nodejs/utils/firebaseAdmin.js';
 
@@ -20,6 +21,10 @@ export const handler = async (event) => {
     
     if (path.includes('/auth/profile-picture') && method === 'PUT') {
       return await updateProfilePicture.handler(event);
+    }
+
+    if (path.includes('/auth/firebase/link') && method === 'POST') {
+      return await linkFirebaseAccount.handler(event);
     }
 
     //verify Firebase ID token (chat integration)
