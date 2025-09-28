@@ -39,6 +39,14 @@ Resources:
         - nodejs22.x
       RetentionPolicy: Delete
 
+  FirebaseServiceAccount:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub campus-connect-firebase-service-${Environment}
+      Description: Firebase Service Account for Campus Connect
+
+
+
   JWTAuthorizer:
     Type: AWS::Serverless::Function
     Properties:
@@ -61,13 +69,18 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedLayer
+      Environment:
+        Variables:
+          FIREBASE_SECRET_ARN: !Ref FirebaseServiceAccount
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
         - Statement:
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
-              Resource: !Ref JWTSecret
+              Resource: 
+                - !Ref JWTSecret
+                - !Ref FirebaseServiceAccount
       Events:
         RegisterApi:
           Type: Api
