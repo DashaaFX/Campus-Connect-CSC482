@@ -111,6 +111,20 @@ Resources:
             RestApiId: !Ref CampusConnectApi
             Auth:
               Authorizer: JWTAuth
+        VerifyFirebaseTokenApi:
+          Type: Api
+          Properties:
+            Path: /auth/firebase/verify
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+        GetUserByIdApi:
+          Type: Api
+          Properties:
+            Path: /auth/user/{id}
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
 
   ProductsFunction:
     Type: AWS::Serverless::Function

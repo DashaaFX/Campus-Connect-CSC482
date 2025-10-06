@@ -29,6 +29,7 @@ import MyOrdersPage from "./pages/MyOrdersPage";
 import MySalesPage from "./pages/MySalesPage";
 import ProductStatus from "./components/product/ProductStatus";
 import OrderDetailPage from "./pages/OrderDetailPage";
+import ChatPage from './pages/ChatPage';
 
 const appRouter = createBrowserRouter([
   {
@@ -65,6 +66,8 @@ const appRouter = createBrowserRouter([
           </AdminRoute>
         ) 
       },
+      //enable chat route if testing chat feature is enabled in env
+      ...(import.meta.env.VITE_ENABLE_FIREBASE_CHAT === 'true' ? [{ path: 'chat', element: <ChatPage /> }] : []),
      
     ]
   }

@@ -1,6 +1,7 @@
 import { UserModel } from '/opt/nodejs/models/User.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
-import { verifyFirebaseIdToken } from '/opt/nodejs/utils/firebaseAdmin.js';
+// POST /auth/firebase/link 
+// links Firebase account to existing user
 
 export const handler = async (event) => {
   try {
@@ -13,6 +14,7 @@ export const handler = async (event) => {
 
     let decoded;
     try {
+      const { verifyFirebaseIdToken } = await import('/opt/nodejs/utils/firebaseAdmin.js');
       decoded = await verifyFirebaseIdToken(body.token);
     } catch (err) {
       console.error('Firebase token verify failed:', err);
