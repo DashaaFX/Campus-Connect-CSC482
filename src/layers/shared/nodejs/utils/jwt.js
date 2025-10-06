@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import jwt from 'jsonwebtoken';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 

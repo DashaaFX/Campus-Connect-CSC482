@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import { BaseModel } from './BaseModel.js';
 import bcrypt from 'bcryptjs';
 import { generateAssetUrl, getCloudFrontDomain } from '../utils/urlUtils.js';
@@ -30,7 +31,7 @@ export class UserModel extends BaseModel {
       profilePicture: profilePicture,
       profile: {
         ...(userData.profile || {}),
-        profilePhoto: profilePicture // Ensure this field is also set during creation
+        profilePhoto: profilePicture 
       }
     };
 
@@ -51,8 +52,7 @@ export class UserModel extends BaseModel {
   }
 
   async getByIdNum(idnum) {
-    // Since idnum might not be indexed, we'll scan for it
-    // In production, consider adding an index for this
+    // Assuming idnum is unique, we can scan the table
     const allUsers = await this.getAll();
     return allUsers.find(user => user.idnum === idnum) || null;
   }

@@ -21,7 +21,7 @@ export const handler = async (event) => {
 
   try {
     const queryParams = event.queryStringParameters || {};
-    const { category, seller, search, limit, lastEvaluatedKey } = queryParams;
+  const { category, seller, search, limit, lastEvaluatedKey, digital } = queryParams;
 
     let products;
     
@@ -41,6 +41,22 @@ export const handler = async (event) => {
     
     // Filter out any null or undefined products
     products = products.filter(product => !!product);
+
+    // Optional digital filter
+    if (digital === 'true') {
+      products = products.filter(p => p.isDigital === true);
+    } else if (digital === 'false') {
+      products = products.filter(p => !p.isDigital);
+    }
+
+    // Sanitize digital sensitive fields (hide documentKey)
+    products = products.map(p => {
+      if (p && p.isDigital) {
+        const { documentKey, ...rest } = p;
+        return rest;
+      }
+      return p;
+    });
 
     // Enhance products with subcategory names
     if (products && products.length > 0) {

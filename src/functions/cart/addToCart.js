@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import { CartModel } from '/opt/nodejs/models/Cart.js';
 import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
@@ -96,7 +97,7 @@ export const handler = async (event) => {
     // Re-fetch latest cart (to return unified view) after mutation
     const updatedCart = await cartModel.getByUserId(userId);
 
-    // Recalculate total defensively (in case model addItem does not maintain total yet)
+    // Recalculate total just in case
     updatedCart.total = Array.isArray(updatedCart.items)
       ? updatedCart.items.reduce((sum, item) => {
           const price = item.product?.price || item.price || 0;

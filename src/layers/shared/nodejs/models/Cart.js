@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import { BaseModel } from './BaseModel.js';
 import { GetCommand, UpdateCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient } from '../utils/dynamodb.js';
@@ -26,9 +27,9 @@ export class CartModel extends BaseModel {
 
   // Ensure we're not trying to update any key/meta fields that we manage separately
   const safeUpdates = { ...updates };
-  delete safeUpdates.userId;      // Primary key
-  delete safeUpdates.updatedAt;   // Will always be injected below
-  delete safeUpdates.createdAt;   // Immutable once set
+  delete safeUpdates.userId;      
+  delete safeUpdates.updatedAt; 
+  delete safeUpdates.createdAt;   
     
     Object.keys(safeUpdates).forEach((key, index) => {
       const attributeName = `#attr${index}`;
@@ -117,7 +118,7 @@ export class CartModel extends BaseModel {
       return this.create({ userId, items: cart.items });
     }
   }
-
+  //Update item of a user's cart
   async updateItem(userId, productId, quantity) {
     const cart = await this.getByUserId(userId);
     

@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import { CartModel } from '/opt/nodejs/models/Cart.js';
 import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
@@ -84,10 +85,8 @@ export const handler = async (event) => {
               // Ensure other important fields are present
               title: product.title || product.name || 'Unknown Product',
               images: product.images || []
-            };
-            
-            // Log successful product fetch
-            console.log(`Successfully fetched product: ${cleanProduct.title}, price: ${cleanProduct.price}`);
+            };            
+    
             
             return {
               ...item,

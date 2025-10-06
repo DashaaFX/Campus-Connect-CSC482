@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import * as getCart from './getCart.js';
 import * as addToCart from './addToCart.js';
 import * as updateCartItem from './updateCartItem.js';
@@ -40,5 +41,4 @@ const cartHandler = async (event) => {
   return errorResponse;
 };
 
-// Export the handler directly
 export const handler = cartHandler;

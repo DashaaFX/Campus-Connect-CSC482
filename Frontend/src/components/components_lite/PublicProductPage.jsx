@@ -27,18 +27,21 @@ const PublicProductPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [sort, setSort] = useState("");
+  const [digitalFilter, setDigitalFilter] = useState(''); // '', 'true', 'false'
   const [currentPage, setCurrentPage] = useState(1);
   const PRODUCTS_PER_PAGE = 9;
   useEffect(() => {
     const initialSearch = searchParams.get('search') || "";
     const initialCategory = searchParams.get('category') || "";
     const initialSubcategory = searchParams.get('subcategory') || "";
-    const initialSort = searchParams.get('sort') || "";
+  const initialSort = searchParams.get('sort') || "";
+  const initialDigital = searchParams.get('digital') || '';
 
     setSearch(initialSearch);
     setSelectedCategory(initialCategory);
     setSelectedSubcategory(initialSubcategory);
-    setSort(initialSort);
+  setSort(initialSort);
+  setDigitalFilter(initialDigital);
   }, [location.search]);
 
   // Load categories
@@ -93,7 +96,8 @@ const PublicProductPage = () => {
       if (search) params.append('search', search);
       if (selectedCategory) params.append('category', selectedCategory);
       //if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
-      if (sort) params.append('sort', sort);
+  if (sort) params.append('sort', sort);
+  if (digitalFilter) params.append('digital', digitalFilter);
 
       const res = await api.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
       let allProducts = res.data.products || [];
@@ -127,7 +131,8 @@ const PublicProductPage = () => {
     if (search) params.set('search', search);
     if (selectedCategory) params.set('category', selectedCategory);
     if (selectedSubcategory) params.set('subcategory', selectedSubcategory);
-    if (sort) params.set('sort', sort);
+  if (sort) params.set('sort', sort);
+  if (digitalFilter) params.set('digital', digitalFilter);
 
     navigate(`/products?${params.toString()}`);
   };
@@ -135,13 +140,14 @@ const PublicProductPage = () => {
   // When user selects something new
   useEffect(() => {
     updateUrlParams();
-  }, [search, selectedCategory, selectedSubcategory, sort]);
+  }, [search, selectedCategory, selectedSubcategory, sort, digitalFilter]);
 
   const handleClearFilters = () => {
     setSearch("");
     setSelectedCategory("");
     setSelectedSubcategory("");
-    setSort("");
+  setSort("");
+  setDigitalFilter('');
   };
     useEffect(() => {
     setCurrentPage(1);
@@ -216,6 +222,20 @@ const PublicProductPage = () => {
               <SelectItem value="-price">Price: High to Low</SelectItem>
               <SelectItem value="-createdAt">Newest First</SelectItem>
               <SelectItem value="createdAt">Oldest First</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={digitalFilter}
+            onValueChange={(value) => setDigitalFilter(value)}
+          >
+            <SelectTrigger className="w-full md:w-40">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Products</SelectItem>
+              <SelectItem value="true">Digital Only</SelectItem>
+              <SelectItem value="false">Physical Only</SelectItem>
             </SelectContent>
           </Select>
 

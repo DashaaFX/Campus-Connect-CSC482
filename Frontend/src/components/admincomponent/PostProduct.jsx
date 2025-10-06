@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/useAuthStore";
 import MultiImageUploader from "@/components/ui/MultiImageUploader";
+import FileUploader from "@/components/ui/FileUploader";
 
 const PostProduct = () => {
   const user = useAuthStore(state => state.user);
@@ -33,6 +34,8 @@ const PostProduct = () => {
   });
 
   const [productImages, setProductImages] = useState([]);
+  const [isDigital, setIsDigital] = useState(false);
+  const [documentMeta, setDocumentMeta] = useState(null); // { key, url (maybe null), name, format }
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -120,10 +123,23 @@ const PostProduct = () => {
 
     const productData = {
       ...formData,
-      images: productImages,
+      images: isDigital ? [] : productImages,
       userId: userId,
       sellerId: userId
     };
+
+    if (isDigital) {
+      if (!documentMeta?.key) {
+        setError("Please upload a document for this digital product.");
+        setLoading(false);
+        return;
+      }
+      productData.documentKey = documentMeta.key;
+      productData.digitalFormat = (documentMeta.name?.split('.').pop() || '').toLowerCase();
+      productData.previewImage = documentMeta.url || undefined; // backend will fallback placeholder if missing
+      // For digital products, override stock to 0
+      productData.stock = 0;
+    }
     setLoading(true);
     try {
       const res = await api.post(PRODUCT_API_ENDPOINT, productData, {
@@ -149,6 +165,26 @@ const PostProduct = () => {
   return (
     <div className="max-w-2xl p-6 mx-auto">
       <h1 className="mb-6 text-2xl font-bold">Add New Product</h1>
+      <div className="flex items-center mb-4 space-x-4">
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="radio"
+            name="productType"
+            checked={!isDigital}
+            onChange={() => { setIsDigital(false); setDocumentMeta(null); }}
+          />
+          <span>Physical</span>
+        </label>
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="radio"
+            name="productType"
+            checked={isDigital}
+            onChange={() => { setIsDigital(true); setProductImages([]); }}
+          />
+          <span>Digital (PDF/DOC/DOCX)</span>
+        </label>
+      </div>
       {error && <div className="mb-4 text-red-500">{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">
@@ -168,8 +204,15 @@ const PostProduct = () => {
             <Input id="price" name="price" type="number" value={formData.price} onChange={handleChange} required />
           </div>
           <div>
-            <Label htmlFor="stock">Stock</Label>
-            <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required />
+            {!isDigital && (
+              <>
+                <Label htmlFor="stock">Stock</Label>
+                <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required />
+              </>
+            )}
+            {isDigital && (
+              <div className="pt-6 text-sm text-gray-500">Unlimited (digital)</div>
+            )}
           </div>
         </div>
 
@@ -216,18 +259,44 @@ const PostProduct = () => {
           </Select>
         </div>
 
-        <div>
-          <MultiImageUploader 
-            onUploadComplete={setProductImages}
-            uploadType="product"
-          />
-        </div>
+        {!isDigital && (
+          <div>
+            <MultiImageUploader 
+              onUploadComplete={setProductImages}
+              uploadType="product"
+            />
+          </div>
+        )}
+        {isDigital && (
+          <div className="space-y-2">
+            <Label>Document File</Label>
+            <FileUploader
+              uploadType="document"
+              multiple={false}
+              maxFiles={1}
+              onUploadComplete={(meta) => {
+                // meta: { name, size, key, url, private, progress }
+                setDocumentMeta({ key: meta.key, url: meta.url, name: meta.name });
+              }}
+            />
+            {documentMeta && (
+              <p className="text-xs text-gray-600">Uploaded: {documentMeta.name}</p>
+            )}
+          </div>
+        )}
 
         <Button
           type="submit"
-          disabled={loading || !formData.title || !formData.price || !formData.category || !formData.subcategory}
+          disabled={
+            loading ||
+            !formData.title ||
+            !formData.price ||
+            !formData.category ||
+            !formData.subcategory ||
+            (isDigital && !documentMeta?.key)
+          }
         >
-          {loading ? "Creating..." : "Create Product"}
+          {loading ? "Creating..." : (isDigital ? "Create Digital Product" : "Create Product")}
         </Button>
       </form>
     </div>

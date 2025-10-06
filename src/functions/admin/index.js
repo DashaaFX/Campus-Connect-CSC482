@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import * as seedCategories from './seedCategories.js';
 import * as seedSubcategories from './seedSubcategories.js';
 import * as cleanDuplicates from './cleanDuplicates.js';

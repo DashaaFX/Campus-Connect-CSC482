@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,11 +12,23 @@ const BUCKET_NAME = process.env.UPLOADS_BUCKET || 'campus-connect-uploads';
 
 export const handler = async (event) => {
   try {
+    // Basic CORS support
+    if (event.httpMethod === 'OPTIONS') {
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+          'Access-Control-Allow-Methods': 'POST,OPTIONS'
+        },
+        body: JSON.stringify({})
+      };
+    }
     // Extract user ID from authorizer if it exists
     let userId = 'anonymous-user';
     
     const requestBody = JSON.parse(event.body || '{}');
-    const { fileName, fileType, uploadType, userId: bodyUserId, isRegistration } = requestBody;
+    const { fileName, fileType, fileSize, uploadType, type, userId: bodyUserId, isRegistration, access } = requestBody;
     
     // Check if this is a registration endpoint or registration flag
     const isRegistrationRequest = event.pathParameters?.proxy?.includes('registration') || 
@@ -47,36 +60,68 @@ export const handler = async (event) => {
       return createErrorResponse('fileName and fileType are required', 400);
     }
 
-    // Validate upload type
-    const validUploadTypes = ['product', 'profile'];
-    const type = uploadType || 'product';
-    if (!validUploadTypes.includes(type)) {
-      return createErrorResponse('uploadType must be either "product" or "profile"', 400);
+    // Central definition of supported upload categories
+    const UPLOAD_TYPE_CONFIG = {
+      profile: {
+        category: 'image',
+        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+        maxSizeBytes: (parseInt(process.env.PROFILE_IMAGE_MAX_MB || '5', 10)) * 1024 * 1024,
+        cacheControl: 'max-age=86400', // 1 day
+        folder: 'profiles'
+      },
+      product: {
+        category: 'image',
+        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+        maxSizeBytes: (parseInt(process.env.PRODUCT_IMAGE_MAX_MB || '5', 10)) * 1024 * 1024,
+        cacheControl: 'max-age=2592000', // 30 days
+        folder: 'products'
+      },
+      document: {
+        category: 'document',
+        // Restricted to PDF and Word formats only 
+        allowedMimeTypes: [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ],
+        maxSizeBytes: (parseInt(process.env.DOCUMENT_MAX_MB || '10', 10)) * 1024 * 1024,
+        cacheControl: 'max-age=604800', // 7 days (adjust as needed)
+        folder: 'documents'
+      }
+    };
+
+    // Accept legacy 'type' param as fallback
+    const resolvedType = uploadType || type || 'product';
+    const typeConfig = UPLOAD_TYPE_CONFIG[resolvedType];
+    if (!typeConfig) {
+      console.warn('Invalid uploadType received:', resolvedType, 'Full body:', requestBody);
+      return createErrorResponse(`Invalid uploadType '${resolvedType}'. Supported types: ${Object.keys(UPLOAD_TYPE_CONFIG).join(', ')}`, 400);
     }
 
-    // Validate file type (images only)
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(fileType)) {
-      return createErrorResponse('Invalid file type. Only images are allowed.', 400);
+    // Validate MIME type against category
+    if (!typeConfig.allowedMimeTypes.includes(fileType)) {
+      return createErrorResponse(`Invalid file type for ${type}. Allowed: ${typeConfig.allowedMimeTypes.join(', ')}`, 400);
+    }
+
+    // Optional size validation (client can pass fileSize). Not mandatory for backward compatibility.
+    if (fileSize && Number.isFinite(fileSize) && fileSize > typeConfig.maxSizeBytes) {
+      return createErrorResponse(`File exceeds max size of ${(typeConfig.maxSizeBytes / (1024*1024)).toFixed(0)}MB`, 400);
     }
 
     // Generate unique key based on upload type
-    const fileExtension = fileName.split('.').pop();
-    const key = type === 'profile' 
-      ? `profiles/${userId}/${uuidv4()}.${fileExtension}`
-      : `products/${userId}/${uuidv4()}.${fileExtension}`;
+  const fileExtension = fileName.includes('.') ? fileName.split('.').pop() : 'bin';
+  const keyBase = `${typeConfig.folder}/${userId}/${uuidv4()}.${fileExtension}`;
+
+    const objectKey = access === 'private' ? `private/${keyBase}` : keyBase;
 
     // Generate presigned URL for upload with cache-friendly headers
-    const cacheControl = type === 'profile' 
-      ? 'max-age=86400'      // 1 day cache
-      : 'max-age=2592000';   // 30 days cache
+    const cacheControl = typeConfig.cacheControl;
 
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
-      Key: key,
+      Key: objectKey,
       ContentType: fileType,
       CacheControl: cacheControl,
-      // Remove ACL to avoid permissions issues
     });
 
     // Include specific parameters for the signed URL
@@ -84,18 +129,24 @@ export const handler = async (event) => {
       expiresIn: 300 // 5 minutes
     });
     
-    // Generate CloudFront URL for the uploaded file (for reading)
-    const fileUrl = generateAssetUrl(
-      key,
-      process.env.ENVIRONMENT || 'dev',
-      process.env.AWS_REGION || 'us-east-1',
-      getCloudFrontDomain()
-    );
+    // Generate CloudFront URL for the uploaded file
+    const fileUrl = access === 'private'
+      ? null
+      : generateAssetUrl(
+          objectKey,
+          process.env.ENVIRONMENT || 'dev',
+          process.env.AWS_REGION || 'us-east-1',
+          getCloudFrontDomain()
+        );
 
     return createSuccessResponse({
       uploadUrl,
       fileUrl,
-      key
+      key: objectKey,
+  uploadType: resolvedType,
+      category: typeConfig.category,
+      maxSizeBytes: typeConfig.maxSizeBytes,
+      private: access === 'private'
     });
 
   } catch (error) {

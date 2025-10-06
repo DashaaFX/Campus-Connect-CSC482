@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import { getCategories } from './getCategories.js';
 import { getSubcategories } from './getSubcategories.js';
 import { createCategory } from './createCategory.js';

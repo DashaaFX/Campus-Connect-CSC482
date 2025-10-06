@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import { docClient } from '../utils/dynamodb.js';
 import { ScanCommand, QueryCommand, PutCommand, GetCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';

@@ -48,6 +48,16 @@ export const handler = async (event) => {
       ...body
     };
 
+    // Protect immutable digital fields (Phase 1). Allow previewImage updates once generated.
+    const protectedDigitalFields = ['isDigital', 'digitalFormat', 'documentKey', 'documentOriginalName', 'fileSizeBytes'];
+    if (existingProduct.isDigital) {
+      protectedDigitalFields.forEach(f => delete updateData[f]);
+      // Allow previewImage or digitalStatus refinement
+    } else {
+      // If product not digital, strip any attempted digital injection
+      protectedDigitalFields.concat(['previewImage','digitalStatus']).forEach(f => delete updateData[f]);
+    }
+
     // Remove fields that shouldn't be updated
     delete updateData.sellerId;
     delete updateData.sellerEmail;

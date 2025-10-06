@@ -1,5 +1,6 @@
 import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
+import { getFormatPlaceholder } from '/opt/nodejs/utils/digitalConstants.js';
 
 export const handler = async (event) => {
   try {
@@ -53,12 +54,35 @@ export const handler = async (event) => {
       }
     }
 
-    // Prepare product data
+    // Digital product Phase 1 support
+    const isDigital = !!body.documentKey; 
+    const allowedDigitalFormats = ['pdf', 'doc', 'docx'];
+    let digitalFormat = null;
+    if (isDigital) {
+      // Accept explicit digitalFormat or derive from documentKey
+      digitalFormat = (body.digitalFormat || body.documentFormat || '').toLowerCase();
+      if (!digitalFormat && body.documentKey) {
+        const ext = body.documentKey.split('.').pop().toLowerCase();
+        if (allowedDigitalFormats.includes(ext)) digitalFormat = ext;
+      }
+      if (!allowedDigitalFormats.includes(digitalFormat)) {
+        return createErrorResponse(`Invalid digital format. Allowed: ${allowedDigitalFormats.join(', ')}`, 400);
+      }
+    }
+
+    // If digital, we can tolerate empty images (preview may come later)
+  const previewImage = isDigital ? (body.previewImage || body.preview || null) : null;
+    const fileSizeBytes = isDigital && body.fileSizeBytes ? parseInt(body.fileSizeBytes) : null;
+    if (isDigital && fileSizeBytes && (isNaN(fileSizeBytes) || fileSizeBytes < 0)) {
+      return createErrorResponse('fileSizeBytes must be a positive integer', 400);
+    }
+
+    // Prepare product data (shared + digital optional fields)
     const productData = {
       name: body.title, // Map title to name for database
       description: body.description,
       price: price,
-      stock: stock,
+      stock: isDigital ? 1 : stock,
       category: body.category,
       subcategory: body.subcategory || '',
       condition: body.condition || 'good',
@@ -68,12 +92,26 @@ export const handler = async (event) => {
       sellerEmail: userEmail,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      status: 'active'
+      status: 'active',
+      // Digital metadata
+      isDigital,
+      digitalFormat: isDigital ? digitalFormat : null,
+      documentKey: isDigital ? body.documentKey : null,
+      documentOriginalName: isDigital ? (body.documentOriginalName || body.originalName || body.title) : null,
+  previewImage: isDigital ? (previewImage || getFormatPlaceholder(digitalFormat)) : null,
+  digitalStatus: isDigital ? ((previewImage || getFormatPlaceholder(digitalFormat)) ? 'ready' : 'processing') : null,
+      fileSizeBytes: isDigital ? fileSizeBytes : null
     };
     
     // Create the product
     const productModel = new ProductModel();
     const product = await productModel.create(productData);
+
+    // Sanitize response: hide raw documentKey until secure download implemented
+    if (product.isDigital) {
+      // Keep internal key but do not expose in API response (client only needs to know it's digital + preview)
+      delete product.documentKey;
+    }
 
     // Return success response
     return createSuccessResponse({

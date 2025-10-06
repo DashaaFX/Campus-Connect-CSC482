@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import { BaseModel } from './BaseModel.js';
 import { generateAssetUrl, getCloudFrontDomain } from '../utils/urlUtils.js';
 
@@ -15,7 +16,15 @@ export class ProductModel extends BaseModel {
       searchTerms,
       status: productData.status || 'active',
       condition: productData.condition || 'new',
-      images: productData.images || []
+      images: productData.images || [],
+      // Digital product metadata (TODO: )
+      isDigital: !!productData.isDigital,
+      digitalFormat: productData.digitalFormat || null,
+      documentKey: productData.documentKey || null,
+      documentOriginalName: productData.documentOriginalName || null,
+      previewImage: productData.previewImage || null,
+      digitalStatus: productData.isDigital ? (productData.digitalStatus || 'ready') : null,
+      fileSizeBytes: productData.fileSizeBytes || null
     };
 
     // Ensure images are properly formatted with CloudFront/S3 URLs
@@ -41,13 +50,15 @@ export class ProductModel extends BaseModel {
       productData.name || productData.title,
       productData.description,
       productData.category,
-      productData.condition
+      productData.condition,
+      productData.isDigital ? 'digital' : null,
+      productData.digitalFormat || null
     ].filter(Boolean);
     
     return searchableFields.join(' ').toLowerCase();
   }
   
-  // Enhanced getById that tries multiple id formats
+  // Enhanced getById for multiple Id formats
   async getById(id) {
     // First try the regular getById from BaseModel
     const product = await super.getById(id);
@@ -123,8 +134,7 @@ export class ProductModel extends BaseModel {
   }
 
   async search(searchTerm, category = null) {
-    // For simple implementation, we'll scan and filter
-    // In production, consider using Amazon OpenSearch
+    // Use scan and filter for now
     const allProducts = await this.getAll();
     
     let filtered = allProducts.filter(product => 

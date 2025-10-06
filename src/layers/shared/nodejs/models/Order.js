@@ -1,8 +1,7 @@
+//Baljinnyam Puntsagnorov
 import { BaseModel } from './BaseModel.js';
 
-// Orders table currently defines a GSI "UserIndex" (userId HASH). A SellerIndex GSI will
-// be added separately in infrastructure (template.yaml). Until then, we can still
-// filter seller orders via scan fallback if the index is missing.
+//Model for Orders table
 export class OrderModel extends BaseModel {
   constructor() {
     super(process.env.ORDERS_TABLE);

@@ -1,10 +1,10 @@
+//Baljinnyam Puntsagnorov
 import { docClient } from '/opt/nodejs/utils/dynamodb.js';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
   try {
-    // Exact subcategory mapping from your MongoDB structure
     const subcategoryMap = {
       academic: ['textbooks', 'lab_manuals', 'solution_guides'],
       electronics: ['laptops', 'calculators'],
@@ -20,11 +20,11 @@ export const handler = async (event) => {
     // Generate subcategories for each category
     for (const [categoryId, subcategoryNames] of Object.entries(subcategoryMap)) {
       for (const name of subcategoryNames) {
-        // Create a deterministic ID to prevent duplicates
+        // Create a ID to prevent duplicates
         const subcategoryId = `${categoryId}-${name}`;
         
         subcategoriesData.push({
-          id: subcategoryId, // Use deterministic ID
+          id: subcategoryId, // ID
           name: name,
           categoryId: categoryId,
           description: `${name.replace('_', ' ')} for ${categoryId}`

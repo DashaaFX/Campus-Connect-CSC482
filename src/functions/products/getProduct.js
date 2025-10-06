@@ -1,6 +1,7 @@
 import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 import { SubcategoryModel } from '/opt/nodejs/models/subcategoryModel.js';
+import { OrderModel } from '/opt/nodejs/models/Order.js';
 
 export const handler = async (event) => {
   // Handle CORS preflight requests
@@ -17,7 +18,8 @@ export const handler = async (event) => {
   }
   
   try {
-    const productId = event.pathParameters?.id;
+  const productId = event.pathParameters?.id;
+  const userId = event.requestContext?.authorizer?.userId; // may be undefined for public requests
     
     if (!productId) {
       return createErrorResponse('Product ID is required', 400);
@@ -43,6 +45,38 @@ export const handler = async (event) => {
     if (!product) {
       return createErrorResponse('Product not found', 404);
     }
+
+    // Determine entitlement for digital products (buyer who purchased or seller)
+    let userOwns = false;
+    let isSeller = false;
+    if (product.isDigital && userId) {
+      try {
+        // Seller always has access
+        if (product.sellerId && product.sellerId === userId) {
+          isSeller = true;
+          userOwns = true;
+        } else {
+          // Scan user orders for entitlement (optimization: future index/attribute)
+            const orderModel = new OrderModel();
+            const buyerOrders = await orderModel.getByBuyer(userId);
+            if (buyerOrders && buyerOrders.length > 0) {
+              for (const o of buyerOrders) {
+                if (!o || !o.items) continue;
+                const hasItem = o.items.some(it => {
+                  const pid = it.productId || it.product?.id || it.product?._id;
+                  return pid === productId || pid === product.id || pid === product._id;
+                });
+                if (hasItem && (o.status === 'completed' || o.status === 'paid' || o.status === 'delivered')) {
+                  userOwns = true;
+                  break;
+                }
+              }
+            }
+        }
+      } catch (entErr) {
+        console.error('Entitlement check failed:', entErr.message);
+      }
+    }
     
     // Enhance product with subcategory name if it exists as an ID
     if (product.subcategory && typeof product.subcategory === 'string' && !product.subcategory.name) {
@@ -62,7 +96,19 @@ export const handler = async (event) => {
       }
     }
 
-    const response = createSuccessResponse({ product });
+    // Sanitize digital sensitive fields if user not entitled
+    let sanitized = product;
+    if (product.isDigital) {
+      const { documentKey, ...rest } = product;
+      sanitized = { ...rest };
+      // Provide flags for frontend gating
+      sanitized.userOwns = userOwns;
+      sanitized.isSeller = isSeller;
+      sanitized.digitalAccess = userOwns ? 'full' : 'preview';
+      // Never return documentKey here (download served via dedicated endpoint later)
+    }
+
+    const response = createSuccessResponse({ product: sanitized });
     
     // Add CORS headers
     response.headers = {

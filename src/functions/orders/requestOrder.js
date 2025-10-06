@@ -70,7 +70,7 @@ export const handler = async (event) => {
     const orderModel = new OrderModel();
     const order = await orderModel.create(orderData);
 
-    // Remove or decrement the item from the user's cart (buy-this semantics remove it)
+    // Remove or decrement the item from the user's cart 
     try {
       const cartModel = new CartModel();
       const cart = await cartModel.getByUserId(userId);
@@ -82,7 +82,7 @@ export const handler = async (event) => {
           }, 0) });
         }
       }
-    } catch (_) { /* silent cart adjustment failure */ }
+    } catch (_) {  } // temporary silent failure
 
     const response = createSuccessResponse({
       message: 'Order request created successfully',

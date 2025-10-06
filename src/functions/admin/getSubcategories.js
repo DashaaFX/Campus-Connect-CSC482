@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import { SubcategoryModel } from '/opt/nodejs/models/subcategoryModel.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 

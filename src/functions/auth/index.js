@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import * as register from './register.js';
 import * as login from './login.js';
 import * as updateProfilePicture from './updateProfilePicture.js';

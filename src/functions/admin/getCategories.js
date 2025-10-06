@@ -1,3 +1,4 @@
+//Baljinnyam Puntsagnorov
 import { docClient } from '/opt/nodejs/utils/dynamodb.js';
 import { ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
