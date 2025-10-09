@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/utils/axios";
 import { USER_API_ENDPOINT } from "@/utils/data";
-import { auth } from "@/../firebase";
+import { auth } from "../../firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth'; // retained for backward compatibility if needed
 
 async function firebasePasswordSignInOrCreate(auth, email, password) {
