@@ -1,3 +1,5 @@
+// Styled textarea component using Tailwind CSS
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 

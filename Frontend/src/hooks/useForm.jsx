@@ -1,3 +1,6 @@
+//Reusable form hook with validation
+//Used for both login and registration forms
+
 import { useState, useEffect } from "react";
 
 export const useForm = (initialState = {}, error, clearError, validationRules = {}) => {

@@ -1,3 +1,5 @@
+//Dashnyam - Navbar component
+
 import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -13,6 +15,7 @@ import {
   Home,
   Package,
   Info,
+  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/store/useCartStore"; // Zustand store
@@ -152,8 +155,8 @@ const logoutHandler = async () => {
                   {/* Admin Navigation */}
                   {user?.role === 'Admin' && (
                     <div className="flex items-center gap-2 cursor-pointer w-fit">
-                      <Settings className="text-blue-500" />
-                      <Button variant="link" className="text-blue-500 hover:text-blue-600">
+                      <Settings/>
+                      <Button variant="link">
                         <Link to={"/admin/categories"}>Manage Categories</Link>
                       </Button>
                     </div>

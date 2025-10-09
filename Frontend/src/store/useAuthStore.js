@@ -1,7 +1,51 @@
+//Zustand store for authentication and related logics
+//Dashnyam
+// Try to integrate chat functionality with auth store
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/utils/axios";
 import { USER_API_ENDPOINT } from "@/utils/data";
+import { auth } from "../../firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth'; // retained for backward compatibility if needed
+
+async function firebasePasswordSignInOrCreate(auth, email, password) {
+  const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import('firebase/auth');
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } else {
+      throw err;
+    }
+  }
+}
+
+async function eagerFirebaseLink({ user, email, password, auth, api, featureFlagEnabled, updateUser }) {
+  if (!featureFlagEnabled) return;
+  // If already linked, skip
+  if (user.firebaseUid && auth.currentUser) return;
+
+  try {
+    await firebasePasswordSignInOrCreate(auth, email, password);
+
+    const idToken = await auth.currentUser.getIdToken();
+    try {
+      await api.post('/auth/firebase/verify', { token: idToken });
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn('[chat] verify skipped', e?.response?.data || e.message);
+    }
+
+    if (!user.firebaseUid) {
+      const linkRes = await api.post('/auth/firebase/link', { token: idToken });
+      if (linkRes.data?.user) {
+        updateUser(linkRes.data.user); // update store
+      }
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.warn('[chat] eager link failed:', e.message);
+  }
+}
 
 export const useAuthStore = create(
   persist(
@@ -48,7 +92,38 @@ export const useAuthStore = create(
             user.profilePicture = user.profile.profilePhoto;
           }
 
-          set({ user: user, token: res.data.token, loading: false });
+          set({ user, token: res.data.token, loading: false });
+
+          // Link firebase if feature flag enabled
+          if (import.meta.env.VITE_ENABLE_FIREBASE_CHAT === 'true') {
+            eagerFirebaseLink({
+              user,
+              email,
+              password,
+              auth,
+              api,
+              featureFlagEnabled: true,
+              updateUser: (u) => set({ user: u })
+            });
+          }
+
+          setTimeout(async () => {
+            try {
+              if (auth.currentUser) {
+                set((state) => {
+                  if (state.user && state.user.firebaseUid !== auth.currentUser.uid) {
+                    if (import.meta.env.DEV) {
+                      console.warn('[auth] Reconciling stale firebaseUid. Stored=', state.user.firebaseUid, 'live=', auth.currentUser.uid);
+                    }
+                    return { user: { ...state.user, firebaseUid: auth.currentUser.uid } };
+                  }
+                  return {};
+                });
+              }
+            } catch (e) {
+              console.debug('[auth] reconciliation skipped', e.message);
+            }
+          }, 1200);
           return res.data;
         } catch (err) {
           set({ loading: false, error: err.response?.data?.message || err.message });
@@ -57,6 +132,28 @@ export const useAuthStore = create(
       },
 
       logout: async () => {
+        try {
+          // Stop chat listeners when logging out
+          const { useChatStore } = await import('./useChatStore');
+          const chatState = useChatStore.getState();
+          if (chatState._unsubscribeConversations) {
+            try { chatState._unsubscribeConversations(); } catch {}
+          }
+          if (chatState._unsubscribeMessages) {
+            try { chatState._unsubscribeMessages(); } catch {}
+          }
+          // Clear chat store state
+          useChatStore.setState({
+            _unsubscribeConversations: null,
+            _unsubscribeMessages: null,
+            conversations: [],
+            activeConversationId: null,
+            activeMessages: [],
+          });
+        } catch (e) {
+          if (import.meta.env.DEV) console.debug('[auth] chat cleanup during logout skipped', e.message);
+        }
+        try { await firebaseSignOut(auth); } catch { /* ignore */ }
         set({ user: null, token: null, loading: false });
       },
 
@@ -82,10 +179,34 @@ export const useAuthStore = create(
           }
  
           set({ loading: false, user: userData });
+
+          // If Firebase session exists but user record missing or stale firebaseUid, reconcile locally
+          if (auth.currentUser && userData.firebaseUid !== auth.currentUser.uid) {
+            setTimeout(() => {
+              set((state) => {
+                if (state.user && state.user.id === userData.id && state.user.firebaseUid !== auth.currentUser.uid) {
+                  if (import.meta.env.DEV) {
+                    console.warn('[auth] fetchUser reconciliation: updating firebaseUid to live auth uid');
+                  }
+                  return { user: { ...state.user, firebaseUid: auth.currentUser.uid } };
+                }
+                return {};
+              });
+            }, 300);
+          }
           return userData;
         } catch (err) {
           set({ loading: false, user: null, token: null });
           return null;
+        }
+      },
+
+      forceSyncFirebaseUid: async () => {
+        const { user } = get();
+        if (!user) return;
+        if (auth.currentUser && user.firebaseUid !== auth.currentUser.uid) {
+          set({ user: { ...user, firebaseUid: auth.currentUser.uid } });
+          if (import.meta.env.DEV) console.debug('[auth] forceSyncFirebaseUid applied');
         }
       },
       

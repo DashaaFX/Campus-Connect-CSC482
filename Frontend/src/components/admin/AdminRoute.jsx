@@ -1,3 +1,6 @@
+//Product manager role
+//Not complete for Sprint 1
+
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -12,15 +15,15 @@ const AdminRoute = ({ children }) => {
   
   if (user.role !== 'Admin') {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <h2 className="text-2xl font-bold text-red-800 mb-4">Access Denied</h2>
-          <p className="text-red-600 mb-4">
+      <div className="max-w-4xl p-6 mx-auto">
+        <div className="p-6 text-center border border-red-200 rounded-lg bg-red-50">
+          <h2 className="mb-4 text-2xl font-bold text-red-800">Access Denied</h2>
+          <p className="mb-4 text-red-600">
             You don't have permission to access this page. Admin privileges required.
           </p>
           <button 
             onClick={() => window.history.back()} 
-            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700"
           >
             Go Back
           </button>

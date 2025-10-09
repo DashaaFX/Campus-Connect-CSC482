@@ -8,6 +8,8 @@ yarn-error.log*
 .aws-sam/
 samconfig.toml
 
+//template.yaml
+template.yaml
 # Environment variables
 .env
 .env.local

@@ -4,7 +4,7 @@
   import { PRODUCT_API_ENDPOINT } from '@/utils/data';
   import { getProductImageUrl } from '@/utils/productHelpers';
 
-  import AdminSidebar from './AdminSidebar';
+  import AdminSidebar from '../components/product/ProductSideBar';
   import { Button } from '@/components/ui/button';
   import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
   import { Badge } from '@/components/ui/badge';
@@ -203,7 +203,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
                 </Table>
               </div>
               
-              <p className="text-gray-600 mt-8">
+              <p className="mt-8 text-gray-600">
                 View and manage order requests for specific products using the "Status" button on each product.
               </p>
             </>

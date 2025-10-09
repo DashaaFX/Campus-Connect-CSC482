@@ -25,8 +25,8 @@ Globals:
 Parameters:
   Environment:
     Type: String
-    Default: dev2
-    AllowedValues: [dev2, local, dev, staging, prod]
+    Default: dev1
+    AllowedValues: [dev2, dev1, dev, staging, prod]
 
 Resources:
   SharedLayer:
@@ -37,7 +37,16 @@ Resources:
       ContentUri: src/layers/shared/
       CompatibleRuntimes:
         - nodejs22.x
+        - nodejs20.x
       RetentionPolicy: Delete
+
+  FirebaseServiceAccount:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub campus-connect-firebase-service-${Environment}
+      Description: Firebase Service Account for Campus Connect
+
+
 
   JWTAuthorizer:
     Type: AWS::Serverless::Function
@@ -61,13 +70,18 @@ Resources:
       Handler: index.handler
       Layers:
         - !Ref SharedLayer
+      Environment:
+        Variables:
+          FIREBASE_SECRET_ARN: !Ref FirebaseServiceAccount
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
         - Statement:
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
-              Resource: !Ref JWTSecret
+              Resource: 
+                - !Ref JWTSecret
+                - !Ref FirebaseServiceAccount
       Events:
         RegisterApi:
           Type: Api
@@ -86,6 +100,28 @@ Resources:
           Properties:
             Path: /auth/profile/picture
             Method: put
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        LinkFirebaseAccountApi:
+          Type: Api
+          Properties:
+            Path: /auth/firebase/link
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        VerifyFirebaseTokenApi:
+          Type: Api
+          Properties:
+            Path: /auth/firebase/verify
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+        GetUserByIdApi:
+          Type: Api
+          Properties:
+            Path: /auth/user/{id}
+            Method: get
             RestApiId: !Ref CampusConnectApi
             Auth:
               Authorizer: JWTAuth

@@ -1,3 +1,5 @@
+//Dashnyam - Register component for Spring 1 - Checks Adelphi Email
+
 import React, { useEffect, useState } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";

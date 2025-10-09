@@ -3,7 +3,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import api from "@/utils/axios";
 import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
-import ProductList from "./ProductsList";
+import ProductList from "../components/product/ProductsList";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {

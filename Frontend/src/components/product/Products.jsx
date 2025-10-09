@@ -1,3 +1,5 @@
+//Dashnyam for Sprint 2
+//Component for detailed product view
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from "@/utils/axios";
@@ -196,7 +198,7 @@ const Products = () => {
               )
             )}
             
-            {/* Product details continue here */}
+            {/* Add more product details later, on later sprints */}
           </div>
         </div>
       </div>

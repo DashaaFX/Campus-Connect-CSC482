@@ -1,3 +1,4 @@
+//User interface component for displaying avatar components using Radix library
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 

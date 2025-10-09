@@ -1,4 +1,4 @@
-// ...existing code...
+// Products list that will be passed onto PublicProducts page.
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
