@@ -5,8 +5,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/utils/axios";
 import { USER_API_ENDPOINT } from "@/utils/data";
-import { auth } from "@/../firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth'; // retained for backward compatibility if needed
+import { auth } from "../../firebase";
+import {  signOut as firebaseSignOut } from 'firebase/auth'; 
 
 async function firebasePasswordSignInOrCreate(auth, email, password) {
   const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import('firebase/auth');
@@ -69,9 +69,12 @@ export const useAuthStore = create(
           if (!res.data.success) throw new Error(res.data.message);
           return res.data;
         } catch (err) {
-          console.error('Registration error:', err.response?.data || err.message);
-          set({ loading: false, error: err.response?.data?.message || err.message });
-          throw err;
+          let errorMsg = err.response?.data?.message || err.message;
+          if (errorMsg && errorMsg.toLowerCase().includes('user with this email already exists')) {
+            errorMsg = 'Email already exists. Please use a different email.';
+          }
+          set({ loading: false, error: errorMsg });
+          throw new Error(errorMsg);
         }
       },
 
@@ -107,6 +110,7 @@ export const useAuthStore = create(
             });
           }
 
+          //Debug firebase linking - later
           setTimeout(async () => {
             try {
               if (auth.currentUser) {
@@ -133,6 +137,7 @@ export const useAuthStore = create(
 
       logout: async () => {
         try {
+
           // Stop chat listeners when logging out
           const { useChatStore } = await import('./useChatStore');
           const chatState = useChatStore.getState();
@@ -154,6 +159,7 @@ export const useAuthStore = create(
           if (import.meta.env.DEV) console.debug('[auth] chat cleanup during logout skipped', e.message);
         }
         try { await firebaseSignOut(auth); } catch { /* ignore */ }
+
         set({ user: null, token: null, loading: false });
       },
 

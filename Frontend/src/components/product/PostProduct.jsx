@@ -183,7 +183,7 @@ const PostProduct = () => {
           >
             <SelectTrigger>
               <SelectValue>
-                {categories.find(c => c._id === formData.category)?.name || "Select a category"}
+                {categories.find(c => c.id === formData.category)?.name || "Select a category"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>

@@ -58,7 +58,6 @@ const Register = () => {
     try {
       // First, handle profile picture upload if there's a file
       if (profilePictureFile && profilePictureFile instanceof File) {
-        toast.info("Uploading profile picture...");
         
         // Use the registration-specific upload API endpoint (no auth required)
         const uploadResponse = await api.post(`${UPLOAD_API_ENDPOINT}/registration/url`, {
@@ -86,13 +85,12 @@ const Register = () => {
         profilePicture: profilePictureUrl
       };
 
-      // Register the user with the profile picture URL
       const registerResult = await register(userData);
       
       toast.success("Registration successful, Please log in");
       navigate("/login");
     } catch (err) {
-      toast.error(error || "Registration failed");
+      toast.error(error || err.message || "Registration failed");
     }
   };
 
