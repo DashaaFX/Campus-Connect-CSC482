@@ -7,6 +7,9 @@ import { ORDER_STATUS_COLORS } from '@/constants/order-status';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { buildChatUrl, collectBuyerIds, fetchUsersIfNeeded, deriveBuyerPeer } from '@/utils/chatHelpers';
+// Import firebase directly from project root 
+import { db, auth } from '../../../firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 const ProductStatus = () => {
@@ -43,6 +46,30 @@ const ProductStatus = () => {
     try {
       await updateOrderStatus(orderId, status);
       toast.success(`Order ${status === 'approved' ? 'approved' : 'cancelled'} successfully!`);
+      if (status === 'approved') {
+        // Find the order we just updated to derive buyer peer
+        const updated = orders.find(o => (o._id === orderId || o.id === orderId));
+        const buyerId = updated?.userId;
+        if (buyerId && currentUser?.id && buyerId !== currentUser.id) {
+          // Generate deterministic thread id 
+            const threadId = [buyerId, currentUser.id].sort().join('_');
+            if (auth?.currentUser?.uid) {
+              try {
+                await addDoc(collection(db, 'threads', threadId, 'messages'), {
+                  type: 'system',
+                  text: 'Your order was approved. You can download your digital item now.',
+                  orderId,
+                  from: currentUser.id,
+                  to: buyerId,
+                  createdAt: serverTimestamp(),
+                  read: false
+                });
+              } catch (fireErr) {
+                console.error('Failed to send system chat message:', fireErr);
+              }
+            }
+        }
+      }
     } catch (err) {
      toast.error(err?.response?.data?.message || 'Failed to update order status');
     }

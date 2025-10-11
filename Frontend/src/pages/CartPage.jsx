@@ -9,10 +9,7 @@ import { toast } from 'sonner';
 import api from "@/utils/axios";
 import { 
   getProductImageUrl, 
-  getPlaceholderImage, 
-  getProductTitle,
-  getProductPrice,
-  processCartItem 
+  getPlaceholderImage 
 } from '@/utils/productHelpers';
 
 const CartPage = () => {
@@ -134,6 +131,9 @@ const CartPage = () => {
   const handleCheckout = () => {
     navigate('/checkout');
   };
+
+  // Detect all-digital cart (no physical shipping needs)
+  const allDigital = items.length > 0 && items.every(it => it.product?.isDigital);
   const [modalOpen, setModalOpen] = React.useState(false);
 
   const handleBuyRequest = async (productId) => {
@@ -187,6 +187,11 @@ const CartPage = () => {
       {/* Cart items */}
       {!loading && items.length > 0 && (
         <>
+          {allDigital && (
+            <div className="p-3 mb-4 text-xs border rounded bg-emerald-50 text-emerald-700">
+              All items are digital. No shipping needed; downloads become available after completion.
+            </div>
+          )}
           {items.map((item, idx) => {
             const isLoading = !item.product || item.product.title === 'Loading product...';
             const isError = item.product && (item.product.title === 'Product not found' || item.product.title === 'Error loading product');

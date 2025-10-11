@@ -179,7 +179,14 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
                           <div className="capitalize">{product.category?.name || product.category}</div>
                           <div className="text-sm text-gray-500">{formatSubcategory(product.subcategory)}</div>
                         </TableCell>
-                        <TableCell>${Number(product.price || 0).toFixed(2)}</TableCell>
+                        <TableCell>
+                          ${Number(product.price || 0).toFixed(2)}
+                          {product.isDigital && (
+                            <span className="block mt-1 text-xs text-indigo-600">
+                              Downloads: {product.digitalDownloadCount || 0}
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell>{product.stock}</TableCell>
                         <TableCell>
                           <Badge variant={product.stock > 0 ? 'default' : 'destructive'}>

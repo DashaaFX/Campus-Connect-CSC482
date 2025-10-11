@@ -10,6 +10,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { useCartStore } from '@/store/useCartStore';
 import { formatSubcategory } from '@/utils/formatSubcategory';
 import { getProductId, getProductTitle, getPlaceholderImage } from '@/utils/productHelpers';
+import { fetchDigitalDownloadUrl } from '@/utils/digitalDownload';
 
 const Products = () => {
   const { id } = useParams();
@@ -68,7 +69,7 @@ const Products = () => {
 
   const isDigital = !!product.isDigital;
   const userOwns = !!product.userOwns; // set by backend gating
-  const digitalAccess = product.digitalAccess; // 'full' | 'preview' (from backend)
+  const digitalAccess = product.digitalAccess; // 'full' | 'preview'
 
   const showAddToCart = !isDigital; // digital products purchased individually (future: direct buy)
 
@@ -159,12 +160,25 @@ const Products = () => {
             {isDigital ? (
               <div className="mt-4">
                 {userOwns ? (
-                  <Button variant="default" disabled>
-                    Full access granted (download endpoint TBD)
+                  <Button
+                    variant="default"
+                    onClick={async () => {
+                      try {
+                        const url = await fetchDigitalDownloadUrl(getProductId(product));
+                        if (!url) {
+                          toast.error('Download unavailable');
+                          return;
+                        }
+                        window.location.href = url;
+                      } catch (e) {
+                        toast.error(e.response?.data?.message || 'Download failed');
+                      }
+                    }}
+                  >
+                    Download File
                   </Button>
                 ) : (
                   <Button onClick={() => {
-                    // For now reuse cart flow or future direct-purchase; just add to cart quantity 1
                     addToCart({ productId: getProductId(product), quantity: 1 })
                       .then(() => toast.success('Added to cart'))
                       .catch(() => toast.error('Failed to add to cart'));

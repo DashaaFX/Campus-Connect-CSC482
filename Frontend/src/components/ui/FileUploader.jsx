@@ -4,16 +4,7 @@ import axios from '@/utils/axios';
 import { UPLOAD_API_ENDPOINT } from '@/utils/data';
 import { useAuthStore } from '@/store/useAuthStore';
 
-/**
- * Generic file uploader supporting documents (PDF, DOC, DOCX) using existing presigned URL API.
- * Props:
- *  - onUploadComplete(fileMeta) => void
- *  - multiple (bool)
- *  - maxFiles (number)
- *  - allowed (override MIME list)
- *  - uploadType: 'document' | 'product' | 'profile'
- *  - access: 'public' | 'private'
- */
+//File uploader
 const DEFAULT_ALLOWED = [
   'application/pdf',
   'application/msword',
@@ -46,12 +37,14 @@ const FileUploader = ({
   };
 
   const requestUploadUrl = async (file) => {
+    // Enforce private access for document uploads (digital products)
+    const enforcedAccess = uploadType === 'document' ? 'private' : (access === 'private' ? 'private' : 'public');
     const body = {
       fileName: file.name,
       fileType: file.type,
       fileSize: file.size,
       uploadType,
-      access: access === 'private' ? 'private' : 'public'
+      access: enforcedAccess
     };
     const resp = await axios.post(`${UPLOAD_API_ENDPOINT}/url`, body, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}

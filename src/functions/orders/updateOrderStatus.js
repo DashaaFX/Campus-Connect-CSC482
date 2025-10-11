@@ -64,8 +64,19 @@ export const handler = async (event) => {
       statusUpdatedBy: userId,
       statusUpdatedAt: new Date().toISOString()
     };
-
+    
+    //track the order state changes
+    const prevStatus = existingOrder.status;
     const updatedOrder = await orderModel.update(orderId, updateData);
+
+    // Unlock digital downloads when moving into completed
+    if (status === 'completed' && prevStatus !== 'completed') {
+      try {
+        console.log(`Digital download entitlement (implicit) unlocked for order ${orderId}`);
+      } catch (e) {
+        console.error('Entitlement unlock hook error:', e);
+      }
+    }
 
     return createSuccessResponse({
       message: 'Order status updated successfully',

@@ -2,7 +2,6 @@
 import * as seedCategories from './seedCategories.js';
 import * as seedSubcategories from './seedSubcategories.js';
 import * as cleanDuplicates from './cleanDuplicates.js';
-import * as makeAdmin from './makeAdmin.js';
 import * as getCategories from './getCategories.js';
 import * as getSubcategories from './getSubcategories.js';
 import * as createCategory from './createCategory.js';
@@ -40,11 +39,6 @@ export const handler = async (event) => {
     if (path === '/admin/clean-duplicates' && method === 'POST') {
       return await cleanDuplicates.handler(event);
     }
-    
-    if (path === '/admin/make-admin' && method === 'POST') {
-      return await makeAdmin.handler(event);
-    }
-
     // Category management routes
     if (path === '/categories' && method === 'GET') {
       return await getCategories.handler(event);

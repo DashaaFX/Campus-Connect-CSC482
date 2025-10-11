@@ -162,6 +162,9 @@ const PublicProductPage = () => {
     <> 
     
       <div className="px-4 py-10 mx-auto max-w-7xl">
+        <div className="p-4 mb-6 text-sm border rounded bg-blue-50 text-slate-700">
+          <strong>Digital Products:</strong> Items marked with the Digital badge are downloadable documents. You'll receive access after the seller marks your order as completed.
+        </div>
         <h1 className="mb-6 text-3xl font-bold">Browse Products</h1>
 
         {/* Filters and Search */}

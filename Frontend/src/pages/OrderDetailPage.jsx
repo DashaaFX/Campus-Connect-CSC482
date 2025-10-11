@@ -8,6 +8,8 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
 import api from "@/utils/axios";
 import { PRODUCT_API_ENDPOINT } from "@/utils/data";
+import { fetchDigitalDownloadUrl } from '@/utils/digitalDownload';
+import { toast } from 'sonner';
 
 const OrderDetailPage = () => {
   const { orderId } = useParams();
@@ -118,6 +120,8 @@ const OrderDetailPage = () => {
             {(order.items || []).map((item, idx) => {
               const productId = item.product?.id || item.product?._id || item.productId;
               const sellerEmail = sellerEmails[productId] || "Loading...";
+              const isDigital = item.product?.isDigital;
+              const canDownload = isDigital && (['approved','completed'].includes(order.status));
               return (
                 <div key={idx} className="flex items-center gap-4 p-3 border rounded bg-gray-50">
                   {item.product?.images?.length > 0 && (
@@ -137,6 +141,34 @@ const OrderDetailPage = () => {
                     <div className="mt-1 text-sm">
                       <strong>Seller Email:</strong> <Badge variant="outline" className="text-md">{sellerEmail}</Badge>
                     </div>
+                    {isDigital && (
+                      <div className="mt-3">
+                        {(order.status === 'approved' || order.status === 'completed') && (
+                          <Badge variant="outline" className="mb-2 text-xs text-green-700 border-green-300 bg-green-50">
+                            Approved (Download Ready)
+                          </Badge>
+                        )}
+                        <Button
+                          variant={canDownload ? 'default' : 'outline'}
+                          size="sm"
+                          disabled={!canDownload}
+                          onClick={async () => {
+                            try {
+                              const url = await fetchDigitalDownloadUrl(productId);
+                              if (!url) {
+                                toast.error('Download unavailable');
+                                return;
+                              }
+                              window.location.href = url;
+                            } catch (e) {
+                              toast.error(e.response?.data?.message || 'Download failed');
+                            }
+                          }}
+                        >
+                          {canDownload ? 'Download File' : (order.status === 'approved' ? 'Preparing...' : 'Available After Completion')}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

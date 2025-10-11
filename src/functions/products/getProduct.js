@@ -66,7 +66,7 @@ export const handler = async (event) => {
                   const pid = it.productId || it.product?.id || it.product?._id;
                   return pid === productId || pid === product.id || pid === product._id;
                 });
-                if (hasItem && (o.status === 'completed' || o.status === 'paid' || o.status === 'delivered')) {
+                if (hasItem && (['approved','completed','paid','delivered'].includes(o.status))) {
                   userOwns = true;
                   break;
                 }
@@ -99,13 +99,17 @@ export const handler = async (event) => {
     // Sanitize digital sensitive fields if user not entitled
     let sanitized = product;
     if (product.isDigital) {
-      const { documentKey, ...rest } = product;
+      const { documentKey, digitalDownloadCount, ...rest } = product;
       sanitized = { ...rest };
       // Provide flags for frontend gating
       sanitized.userOwns = userOwns;
       sanitized.isSeller = isSeller;
       sanitized.digitalAccess = userOwns ? 'full' : 'preview';
-      // Never return documentKey here (download served via dedicated endpoint later)
+      // Only expose download count to seller
+      if (isSeller && typeof digitalDownloadCount !== 'undefined') {
+        sanitized.digitalDownloadCount = digitalDownloadCount;
+      }
+      //download served via dedicated endpoint later
     }
 
     const response = createSuccessResponse({ product: sanitized });

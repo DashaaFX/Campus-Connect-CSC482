@@ -10,6 +10,9 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { buildChatUrl, collectSellerIds, fetchUsersIfNeeded, deriveSellerPeerFromItem } from '@/utils/chatHelpers';
 import api from '@/utils/axios';
 import { PRODUCT_API_ENDPOINT } from '@/utils/data'
+import { fetchDigitalDownloadUrl } from '@/utils/digitalDownload';
+import { FileText, Package } from 'lucide-react';
+import { toast } from 'sonner';
 const MyOrdersPage = () => {
   
   const { orders, fetchOrders, loading, error } = useOrderStore();
@@ -20,6 +23,10 @@ const MyOrdersPage = () => {
 
   useEffect(() => {
     fetchOrders();
+    const interval = setInterval(() => fetchOrders(), 15000);
+    const vis = () => { if (document.visibilityState === 'visible') fetchOrders(); };
+    document.addEventListener('visibilitychange', vis);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', vis); };
   }, [fetchOrders]);
   
   useEffect(() => {
@@ -85,17 +92,47 @@ const MyOrdersPage = () => {
                 {(order.items || []).map(item => {
                   const pid = item.product?.id || item.product?._id || item.productId;
                   const email = sellerEmails[pid] || 'Loading...';
+                  const isDigital = item.product?.isDigital;
+                  const canDownload = isDigital && (['approved','completed'].includes(order.status));
                   return (
                     <div
                       key={pid || Math.random()}
                       className="flex flex-col gap-1 py-2 text-sm border-b last:border-b-0"
                     >
-                      <div className="flex justify-between">
-                        <div>{item.product?.title || item.title || 'Product Title'}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1">
+                          {isDigital ? (
+                            <FileText className="w-4 h-4 text-indigo-600" />
+                          ) : (
+                            <Package className="w-4 h-4 text-gray-500" />
+                          )}
+                          <span>{item.product?.title || item.title || 'Product Title'}</span>
+                        </div>
                         <div>Qty: {item.quantity} @ ${Number(item.product?.price || item.price || 0).toFixed(2)}</div>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-600">
+                      <div className="flex items-center justify-between text-xs text-gray-600">
                         <span>Seller Email: {email}</span>
+                        {isDigital && (
+                          <Button
+                            size="xs"
+                            variant={canDownload ? 'outline' : 'outline'}
+                            disabled={!canDownload}
+                            onClick={async () => {
+                              try {
+                                const url = await fetchDigitalDownloadUrl(pid);
+                                if (!url) { toast.error('Download unavailable'); return; }
+                                window.location.href = url;
+                              } catch (e) {
+                                toast.error(e.response?.data?.message || 'Download failed');
+                              }
+                            }}
+                          >
+                            {canDownload ? 'Download' : (order.status === 'approved' ? 'Ready' : 'Pending')}
+                          </Button>
+                        )}
+                        {isDigital && (order.status === 'approved' || order.status === 'completed') && (
+                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-green-700 bg-green-50 border border-green-200 rounded">Approved (Download Ready)</span>
+                        )}
                       </div>
                     </div>
                   );

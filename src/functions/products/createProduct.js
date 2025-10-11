@@ -59,6 +59,10 @@ export const handler = async (event) => {
     const allowedDigitalFormats = ['pdf', 'doc', 'docx'];
     let digitalFormat = null;
     if (isDigital) {
+      // Enforce that the provided documentKey is already a PRIVATE object path
+      if (!body.documentKey.startsWith('private/')) {
+        return createErrorResponse('Digital documentKey must start with "private/". Upload the file with access="private" and use the returned key.', 400);
+      }
       // Accept explicit digitalFormat or derive from documentKey
       digitalFormat = (body.digitalFormat || body.documentFormat || '').toLowerCase();
       if (!digitalFormat && body.documentKey) {
@@ -96,12 +100,16 @@ export const handler = async (event) => {
       // Digital metadata
       isDigital,
       digitalFormat: isDigital ? digitalFormat : null,
-      documentKey: isDigital ? body.documentKey : null,
+  documentKey: isDigital ? body.documentKey : null, // already validated to include private/
       documentOriginalName: isDigital ? (body.documentOriginalName || body.originalName || body.title) : null,
   previewImage: isDigital ? (previewImage || getFormatPlaceholder(digitalFormat)) : null,
   digitalStatus: isDigital ? ((previewImage || getFormatPlaceholder(digitalFormat)) ? 'ready' : 'processing') : null,
       fileSizeBytes: isDigital ? fileSizeBytes : null
     };
+    // Initialize digital download count
+    if (isDigital) {
+      productData.digitalDownloadCount = 0;
+    }
     
     // Create the product
     const productModel = new ProductModel();

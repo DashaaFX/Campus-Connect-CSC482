@@ -25,7 +25,7 @@ Globals:
 Parameters:
   Environment:
     Type: String
-    Default: dev1
+    Default: dev2
     AllowedValues: [dev2, dev1, dev, staging, prod]
 
 Resources:
@@ -143,6 +143,17 @@ Resources:
             TableName: !Ref SubcategoriesTable
         - DynamoDBReadPolicy:
             TableName: !Ref UsersTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref OrdersTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub "${UploadsBucket.Arn}/*"
+            - Effect: Allow
+              Action:
+                - s3:ListBucket
+              Resource: !GetAtt UploadsBucket.Arn
       Events:
         GetProductsApi:
           Type: Api
@@ -156,6 +167,14 @@ Resources:
             Path: /products/{id}
             Method: get
             RestApiId: !Ref CampusConnectApi
+        DownloadDigitalProductApi:
+          Type: Api
+          Properties:
+            Path: /products/{id}/download
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
         GetSellerProductsApi:
           Type: Api
           Properties:
@@ -413,14 +432,6 @@ Resources:
             Path: /admin/clean-duplicates
             Method: options
             RestApiId: !Ref CampusConnectApi
-        MakeAdminApi:
-          Type: Api
-          Properties:
-            Path: /admin/make-admin
-            Method: post
-            RestApiId: !Ref CampusConnectApi
-            Auth:
-              Authorizer: JWTAuth
         GetCategoriesApi:
           Type: Api
           Properties:

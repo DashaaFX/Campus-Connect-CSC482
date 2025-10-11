@@ -1,6 +1,4 @@
-/**
- * Utility functions for product handling
- */
+//product handling
 import { getCloudFrontImageUrl } from './imageHelpers.js';
 
 export const getProductId = (product) => {
@@ -52,8 +50,6 @@ export const processCartItem = (item) => {
       images: []
     };
   }
-  
-  // Make a deep copy to avoid mutating the original
   const product = JSON.parse(JSON.stringify(item.product));
   
   // Ensure product has required fields
@@ -61,17 +57,14 @@ export const processCartItem = (item) => {
   product.title = getProductTitle(product);
   product.price = getProductPrice(product, item.price || 0);
   
-  // Make sure images array exists
   if (!product.images || !Array.isArray(product.images)) {
     product.images = [];
   }
   
-  // Process images if they exist
   if (product.images && product.images.length > 0) {
     const imageUrl = getProductImageUrl({...product});
-    product.images = [imageUrl]; // Store the full URL directly
+    product.images = [imageUrl]; 
   } else {
-    // Add a placeholder image directly in the array
     product.images = [getPlaceholderImage()];
   }
   
@@ -82,4 +75,14 @@ export const processCartItem = (item) => {
     product
   };
 };
+
+// Determine if a user owns a digital product given their orders list, any COMPLETED order that includes the product as an item.
+export const userOwnsDigitalProduct = (orders, userId, productId) => {
+  if (!orders || !Array.isArray(orders) || !productId) return false;
+  return orders.some(o => o && o.status === 'completed' && Array.isArray(o.items) && o.items.some(it => {
+    const pid = it.productId || it.product?.id || it.product?._id;
+    return pid === productId;
+  }));
+};
+
 
