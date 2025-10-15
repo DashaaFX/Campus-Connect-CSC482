@@ -8,7 +8,6 @@ import api from "@/utils/axios";
 import { PRODUCT_API_ENDPOINT } from '@/utils/data';
 import LatestProducts from '../product/LatestProducts';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const Home = () => {
   const [recentProducts, setRecentProducts] = useState([]);

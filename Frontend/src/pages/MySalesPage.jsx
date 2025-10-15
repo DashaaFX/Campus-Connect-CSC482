@@ -4,7 +4,7 @@
   import { PRODUCT_API_ENDPOINT } from '@/utils/data';
   import { getProductImageUrl } from '@/utils/productHelpers';
 
-  import AdminSidebar from '../components/product/ProductSideBar';
+  import ProductSidebar from '../components/product/ProductSideBar';
   import { Button } from '@/components/ui/button';
   import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
   import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,9 @@
   import { useAuthStore } from '@/store/useAuthStore';
   import { toast } from 'sonner';
   import { formatSubcategory } from '@/utils/formatSubcategory';
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  const MySalesPage = () => {
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
+  
+  const MySalesPage = () => {
     const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -45,8 +47,11 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
             // Make sure each product has both id and _id fields
             return {
               ...product,
-              id: product.id || product._id,
-              _id: product._id || product.id
+              category: product.category,
+              subcategory: product.subcategory.id,
+              subcategoryName: product.subcategory.name, 
+              id: product.id,
+              _id: product._id
             };
           });
           setProducts(processedProducts);
@@ -76,7 +81,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
     
     return (
       <div className="flex min-h-screen">
-        <AdminSidebar
+        <ProductSidebar
           onCategorySelect={setSelectedCategory}
           onSubcategorySelect={setSelectedSubcategory}
           selectedCategory={selectedCategory}
@@ -177,7 +182,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';  
 
                         <TableCell>
                           <div className="capitalize">{product.category?.name || product.category}</div>
-                          <div className="text-sm text-gray-500">{formatSubcategory(product.subcategory)}</div>
+                          <div className="text-sm text-gray-500">{ product.subcategoryName || formatSubcategory(product.subcategory)}</div>
                         </TableCell>
                         <TableCell>${Number(product.price || 0).toFixed(2)}</TableCell>
                         <TableCell>{product.stock}</TableCell>

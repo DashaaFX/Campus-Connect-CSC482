@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, useMotionValue } from "framer-motion";
-
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 const DRAG_BUFFER = 0;
 const VELOCITY_THRESHOLD = 500;
 const GAP = 16;
@@ -20,6 +21,9 @@ export default function Carousel1({
 
   const x = useMotionValue(0);
   const containerRef = useRef(null);
+
+  const prev = () => setCurrentIndex((c) => (c === 0 ? items.length - 1 : c - 1));
+  const next = () => setCurrentIndex((c) => (c === items.length - 1 ? 0 : c + 1));
 
   const trackItemOffset = 100 / visibleItems;
   const carouselItems = loop && items.length > 0 ? [...items, ...items.slice(0, visibleItems)] : items;
@@ -45,7 +49,7 @@ export default function Carousel1({
       const timer = setInterval(() => {
         setCurrentIndex((prev) => {
           if (prev >= items.length) {
-            return loop ? prev + 1 : prev;
+            return loop ? 0 : prev;
           }
           return prev + 1;
         });
@@ -86,6 +90,16 @@ export default function Carousel1({
 
   return (
     <div ref={containerRef} className="relative w-full px-4 overflow-hidden">
+      <Button
+        variant="secondary"
+        size="icon"
+        className="absolute left-0 z-10 -translate-y-1/2 top-1/2"
+        onClick={prev}
+        aria-label="Previous"
+      >
+        <ChevronLeft />
+      </Button>
+
       <motion.div
         className="flex"
         drag="x"
@@ -128,6 +142,15 @@ export default function Carousel1({
             )
         )}
       </motion.div>
+      <Button
+        variant="secondary"
+        size="icon"
+        className="absolute right-0 z-10 -translate-y-1/2 top-1/2"
+        onClick={next}
+        aria-label="Next"
+      >
+        <ChevronRight />
+      </Button>
 
       {/* dots */}
       <div className="flex justify-center mt-4">

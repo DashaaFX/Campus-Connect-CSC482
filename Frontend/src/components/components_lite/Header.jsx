@@ -40,16 +40,20 @@ const Header = () => {
         <div className="flex justify-center mt-10">
           <div className="w-full max-w-5xl p-4 border shadow-lg rounded-2xl bg-white/5 border-white/10 backdrop-blur">
             <Carousel1
-              items={categories.map(cat => {
-                const cleanName = (cat.name || "").toLowerCase();
-                return {
-                  title: cat.name ? cat.name.replace(/_/g, " ") : "No Name",
-                  description: cat.description || "",
-                  id: cat._id,
-                  image: categoryImages[cleanName] || "/images/categories/default.jpg",
-                  onClick: () => navigate(`/products?category=${cat._id}`),
-                };
-              })}
+              items={
+                [...categories]
+                  //sort categories alphabetically
+                  .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                  .map(cat => {
+                    const cleanName = (cat.name || "").toLowerCase();
+                    return {
+                      title: cat.name ? cat.name.replace(/_/g, " ") : "No Name",
+                      description: cat.description || "",
+                      id: cat.id,
+                      image: categoryImages[cleanName] || "/images/categories/default.jpg",
+                      onClick: () => navigate(`/products?category=${cat.id}`),
+                    };
+                  })}
             />
           </div>
         </div>

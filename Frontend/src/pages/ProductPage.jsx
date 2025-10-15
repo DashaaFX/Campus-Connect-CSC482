@@ -103,14 +103,25 @@ const PublicProductPage = () => {
           (p) => p.sellerId !== user.id && p.userId !== user.id
         );
       }
-      //filter subcategory separately 
-       if (selectedSubcategory) {
-          allProducts = allProducts.filter(p =>
-            p.subcategory === selectedSubcategory ||
-            p.subcategory?.id === selectedSubcategory ||
-            p.subcategory?._id === selectedSubcategory
-          );
-        }
+      //filter subcategory separately, for Sort by dropdown
+      if (selectedSubcategory) {
+        allProducts = allProducts.filter(p =>
+          p.subcategory === selectedSubcategory ||
+          p.subcategory?.id === selectedSubcategory ||
+          p.subcategory?._id === selectedSubcategory
+        );
+      }
+      // Sort products 
+      if (sort === "price") {
+        allProducts = [...allProducts].sort((a, b) => Number(a.price) - Number(b.price));
+      } else if (sort === "-price") {
+        allProducts = [...allProducts].sort((a, b) => Number(b.price) - Number(a.price));
+      } else if (sort === "createdAt") {
+        allProducts = [...allProducts].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      } else if (sort === "-createdAt") {
+        allProducts = [...allProducts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      }
+
       setProducts(allProducts);
     } catch (err) {
       console.error("Failed to fetch products", err);
@@ -195,7 +206,6 @@ const PublicProductPage = () => {
               <SelectValue placeholder="Subcategory" />
             </SelectTrigger>
             <SelectContent>
-              {console.log('Rendering subcategories:', subcategories)}
               {subcategories.map(sub => (
                 <SelectItem key={sub.id || sub._id} value={sub.id || sub._id}>
                   {sub.name.replace(/_/g, ' ')}

@@ -75,7 +75,7 @@ const EditProductForm = () => {
         });
         const product = res.data.product || res.data;
         setFormData({
-          title: product.title || "",
+          title: product.name || "",
           description: product.description || "",
           price: product.price || 0,
           category: product.category?._id || product.category || "",
@@ -141,6 +141,7 @@ const EditProductForm = () => {
 
   return (
     <div className="max-w-2xl p-6 mx-auto">
+        <Button variant="outline" onClick={() => navigate(-1)}>← Back</Button>
       <h1 className="mb-6 text-2xl font-bold">Edit Product</h1>
       {error && <div className="mb-4 text-red-500">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">

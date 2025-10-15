@@ -149,7 +149,6 @@ const Products = () => {
             <div className="mb-4 text-xl font-semibold">${Number(product.price || 0).toFixed(2)}</div>
             <div className="mb-2"><strong>Category:</strong> {product.category?.name || product.category}</div>
             <div className="mb-2"><strong>Subcategory:</strong> {formatSubcategory(product.subcategory)}</div>
-            <div className="mb-2"><strong>Condition:</strong> {product.condition}</div>
             <div className="mb-2"><strong>Stock:</strong> {product.stock}</div>
 
             {product.stock > 0 ? (
