@@ -27,21 +27,23 @@ const PublicProductPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [sort, setSort] = useState("");
-  const [digitalFilter, setDigitalFilter] = useState(''); // '', 'true', 'false'
+  // Digital filter sentinel values: 'all' (no filter), 'true' (digital only), 'false' (physical only)
+  const [digitalFilter, setDigitalFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const PRODUCTS_PER_PAGE = 9;
   useEffect(() => {
     const initialSearch = searchParams.get('search') || "";
     const initialCategory = searchParams.get('category') || "";
     const initialSubcategory = searchParams.get('subcategory') || "";
-  const initialSort = searchParams.get('sort') || "";
-  const initialDigital = searchParams.get('digital') || '';
+    const initialSort = searchParams.get('sort') || "";
+    const rawDigital = searchParams.get('digital');
+    const initialDigital = rawDigital === 'true' || rawDigital === 'false' ? rawDigital : 'all';
 
     setSearch(initialSearch);
     setSelectedCategory(initialCategory);
     setSelectedSubcategory(initialSubcategory);
-  setSort(initialSort);
-  setDigitalFilter(initialDigital);
+    setSort(initialSort);
+    setDigitalFilter(initialDigital);
   }, [location.search]);
 
   // Load categories
@@ -93,11 +95,11 @@ const PublicProductPage = () => {
     try {
       const params = new URLSearchParams();
 
-      if (search) params.append('search', search);
-      if (selectedCategory) params.append('category', selectedCategory);
-      //if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
-  if (sort) params.append('sort', sort);
-  if (digitalFilter) params.append('digital', digitalFilter);
+    if (search) params.append('search', search);
+    if (selectedCategory) params.append('category', selectedCategory);
+    //if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
+    if (sort) params.append('sort', sort);
+    if (digitalFilter && digitalFilter !== 'all') params.append('digital', digitalFilter);
 
       const res = await api.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
       let allProducts = res.data.products || [];
@@ -142,8 +144,8 @@ const PublicProductPage = () => {
     if (search) params.set('search', search);
     if (selectedCategory) params.set('category', selectedCategory);
     if (selectedSubcategory) params.set('subcategory', selectedSubcategory);
-  if (sort) params.set('sort', sort);
-  if (digitalFilter) params.set('digital', digitalFilter);
+    if (sort) params.set('sort', sort);
+    if (digitalFilter && digitalFilter !== 'all') params.set('digital', digitalFilter);
 
     navigate(`/products?${params.toString()}`);
   };
@@ -157,8 +159,8 @@ const PublicProductPage = () => {
     setSearch("");
     setSelectedCategory("");
     setSelectedSubcategory("");
-  setSort("");
-  setDigitalFilter('');
+    setSort("");
+    setDigitalFilter('all');
   };
     useEffect(() => {
     setCurrentPage(1);
@@ -246,7 +248,7 @@ const PublicProductPage = () => {
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Products</SelectItem>
+              <SelectItem value="all">All Products</SelectItem>
               <SelectItem value="true">Digital Only</SelectItem>
               <SelectItem value="false">Physical Only</SelectItem>
             </SelectContent>
