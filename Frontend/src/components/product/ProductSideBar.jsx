@@ -7,7 +7,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { CATEGORY_API_ENDPOINT } from '@/utils/data';
 
-const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory, selectedSubcategory }) => {
+const ProductSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory, selectedSubcategory }) => {
   const [openCategories, setOpenCategories] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategoriesMap, setSubcategoriesMap] = useState({});
@@ -73,7 +73,10 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
       <Button
         variant="ghost"
         className={`w-full justify-start mb-2 ${!selectedCategory ? 'bg-accent' : ''}`}
-        onClick={() => onCategorySelect(null)}
+        onClick={() => {
+          onCategorySelect(null);
+          onSubcategorySelect(null);
+        }}
       >
         All Products
       </Button>
@@ -89,6 +92,10 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
             <Button
               variant="ghost"
               className={`w-full justify-between ${selectedCategory === (category.id || category._id) ? 'bg-accent' : ''}`}
+              onClick={() => {
+                onCategorySelect(category.id || category._id);
+                onSubcategorySelect(null);  
+              }}
             >
               <span className="capitalize">{category.name.replace(/_/g, ' ')}</span>
               {openCategories.includes(category.id || category._id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -115,5 +122,5 @@ const AdminSidebar = ({ onCategorySelect, onSubcategorySelect, selectedCategory,
   );
 };
 
-export default AdminSidebar;
+export default ProductSidebar;
 
