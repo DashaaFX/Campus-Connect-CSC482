@@ -18,12 +18,10 @@ export const handler = async (event) => {
   }
 
   try {
-    console.log('GetCart event:', JSON.stringify(event, null, 2));
     
     // Get user info from JWT authorizer context
     const userId = event.requestContext?.authorizer?.userId;
     
-    console.log('Extracted userId:', userId);
     
     if (!userId) {
       return createErrorResponse('User authentication required', 401);
@@ -32,13 +30,11 @@ export const handler = async (event) => {
     const cartModel = new CartModel();
     const cart = await cartModel.getByUserId(userId);
     
-    console.log('Retrieved cart:', JSON.stringify(cart, null, 2));
     
     // If cart has items, fetch full product details for each item
     if (cart?.items?.length > 0) {
       const productModel = new ProductModel();
       
-      console.log('Fetching product details for cart items, count:', cart.items.length);
       
       // First, clean up items to ensure they all have productId
       cart.items = cart.items.filter(item => item && item.productId);
@@ -58,9 +54,7 @@ export const handler = async (event) => {
           }
           
           try {
-            console.log(`Fetching product ${item.productId}...`);
             const product = await productModel.getById(item.productId);
-            console.log(`Product ${item.productId} result:`, product ? 'Found' : 'Not found');
             
             if (!product) {
               console.warn(`Product ${item.productId} not found in database`);

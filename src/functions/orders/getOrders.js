@@ -29,14 +29,11 @@ export const handler = async (event) => {
     
     if (isSeller) {
       // Get orders where the user is the seller
-      console.log(`Fetching seller orders for user ${userId}`);
       orders = await orderModel.getBySeller(userId);
-      console.log(`Found ${orders?.length || 0} seller orders for user ${userId}`);
     } else {
       // Get orders where the user is the buyer
-      console.log(`Fetching buyer orders for user ${userId} using UserIndex`);
+
       orders = await orderModel.getByBuyer(userId);
-      console.log(`Found ${orders?.length || 0} buyer orders for user ${userId}`);
     }
 
     // Enrich orders with minimal digital product metadata 

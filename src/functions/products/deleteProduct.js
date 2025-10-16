@@ -17,7 +17,6 @@ export const handler = async (event) => {
 
     // Get existing product to verify ownership
     const productModel = new ProductModel();
-    console.log(`Deleting product with ID: ${productId}`);
     
     // Try to get the product by ID using enhanced method
     const existingProduct = await productModel.getById(productId);

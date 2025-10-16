@@ -6,11 +6,7 @@ import { createSubcategory } from './createSubcategory.js';
 import { createErrorResponse } from '/opt/nodejs/utils/response.js';
 
 export const handler = async (event) => {
-  console.log('Categories handler received:', {
-    path: event.path,
-    httpMethod: event.httpMethod,
-    resource: event.resource
-  });
+
 
   try {
     const path = event.path || event.resource;

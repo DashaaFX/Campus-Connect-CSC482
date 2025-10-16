@@ -72,7 +72,6 @@ export const handler = async (event) => {
     // Unlock digital downloads when moving into completed
     if (status === 'completed' && prevStatus !== 'completed') {
       try {
-        console.log(`Digital download entitlement (implicit) unlocked for order ${orderId}`);
       } catch (e) {
         console.error('Entitlement unlock hook error:', e);
       }

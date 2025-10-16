@@ -1,6 +1,8 @@
 //Baljinnyam Puntsagnorov
 import { BaseModel } from './BaseModel.js';
 import { generateAssetUrl, getCloudFrontDomain } from '../utils/urlUtils.js';
+import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { docClient } from '../utils/dynamodb.js';
 
 export class ProductModel extends BaseModel {
   constructor() {
@@ -161,6 +163,30 @@ export class ProductModel extends BaseModel {
   // Legacy method for backward compatibility
   async createProduct(productData) {
     return this.create(productData);
+  }
+
+  // Atomic increment for digital download count to avoid race conditions
+  async incrementDigitalDownloadCount(productId) {
+    try {
+      const timestamp = new Date().toISOString();
+      const command = new UpdateCommand({
+        TableName: this.tableName,
+        Key: { id: productId },
+        // If attribute does not exist, ADD initializes it to :inc (1). Also bump updatedAt.
+        UpdateExpression: 'ADD digitalDownloadCount :inc SET updatedAt = :updatedAt',
+        ExpressionAttributeValues: {
+          ':inc': 1,
+          ':updatedAt': timestamp
+        },
+        ReturnValues: 'UPDATED_NEW'
+      });
+      const result = await docClient.send(command);
+      return result.Attributes?.digitalDownloadCount;
+    } catch (err) {
+      // Swallow metric failure; not critical to user flow
+      console.error('incrementDigitalDownloadCount failed:', err.message);
+      return null;
+    }
   }
 }
 

@@ -204,7 +204,6 @@ const PublicProductPage = () => {
               <SelectValue placeholder="Subcategory" />
             </SelectTrigger>
             <SelectContent>
-              {console.log('Rendering subcategories:', subcategories)}
               {subcategories.map(sub => (
                 <SelectItem key={sub.id || sub._id} value={sub.id || sub._id}>
                   {sub.name.replace(/_/g, ' ')}

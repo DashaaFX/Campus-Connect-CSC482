@@ -73,7 +73,6 @@ async function cleanCategoriesDuplicates() {
           Key: { id: group[i].id }
         }));
         duplicatesRemoved++;
-        console.log(`Deleted duplicate category: ${group[i].id} (${group[i].name})`);
       }
     }
   }
@@ -115,7 +114,6 @@ async function cleanSubcategoriesDuplicates() {
           Key: { id: group[i].id }
         }));
         duplicatesRemoved++;
-        console.log(`Deleted duplicate subcategory: ${group[i].id} (${group[i].name})`);
       }
     }
   }

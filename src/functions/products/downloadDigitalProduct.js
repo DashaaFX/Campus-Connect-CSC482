@@ -58,10 +58,9 @@ export const handler = async (event) => {
     });
     const url = await getSignedUrl(s3Client, command, { expiresIn: 60 });
 
-    // Best-effort download count increment
+    // Atomic best-effort download count increment (no race conditions)
     try {
-      const currentCount = product.digitalDownloadCount || 0;
-      await productModel.update(productId, { digitalDownloadCount: currentCount + 1, updatedAt: new Date().toISOString() });
+      await productModel.incrementDigitalDownloadCount(productId);
     } catch (_) { /* ignore metric failures */ }
 
     const resp = createSuccessResponse({ url, expiresIn: 60 });

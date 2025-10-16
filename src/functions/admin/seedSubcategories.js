@@ -47,7 +47,6 @@ export const handler = async (event) => {
         createdSubcategories.push(subcategoryData);
       } catch (error) {
         if (error.name === 'ConditionalCheckFailedException') {
-          console.log(`Subcategory ${subcategoryData.id} already exists, skipping...`);
         } else {
           console.error(`Error creating subcategory ${subcategoryData.name}:`, error.message);
         }

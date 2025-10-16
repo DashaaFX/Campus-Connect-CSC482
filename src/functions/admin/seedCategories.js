@@ -34,7 +34,7 @@ export const handler = async (event) => {
         return await docClient.send(new PutCommand(params));
       } catch (error) {
         if (error.name === 'ConditionalCheckFailedException') {
-          console.log(`Category ${category.id} already exists, skipping...`);
+
           return null; // Category already exists
         }
         throw error; // Re-throw other errors
