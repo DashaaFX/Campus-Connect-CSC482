@@ -24,7 +24,7 @@ dist-ssr
 # .env.staging  
 # .env.production
 
-
+.github/
 .history/
 
 # Editor directories and files
