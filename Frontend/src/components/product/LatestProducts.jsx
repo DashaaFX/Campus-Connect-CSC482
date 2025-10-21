@@ -72,7 +72,7 @@ const LatestProducts = ({ limit = 6 }) => {
               />
             ) : (
               <img
-                src="/placeholder-image.jpg"
+                src="/placeholder1.png"
                 alt="No preview"
                 className="object-cover w-full h-40 rounded"
               />
