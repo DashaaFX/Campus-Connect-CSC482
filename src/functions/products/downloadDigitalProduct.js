@@ -1,5 +1,8 @@
 import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { orderModel } from '/opt/nodejs/models/Order.js';
+import { downloadLogModel } from '/opt/nodejs/models/DownloadLog.js';
+import { TIMELINE_EVENTS } from '/opt/nodejs/constants/timelineEventTypes.js';
+import { DOWNLOAD_ENTITLEMENT_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -8,7 +11,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 // seller or buyer with at least one approved/completed order containing product.
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 const BUCKET_NAME = process.env.UPLOADS_BUCKET || 'campus-connect-uploads';
-const UNLOCK_STATUSES = ['approved', 'completed'];
+// Entitlement now requires paid or completed status (except seller bypass)
 
 export const handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -37,33 +40,67 @@ export const handler = async (event) => {
 
     const isSeller = product.sellerId === userId || product.userId === userId;
     let entitled = isSeller;
+    let grantingOrder = null;
     if (!entitled) {
       const buyerOrders = await orderModel.getByBuyer(userId) || [];
-      const unlocked = buyerOrders.filter(o => {
-        const st = (o.status || '').toLowerCase();
-        return UNLOCK_STATUSES.some(base => st === base || st === base + 'd');
-      });
-      entitled = unlocked.some(o => o.items?.some(it => {
+      const unlocked = buyerOrders.filter(o => DOWNLOAD_ENTITLEMENT_STATUSES.includes(o.status));
+      for (const o of unlocked) {
+        const match = o.items?.some(it => {
+          const pid = it.productId || it.id || it.product?.id || it.product?._id || it.product?.productId;
+          return pid === productId;
+        });
+        if (match) { grantingOrder = o; entitled = true; break; }
+      }
+      if (!entitled) return createErrorResponse('No paid or completed order grants access to this digital product', 403);
+      // If any granting order requires review (fraud flag), block download until resolved
+      const needsReview = unlocked.some(o => o.requiresReview);
+      if (needsReview) {
+        try { await orderModel.update(grantingOrder.id, { timeline: [...(grantingOrder.timeline||[]), { at: new Date().toISOString(), type: TIMELINE_EVENTS.DOWNLOAD_BLOCKED_REVIEW, actor: userId, actorType: 'user', actorId: userId, meta: { productId } }] }); } catch(_) {}
+        return createErrorResponse('Download temporarily blocked pending payment review', 423);
+      }
+      // If the granting order was later refunded, explicitly block with clearer message
+      const refunded = buyerOrders.some(o => o.status === 'refunded' && o.items?.some(it => {
         const pid = it.productId || it.id || it.product?.id || it.product?._id || it.product?.productId;
         return pid === productId;
       }));
-      if (!entitled) return createErrorResponse('No approved or completed order grants access to this digital product', 403);
+      if (refunded) {
+        try { await orderModel.update(grantingOrder.id, { timeline: [...(grantingOrder.timeline||[]), { at: new Date().toISOString(), type: TIMELINE_EVENTS.DOWNLOAD_BLOCKED_REFUND, actor: userId, actorType: 'user', actorId: userId, meta: { productId } }] }); } catch(_) {}
+        return createErrorResponse('Download disabled (order refunded)', 410);
+      }
+    }
+
+    // Rate limiting (per hour per granting order). Sellers bypass limit.
+    if (!isSeller && grantingOrder?.id) {
+      const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const recentCount = await downloadLogModel.countRecent(grantingOrder.id, windowStart);
+      const limit = downloadLogModel.getLimit();
+      if (recentCount >= limit) {
+        // Treat rate limit as attempt but blocked (reuse refund/review not specified, keep generic attempt record?)
+        try { await orderModel.update(grantingOrder.id, { timeline: [...(grantingOrder.timeline||[]), { at: new Date().toISOString(), type: TIMELINE_EVENTS.DOWNLOAD_ATTEMPT, actor: userId, actorType: 'user', actorId: userId, meta: { productId, blocked: 'rate_limit' } }] }); } catch(_) {}
+        return createErrorResponse(`Rate limit exceeded (${limit}/hour)`, 429);
+      }
     }
 
     const safeName = encodeURIComponent(product.documentOriginalName || `download-${productId}.${product.digitalFormat || 'pdf'}`);
+    const expiresSeconds = 120; // short-lived URL
     const command = new GetObjectCommand({
       Bucket: BUCKET_NAME,
       Key: documentKey,
       ResponseContentDisposition: `attachment; filename="${safeName}"`
     });
-    const url = await getSignedUrl(s3Client, command, { expiresIn: 60 });
+  const url = await getSignedUrl(s3Client, command, { expiresIn: expiresSeconds });
 
     // Atomic best-effort download count increment (no race conditions)
     try {
       await productModel.incrementDigitalDownloadCount(productId);
+      if (grantingOrder?.id) {
+        await downloadLogModel.logAttempt({ orderId: grantingOrder.id, userId, productId });
+        // Log successful attempt
+        try { await orderModel.update(grantingOrder.id, { timeline: [...(grantingOrder.timeline||[]), { at: new Date().toISOString(), type: TIMELINE_EVENTS.DOWNLOAD_ATTEMPT, actor: userId, actorType: 'user', actorId: userId, meta: { productId, success: true } }] }); } catch(_) {}
+      }
     } catch (_) { /* ignore metric failures */ }
 
-    const resp = createSuccessResponse({ url, expiresIn: 60 });
+  const resp = createSuccessResponse({ url, expiresIn: expiresSeconds });
     resp.headers = {
       ...resp.headers,
       'Access-Control-Allow-Origin': '*',

@@ -7,3 +7,4 @@ export const CART_API_ENDPOINT = `${API_BASE_URL}/cart`;
 export const ORDER_API_ENDPOINT = `${API_BASE_URL}/orders`;
 export const UPLOAD_API_ENDPOINT = `${API_BASE_URL}/upload`;
 export const ADMIN_API_ENDPOINT = `${API_BASE_URL}/admin`;
+export const SELLERS_API_ENDPOINT = `${API_BASE_URL}/sellers`;

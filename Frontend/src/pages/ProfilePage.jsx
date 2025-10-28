@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { getSellerOnboardingLink } from '@/utils/axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import ProfilePictureManager from '@/components/profile/ProfilePictureManager';
@@ -45,39 +46,56 @@ const ProfilePage = () => {
         <div className="md:col-span-1">
           <ProfilePictureManager />
         </div>
-        
         {/* Right column: Profile information */}
         <div className="md:col-span-2">
           <div className="p-6 bg-white rounded-lg shadow-sm">
             <h3 className="mb-4 text-lg font-medium">Personal Information</h3>
-            
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600">Name</label>
                 <p className="mt-1 font-medium">{user.fullname}</p>
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-600">Email</label>
                 <p className="mt-1">{user.email}</p>
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-600">Phone Number</label>
                 <p className="mt-1">{user.phoneNumber || 'Not provided'}</p>
               </div>
-              
               {user.idnum && (
                 <div>
                   <label className="block text-sm font-medium text-gray-600">ID Number</label>
                   <p className="mt-1">{user.idnum}</p>
                 </div>
               )}
-              
               <div>
                 <label className="block text-sm font-medium text-gray-600">Account Type</label>
                 <p className="mt-1">{user.role || 'User'}</p>
               </div>
+              {/* Seller onboarding button: show for any user with products or stripeAccountId */}
+              {((user.stripeAccountId || user.stripeOnboardingStatus !== 'complete') || useProductStore.getState().products.some(p => p.sellerId === user.id)) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600">Stripe Payouts</label>
+                  {user.stripeOnboardingStatus !== 'complete' ? (
+                    <button
+                      className="mt-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700"
+                      onClick={async () => {
+                        try {
+                          const res = await getSellerOnboardingLink();
+                          window.open(res.data.onboardingUrl, '_blank');
+                        } catch (e) {
+                          alert('Failed to get onboarding link: ' + (e?.response?.data?.message || e.message));
+                        }
+                      }}
+                    >
+                      {user.stripeOnboardingStatus === 'incomplete' ? 'Continue Stripe Onboarding' : 'Start Stripe Onboarding'}
+                    </button>
+                  ) : (
+                    <span className="mt-2 px-4 py-2 text-sm font-medium text-green-700 bg-green-100 rounded">Onboarding Complete</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

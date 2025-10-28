@@ -9,6 +9,7 @@ export const useOrderStore = create((set) => ({
   orders: [],
   loading: false,
   error: null,
+  redirecting: false,
 
   clearError: () => set({ error: null }),
 
@@ -78,6 +79,44 @@ export const useOrderStore = create((set) => ({
       throw err;
     }
   },
+
+  cancelOrder: async (orderId) => {
+    // Buyer cancellation convenience wrapper
+    return await useOrderStore.getState().updateOrderStatus(orderId, 'cancelled');
+  },
+
+  createCheckoutSession: async (orderId) => {
+    if (!orderId) return;
+    set({ error: null, redirecting: true });
+    const token = useAuthStore.getState().token;
+    try {
+      const res = await api.post(`${ORDER_API_ENDPOINT}/${orderId}/checkout-session`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const sessionUrl = res.data?.sessionUrl || res.data?.data?.sessionUrl;
+      if (sessionUrl) {
+        window.location.assign(sessionUrl);
+      } else {
+        set({ redirecting: false, error: 'Failed to obtain checkout session.' });
+      }
+    } catch (err) {
+      set({ redirecting: false, error: err.response?.data?.message || err.message });
+    }
+  }
+  ,
+  refundOrder: async (orderId, amount) => {
+    if (!orderId) return;
+    const token = useAuthStore.getState().token;
+    try {
+      const res = await api.post(`${ORDER_API_ENDPOINT}/${orderId}/refund`, { amount }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // optimistic: paymentStatus changes via webhook; add initiated event local marker if needed
+      return res.data;
+    } catch (err) {
+      throw err;
+    }
+  }
 }),
 {
   name: "order-storage",

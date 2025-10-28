@@ -3,7 +3,10 @@ import * as requestOrder from './requestOrder.js';
 import * as getOrders from './getOrders.js';
 import * as getOrder from './getOrder.js';
 import * as updateOrderStatus from './updateOrderStatus.js';
+import * as markPaid from './markPaid.js';
+import * as createCheckoutSession from './createCheckoutSession.js';
 import { createErrorResponse } from '/opt/nodejs/utils/response.js';
+import * as refundOrder from './refundOrder.js';
 
 export const handler = async (event) => {
   try {
@@ -29,6 +32,17 @@ export const handler = async (event) => {
     
     if (path.includes('/orders/') && path.includes('/status') && method === 'PUT') {
       return await updateOrderStatus.handler(event);
+    }
+
+    if (path.includes('/orders/') && path.includes('/mark-paid') && method === 'POST') {
+      return await markPaid.handler(event);
+    }
+
+    if (path.includes('/orders/') && path.includes('/checkout-session') && method === 'POST') {
+      return await createCheckoutSession.handler(event);
+    }
+    if (path.includes('/orders/') && path.includes('/refund') && method === 'POST') {
+      return await refundOrder.handler(event);
     }
 
     // If no route matches

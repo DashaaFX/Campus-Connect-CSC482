@@ -1,8 +1,9 @@
+
 {
-  "name": "orders-functions",
+  "name": "sellers-functions",
   "version": "1.0.0",
   "type": "module",
-  "description": "Order management Lambda functions",
+  "description": "Seller management Lambda functions",
   "dependencies": {
     "stripe": "^14.0.0"
   }

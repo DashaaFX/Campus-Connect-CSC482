@@ -66,6 +66,43 @@ export class OrderModel extends BaseModel {
   async get(id) {
     return this.getById(id);
   }
+
+  // Query payment intent index (expects GSI PaymentIntentIndex)
+  async listByPaymentIntent(paymentIntentId) {
+    if (!paymentIntentId) return [];
+    try {
+      const items = await this.queryByIndex(
+        'PaymentIntentIndex',
+        'stripePaymentIntentId = :pid',
+        { ':pid': paymentIntentId }
+      );
+      return items || [];
+    } catch (e) {
+      console.error('[orders-paymentIntentIndex-error]', e.message);
+      return [];
+    }
+  }
+
+  async listByStatus(status) {
+    if (!status) return [];
+    try {
+      const items = await this.queryByIndex(
+        'StatusIndex',
+        'status = :status',
+        { ':status': status }
+      );
+      return items || [];
+    } catch (e) {
+      console.error('[orders-statusIndex-error]', e.message);
+      return [];
+    }
+  }
+
+  async listFailedPaymentApproved(cutoffIso) {
+    // Return orders still in APPROVED with paymentStatus failed and updatedAt older than cutoff
+    const approved = await this.listByStatus('approved');
+    return approved.filter(o => o.paymentStatus === 'failed' && o.updatedAt && o.updatedAt < cutoffIso);
+  }
 }
 
 export const orderModel = new OrderModel();

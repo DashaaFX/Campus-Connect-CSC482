@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { format } from 'date-fns';
-import { ORDER_STATUS_COLORS } from '@/constants/order-status.jsx';
+import { ORDER_STATUS_COLORS, getPaymentStatusBadge } from '@/constants/order-status.jsx';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useNavigate } from 'react-router-dom'; 
 import { Button } from '@/components/ui/button';
@@ -15,15 +15,16 @@ import { FileText, Package } from 'lucide-react';
 import { toast } from 'sonner';
 const MyOrdersPage = () => {
   
-  const { orders, fetchOrders, loading, error } = useOrderStore();
+  const { orders, fetchOrders, loading, error, createCheckoutSession, redirecting, cancelOrder } = useOrderStore();
   const navigate = useNavigate();
   const currentUser = useAuthStore(s => s.user);
   const [sellerEmails, setSellerEmails] = React.useState({});
   const [sellerUsers, setSellerUsers] = React.useState({}); 
 
+  // Poll for order status after payment to enable download promptly
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(() => fetchOrders(), 15000);
+    const interval = setInterval(() => fetchOrders(), 5000); // Poll every 5s for faster update after payment
     const vis = () => { if (document.visibilityState === 'visible') fetchOrders(); };
     document.addEventListener('visibilitychange', vis);
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', vis); };
@@ -82,6 +83,12 @@ const MyOrdersPage = () => {
         <p>You haven't placed any orders yet.</p>
       ) : (
         <div className="space-y-4">
+          {orders.some(order => order.status === 'approved' && order.paymentStatus === 'initiated') && (
+            <div className="flex items-center gap-2 p-3 mb-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded">
+              <svg className="w-5 h-5 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+              <span>Waiting for payment confirmation... Your download will be enabled automatically once payment is complete.</span>
+            </div>
+          )}
           {orders.map(order => (
             <div key={order._id || order.id} className="p-4 border rounded shadow-sm">
               <div className="flex justify-between text-sm text-gray-500">
@@ -93,7 +100,14 @@ const MyOrdersPage = () => {
                   const pid = item.product?.id || item.product?._id || item.productId;
                   const email = sellerEmails[pid] || 'Loading...';
                   const isDigital = item.product?.isDigital;
-                  const canDownload = isDigital && (['approved','completed'].includes(order.status));
+                  // Blocked download states (single source of truth)
+                  const blockedReason = (() => {
+                    if (order.timeline?.some(ev => ev.type === 'download_blocked_review')) return 'review';
+                    if (order.timeline?.some(ev => ev.type === 'download_blocked_refund')) return 'refund';
+                    if (order.timeline?.some(ev => ev.type === 'download_attempt' && ev.meta?.blocked === 'rate_limit')) return 'rate_limit';
+                    return null;
+                  })();
+                  const canDownload = isDigital && (['completed','paid'].includes(order.status)) && order.paymentStatus !== 'failed' && order.status !== 'refunded' && !blockedReason;
                   return (
                     <div
                       key={pid || Math.random()}
@@ -127,11 +141,32 @@ const MyOrdersPage = () => {
                               }
                             }}
                           >
-                            {canDownload ? 'Download' : (order.status === 'approved' ? 'Ready' : 'Pending')}
+                            {canDownload ? 'Download'
+                              : blockedReason === 'review' ? 'Blocked: Payment Under Review'
+                              : blockedReason === 'refund' ? 'Blocked: Refunded'
+                              : blockedReason === 'rate_limit' ? 'Blocked: Rate Limit'
+                              : (order.status === 'approved' ? 'Awaiting Payment'
+                                : (order.paymentStatus === 'failed' ? 'Payment Failed'
+                                  : (order.status === 'refunded' ? 'Refunded' : 'Requested')))}
                           </Button>
                         )}
-                        {isDigital && (order.status === 'approved' || order.status === 'completed') && (
-                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-green-700 bg-green-50 border border-green-200 rounded">Approved (Download Ready)</span>
+                        {isDigital && blockedReason === 'review' && (
+                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded">Download blocked: Payment under review</span>
+                        )}
+                        {isDigital && blockedReason === 'refund' && (
+                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-yellow-800 bg-yellow-50 border border-yellow-200 rounded">Download blocked: Refunded</span>
+                        )}
+                        {isDigital && blockedReason === 'rate_limit' && (
+                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-blue-800 bg-blue-50 border border-blue-200 rounded">Download blocked: Rate limit</span>
+                        )}
+                        {isDigital && order.status === 'approved' && !isBlockedReview && !isBlockedRefund && !isBlockedRate && (
+                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">Approved - Payment Required</span>
+                        )}
+                        {isDigital && order.paymentStatus === 'failed' && !isBlockedReview && !isBlockedRefund && !isBlockedRate && (
+                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 rounded">Payment Failed</span>
+                        )}
+                        {isDigital && order.status === 'refunded' && !isBlockedReview && !isBlockedRefund && !isBlockedRate && (
+                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-yellow-800 bg-yellow-50 border border-yellow-200 rounded">Refunded</span>
                         )}
                       </div>
                     </div>
@@ -157,7 +192,7 @@ const MyOrdersPage = () => {
                   </span>
                 </span>
               </div>
-              <div className="flex justify-end gap-2 mt-3">
+              <div className="flex flex-wrap justify-end gap-2 mt-3">
                 <Button
                   size="sm"
                   variant="default"
@@ -165,6 +200,47 @@ const MyOrdersPage = () => {
                 >
                   View Details
                 </Button>
+                {(['requested','approved'].includes(order.status)) && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={async () => {
+                      const confirmed = window.confirm('Cancel this order? This cannot be undone.');
+                      if (!confirmed) return;
+                      try {
+                        await cancelOrder(order._id || order.id);
+                        toast.success('Order cancelled');
+                      } catch (e) {
+                        toast.error(e.response?.data?.message || 'Cancel failed');
+                      }
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+                {(() => {
+                  const hasDigital = (order.items || []).some(it => it.product?.isDigital);
+                  if (!hasDigital) return null;
+                  if (order.status === 'approved' || order.paymentStatus === 'failed') {
+                    return (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        disabled={redirecting}
+                        onClick={() => createCheckoutSession(order._id || order.id)}
+                      >
+                        {redirecting ? 'Redirecting...' : (order.paymentStatus === 'failed' ? 'Retry Payment' : 'Pay Now')}
+                      </Button>
+                    );
+                  }
+                  return null;
+                })()}
+                {(() => {
+                  if (!order.paymentStatus || ['refunded'].indexOf(order.paymentStatus) === -1) return null;
+                  const p = getPaymentStatusBadge(order.paymentStatus);
+                  if (!p) return null;
+                  return <span className={`px-2 py-0.5 text-[10px] font-medium rounded ${p.className}`}>{p.label}</span>;
+                })()}
                 {(() => {
                   const firstItem = (order.items || [])[0];
                   const peer = deriveSellerPeerFromItem(firstItem, currentUser, sellerUsers);

@@ -25,8 +25,9 @@ export class ProductModel extends BaseModel {
       documentKey: productData.documentKey || null,
       documentOriginalName: productData.documentOriginalName || null,
       previewImage: productData.previewImage || null,
-      digitalStatus: productData.isDigital ? (productData.digitalStatus || 'ready') : null,
-      fileSizeBytes: productData.fileSizeBytes || null
+  digitalStatus: productData.isDigital ? (productData.digitalStatus || 'ready') : null,
+  fileSizeBytes: productData.fileSizeBytes || null,
+  digitalAutoComplete: productData.isDigital ? !!productData.digitalAutoComplete : false
     };
 
     // Ensure images are properly formatted with CloudFront/S3 URLs

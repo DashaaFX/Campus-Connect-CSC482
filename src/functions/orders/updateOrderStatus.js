@@ -1,6 +1,6 @@
 import { orderModel } from '/opt/nodejs/models/Order.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
-import { ORDER_STATUS_LIST } from '/opt/nodejs/constants/orderStatus.js';
+import { ORDER_STATUS_LIST, canTransition, ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
 
 export const handler = async (event) => {
   try {
@@ -24,7 +24,7 @@ export const handler = async (event) => {
     }
 
     const { status } = body;
-  const validStatuses = ORDER_STATUS_LIST;
+    const validStatuses = ORDER_STATUS_LIST;
     
     if (!validStatuses.includes(status)) {
       return createErrorResponse('Invalid status. Must be one of: ' + validStatuses.join(', '), 400);
@@ -48,21 +48,34 @@ export const handler = async (event) => {
       return createErrorResponse('Not authorized to update this order', 403);
     }
 
-    // Buyers can only cancel orders that are not already completed or shipped
+    // Role-based transition validation
     if (isBuyer && !isSeller) {
-      if (status !== 'cancelled') {
+      // Buyer allowed: cancel only from requested/approved
+      if (status === ORDER_STATUSES.CANCELLED) {
+        if (![ORDER_STATUSES.REQUESTED, ORDER_STATUSES.APPROVED].includes(existingOrder.status)) {
+          return createErrorResponse('Cannot cancel at this stage', 403);
+        }
+      } else {
         return createErrorResponse('Buyers can only cancel orders', 403);
-      }
-      
-      if (['completed', 'shipped'].includes(existingOrder.status)) {
-        return createErrorResponse('Cannot cancel order that has been shipped or completed', 403);
       }
     }
 
+    // Sellers cannot mark paid / completed directly (paid handled by markPaid endpoint) unless rejecting
+    if (isSeller && status === ORDER_STATUSES.PAID) {
+      return createErrorResponse('Use payment endpoints to mark paid', 403);
+    }
+
+    // Validate transition legality
+    if (!canTransition(existingOrder.status, status)) {
+      return createErrorResponse(`Illegal status transition from ${existingOrder.status} to ${status}`, 409);
+    }
+
+    const now = new Date().toISOString();
     const updateData = {
       status,
       statusUpdatedBy: userId,
-      statusUpdatedAt: new Date().toISOString()
+      statusUpdatedAt: now,
+      timeline: [ ...(existingOrder.timeline || []), { at: now, type: `status_${status}`, actor: userId } ]
     };
     
     //track the order state changes

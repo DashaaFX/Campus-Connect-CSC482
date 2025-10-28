@@ -1,3 +1,9 @@
+import { SELLERS_API_ENDPOINT } from './data';
+
+// Seller onboarding link API
+export const getSellerOnboardingLink = async () => {
+  return api.post(`${SELLERS_API_ENDPOINT}/onboarding-link`);
+};
 import axios from 'axios';
 
 // Create axios instance

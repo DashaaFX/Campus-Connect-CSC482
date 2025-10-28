@@ -104,7 +104,8 @@ export const handler = async (event) => {
       documentOriginalName: isDigital ? (body.documentOriginalName || body.originalName || body.title) : null,
   previewImage: isDigital ? (previewImage || getFormatPlaceholder(digitalFormat)) : null,
   digitalStatus: isDigital ? ((previewImage || getFormatPlaceholder(digitalFormat)) ? 'ready' : 'processing') : null,
-      fileSizeBytes: isDigital ? fileSizeBytes : null
+  fileSizeBytes: isDigital ? fileSizeBytes : null,
+  digitalAutoComplete: isDigital ? !!body.digitalAutoComplete : false
     };
     // Initialize digital download count
     if (isDigital) {

@@ -12,6 +12,7 @@ Globals:
         USERS_TABLE: !Ref UsersTable
         PRODUCTS_TABLE: !Ref ProductsTable
         ORDERS_TABLE: !Ref OrdersTable
+        DOWNLOAD_LOGS_TABLE: !Ref DownloadLogsTable
         CARTS_TABLE: !Ref CartsTable
         CATEGORIES_TABLE: !Ref CategoriesTable
         SUBCATEGORIES_TABLE: !Ref SubcategoriesTable
@@ -40,11 +41,84 @@ Resources:
         - nodejs20.x
       RetentionPolicy: Delete
 
+  SellersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-sellers-${Environment}
+      CodeUri: src/functions/sellers/
+      Handler: index.handler
+      Layers:
+        - !Ref SharedLayer
+      Environment:
+        Variables:
+          USERS_TABLE: !Ref UsersTable
+          STRIPE_SECRET_ARN: !Ref StripeApiKeySecret
+          STRIPE_WEBHOOK_SECRET_ARN: !Ref StripeWebhookSigningSecret
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource:
+                - !Ref StripeApiKeySecret
+                - !Ref StripeWebhookSigningSecret
+      Events:
+        CreateOnboardingLinkApi:
+          Type: Api
+          Properties:
+            Path: /sellers/onboarding-link
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        CreateOnboardingLinkOptionsApi:
+          Type: Api
+          Properties:
+            Path: /sellers/onboarding-link
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+        GetSellersApi:
+          Type: Api
+          Properties:
+            Path: /sellers
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        SellersOptionsApi:
+          Type: Api
+          Properties:
+            Path: /sellers
+            Method: options
+            RestApiId: !Ref CampusConnectApi
   FirebaseServiceAccount:
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: !Sub campus-connect-firebase-service-${Environment}
       Description: Firebase Service Account for Campus Connect
+
+  StripeApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub campus-connect-stripe-secret-${Environment}
+      Description: Stripe API Secret Key container (update value manually after stack creation)
+      GenerateSecretString:
+        SecretStringTemplate: '{}'
+        GenerateStringKey: placeholder
+        PasswordLength: 16
+        ExcludePunctuation: true
+
+  StripeWebhookSigningSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub campus-connect-stripe-webhook-secret-${Environment}
+      Description: Stripe Webhook Signing Secret container (replace with real whsec_ value)
+      GenerateSecretString:
+        SecretStringTemplate: '{}'
+        GenerateStringKey: placeholder
+        PasswordLength: 16
+        ExcludePunctuation: true
 
 
 
@@ -294,6 +368,17 @@ Resources:
             TableName: !Ref CartsTable
         - DynamoDBReadPolicy:
             TableName: !Ref UsersTable
+        - Statement:
+            Effect: Allow
+            Action: secretsmanager:GetSecretValue
+            Resource:
+              - !Ref StripeApiKeySecret
+              - !Ref StripeWebhookSigningSecret
+      Environment:
+        Variables:
+          STRIPE_SECRET_ARN: !Ref StripeApiKeySecret
+          STRIPE_WEBHOOK_SECRET_ARN: !Ref StripeWebhookSigningSecret
+          CLEANUP_FAILED_PAYMENT_MINUTES: 180
       Events:
         CreateOrderApi:
           Type: Api
@@ -351,6 +436,81 @@ Resources:
             RestApiId: !Ref CampusConnectApi
             Auth:
               Authorizer: JWTAuth
+        CreateCheckoutSessionApi:
+          Type: Api
+          Properties:
+            Path: /orders/{id}/checkout-session
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        MarkPaidApi:
+          Type: Api
+          Properties:
+            Path: /orders/{id}/mark-paid
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        RefundOrderApi:
+          Type: Api
+          Properties:
+            Path: /orders/{id}/refund
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+
+  CleanupFailedPaymentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-cleanup-failed-payments-${Environment}
+      CodeUri: src/functions/orders/
+      Handler: cleanupFailedPayments.handler
+      Layers:
+        - !Ref SharedLayer
+      Environment:
+        Variables:
+          ORDERS_TABLE: !Ref OrdersTable
+          CLEANUP_FAILED_PAYMENT_MINUTES: 180
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+      Events:
+        CleanupSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 hour)
+            Name: !Sub campus-connect-cleanup-failed-${Environment}
+            Description: Periodic cleanup of stale failed payment orders
+
+  StripeWebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-stripe-webhook-${Environment}
+      CodeUri: src/functions/webhooks/
+      Handler: stripeWebhook.handler
+      Layers:
+        - !Ref SharedLayer
+      Environment:
+        Variables:
+          STRIPE_SECRET_ARN: !Ref StripeApiKeySecret
+          STRIPE_WEBHOOK_SECRET_ARN: !Ref StripeWebhookSigningSecret
+      Events:
+        StripeWebhookApi:
+          Type: Api
+          Properties:
+            Path: /webhooks/stripe
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource:
+                - !Ref StripeApiKeySecret
+                - !Ref StripeWebhookSigningSecret
 
   AdminFunction:
     Type: AWS::Serverless::Function
@@ -504,6 +664,8 @@ Resources:
           AttributeType: S
         - AttributeName: email
           AttributeType: S
+        - AttributeName: stripeAccountId
+          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
@@ -511,6 +673,12 @@ Resources:
         - IndexName: EmailIndex
           KeySchema:
             - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: StripeAccountIdIndex
+          KeySchema:
+            - AttributeName: stripeAccountId
               KeyType: HASH
           Projection:
             ProjectionType: ALL
@@ -556,6 +724,10 @@ Resources:
           AttributeType: S
         - AttributeName: sellerId
           AttributeType: S
+        - AttributeName: stripePaymentIntentId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
@@ -572,6 +744,34 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+        - IndexName: PaymentIntentIndex
+          KeySchema:
+            - AttributeName: stripePaymentIntentId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: StatusIndex
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  DownloadLogsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub DownloadLogs-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: orderId
+          AttributeType: S
+        - AttributeName: ts
+          AttributeType: S
+      KeySchema:
+        - AttributeName: orderId
+          KeyType: HASH
+        - AttributeName: ts
+          KeyType: RANGE
 
   CartsTable:
     Type: AWS::DynamoDB::Table

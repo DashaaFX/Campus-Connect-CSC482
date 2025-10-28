@@ -1,9 +1,11 @@
 export const ORDER_STATUSES = {
-  PENDING: 'pending',
+  REQUESTED: 'requested',
   APPROVED: 'approved',
+  PAID: 'paid',
+  COMPLETED: 'completed',
+  REFUNDED: 'refunded',
   CANCELLED: 'cancelled',
-  SHIPPED: 'shipped',
-  COMPLETED: 'completed'
+  REJECTED: 'rejected'
 };
 
 export const ORDER_STATUS_LIST = Object.values(ORDER_STATUSES);

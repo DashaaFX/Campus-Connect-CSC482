@@ -1,7 +1,7 @@
 import { OrderModel } from '/opt/nodejs/models/Order.js';
 import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
-import { ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
+import { ORDER_STATUSES, OPEN_ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
 import { CartModel } from '/opt/nodejs/models/Cart.js';
 
 export const handler = async (event) => {
@@ -48,6 +48,17 @@ export const handler = async (event) => {
       product.sellerId = product.userId; // normalize snapshot
     }
 
+    // Prevent duplicate open order for same buyer/product
+    const orderModel = new OrderModel();
+    const existingOrders = await orderModel.getByBuyer(userId);
+    const duplicate = existingOrders?.find(o => o.items?.some(it => {
+      const pid = it.productId || it.product?.id || it.product?._id;
+      return pid === body.productId;
+    }) && OPEN_ORDER_STATUSES.includes(o.status));
+    if (duplicate) {
+      return createErrorResponse('An active order for this product already exists.', 409);
+    }
+
     // Create order request (single-item order)
     const orderData = {
       userId: userId,
@@ -61,13 +72,15 @@ export const handler = async (event) => {
         sellerId: derivedSellerId
       }],
       total: (body.quantity || 1) * product.price,
-      status: ORDER_STATUSES.PENDING,
+      status: ORDER_STATUSES.REQUESTED,
+      timeline: [
+        { at: new Date().toISOString(), type: 'requested', actor: userId }
+      ],
       requestNotes: body.notes || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
-    const orderModel = new OrderModel();
     const order = await orderModel.create(orderData);
 
     // Remove or decrement the item from the user's cart 

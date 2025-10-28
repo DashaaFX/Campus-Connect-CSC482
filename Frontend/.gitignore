@@ -13,6 +13,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.github/
 
 # Environment files with sensitive data
 .env

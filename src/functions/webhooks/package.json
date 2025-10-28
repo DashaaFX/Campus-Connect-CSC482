@@ -1,8 +1,8 @@
 {
-  "name": "orders-functions",
+  "name": "webhooks-functions",
   "version": "1.0.0",
   "type": "module",
-  "description": "Order management Lambda functions",
+  "description": "Webhook handlers (Stripe)",
   "dependencies": {
     "stripe": "^14.0.0"
   }
