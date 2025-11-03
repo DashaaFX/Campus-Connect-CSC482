@@ -40,7 +40,7 @@ const LatestProducts = ({ limit = 6 }) => {
     try {
       const productId = product.id || product._id;
       await addToCart({ productId, quantity: 1 });
-      toast.success(`${product.name || product.title || 'Product'} added to cart`);
+  toast.success(`${product.title || 'Product'} added to cart`);
     } catch (err) {
       toast.error(err.message || 'Failed to add to cart');
     }
@@ -57,7 +57,7 @@ const LatestProducts = ({ limit = 6 }) => {
             {product.images?.length > 0 ? (
               <img
                 src={product.images[0]}
-                alt={product.title || product.name}
+                alt={product.title}
                 className="object-cover w-full h-40 rounded"
                 onError={(e) => {
                   e.target.onerror = null;
@@ -78,7 +78,7 @@ const LatestProducts = ({ limit = 6 }) => {
               />
             )}
 
-            <h3 className="mt-4 text-lg font-semibold">{product.name}</h3>
+            <h3 className="mt-4 text-lg font-semibold">{product.title}</h3>
 
             {product.pdf?.length > 0 && (
               <span className="mt-1 inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">

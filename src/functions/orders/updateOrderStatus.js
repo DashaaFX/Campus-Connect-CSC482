@@ -70,20 +70,35 @@ export const handler = async (event) => {
       return createErrorResponse(`Illegal status transition from ${existingOrder.status} to ${status}`, 409);
     }
 
-    const now = new Date().toISOString();
-    const updateData = {
-      status,
-      statusUpdatedBy: userId,
-      statusUpdatedAt: now,
-      timeline: [ ...(existingOrder.timeline || []), { at: now, type: `status_${status}`, actor: userId } ]
-    };
-    
-    //track the order state changes
-    const prevStatus = existingOrder.status;
-    const updatedOrder = await orderModel.update(orderId, updateData);
+    // If seller is approving only some products, update per-product status
+    let updatedOrder = null;
+    if (isSeller && [ORDER_STATUSES.APPROVED, ORDER_STATUSES.REJECTED].includes(status)) {
+      const now = new Date().toISOString();
+      // Remove immutable fields from update payload
+      const { id, createdAt, updatedAt, ...orderFields } = existingOrder;
+      updatedOrder = await orderModel.update(orderId, {
+        ...orderFields,
+        status,
+        statusUpdatedBy: userId,
+        statusUpdatedAt: now,
+        timeline: [ ...(existingOrder.timeline || []), { at: now, type: `status_${status}`, actor: userId } ]
+      });
+    } else {
+      // Normal status update (whole order)
+      const now = new Date().toISOString();
+      // Remove immutable fields from update payload
+      const { id, createdAt, updatedAt, ...orderFields } = existingOrder;
+      updatedOrder = await orderModel.update(orderId, {
+        ...orderFields,
+        status,
+        statusUpdatedBy: userId,
+        statusUpdatedAt: now,
+        timeline: [ ...(existingOrder.timeline || []), { at: now, type: `status_${status}`, actor: userId } ]
+      });
+    }
 
     // Unlock digital downloads when moving into completed
-    if (status === 'completed' && prevStatus !== 'completed') {
+    if (status === 'completed' && existingOrder.status !== 'completed') {
       try {
       } catch (e) {
         console.error('Entitlement unlock hook error:', e);

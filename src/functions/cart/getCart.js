@@ -77,7 +77,7 @@ export const handler = async (event) => {
               category: product.category || 'uncategorized',
               images: Array.isArray(product.images) ? product.images : [],
               // Ensure other important fields are present
-              title: product.title || product.name || 'Unknown Product',
+              title: product.title || 'Unknown Product',
               images: product.images || []
             };            
     

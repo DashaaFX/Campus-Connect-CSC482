@@ -36,11 +36,13 @@ export const handler = async (event) => {
     }
 
     // Determine if digital (any item digital)
+    const firstProductEntry = Array.isArray(order.products) && order.products.length > 0
+      ? order.products[0]
+      : (order.items?.[0] || null);
     const productModel = new ProductModel();
-    const firstItem = order.items?.[0];
     let product = null;
-    if (firstItem) {
-      const pid = firstItem.productId || firstItem.product?.id || firstItem.product?._id;
+    if (firstProductEntry) {
+      const pid = firstProductEntry.productId || firstProductEntry.product?.id || firstProductEntry.product?._id;
       if (pid) product = await productModel.getById(pid);
     }
     const isDigital = !!product?.isDigital;

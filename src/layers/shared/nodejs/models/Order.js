@@ -32,22 +32,30 @@ export class OrderModel extends BaseModel {
   // Seller orders: prefer SellerIndex if exists, else fallback to scan & filter
   async getBySeller(sellerId) {
     try {
-      const items = await this.queryByIndex(
+      // Orders are already split by seller, so just query SellerIndex
+      return await this.queryByIndex(
         'SellerIndex',
         'sellerId = :sellerId',
         { ':sellerId': sellerId }
       );
-      return items;
     } catch (e) {
       // Fallback if index not yet provisioned
       const all = await this.getAll();
-      return all.filter(o => o.sellerId === sellerId || o.items?.some(it => it.sellerId === sellerId || it.product?.sellerId === sellerId));
+      return all.filter(o => o.sellerId === sellerId);
     }
   }
 
   async createOrder(orderData) {
+    // Initialize per-product status if products array exists
+    let products = Array.isArray(orderData.products)
+      ? orderData.products.map(p => ({
+          ...p,
+          status: p.status || 'pending',
+        }))
+      : undefined;
     const order = {
       ...orderData,
+      products,
       status: orderData.status || 'pending',
       orderDate: new Date().toISOString()
     };
@@ -55,6 +63,7 @@ export class OrderModel extends BaseModel {
   }
 
   async updateStatus(orderId, status, updatedBy) {
+    // Update overall order status
     return this.update(orderId, {
       status,
       statusUpdatedBy: updatedBy,
@@ -102,6 +111,24 @@ export class OrderModel extends BaseModel {
     // Return orders still in APPROVED with paymentStatus failed and updatedAt older than cutoff
     const approved = await this.listByStatus('approved');
     return approved.filter(o => o.paymentStatus === 'failed' && o.updatedAt && o.updatedAt < cutoffIso);
+  }
+
+  // Get product status by productId
+  async getProductStatus(orderId, productId) {
+    const order = await this.get(orderId);
+    if (!order || !Array.isArray(order.products)) return null;
+    const prod = order.products.find(p => p.productId === productId);
+    return prod ? prod.status : null;
+  }
+
+  // Update product status by productId
+  async updateProductStatus(orderId, productId, status, updatedBy) {
+    const order = await this.get(orderId);
+    if (!order || !Array.isArray(order.products)) return null;
+    const products = order.products.map(p =>
+      p.productId === productId ? { ...p, status, statusUpdatedBy: updatedBy, statusUpdatedAt: new Date().toISOString() } : p
+    );
+    return this.update(orderId, { products });
   }
 }
 

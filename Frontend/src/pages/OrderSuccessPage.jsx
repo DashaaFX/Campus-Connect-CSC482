@@ -86,7 +86,7 @@ const OrderSuccessPage = () => {
     );
   }
 
-  const isDigital = (order.items || []).some(i => i.product?.isDigital);
+  const isDigital = (order.products || order.items || []).some(i => i.product?.isDigital);
   const ready = ['completed','paid','refunded'].includes(order.status) || ['succeeded','refunded'].includes(order.paymentStatus);
 
   return (
@@ -109,7 +109,7 @@ const OrderSuccessPage = () => {
           )}
           {ready && (
             <div className="space-y-3">
-              {(order.items || []).filter(i => i.product?.isDigital).map(i => {
+              {(order.products || order.items || []).filter(i => i.product?.isDigital).map(i => {
                 const pid = i.product?.id || i.product?._id || i.productId;
                 return (
                   <Button
@@ -124,7 +124,7 @@ const OrderSuccessPage = () => {
                       }
                     }}
                   >
-                    Download {i.product?.title || 'File'}
+                    Download {i.product?.title || i.title || i.product?.name || i.name || 'File'}
                   </Button>
                 );
               })}

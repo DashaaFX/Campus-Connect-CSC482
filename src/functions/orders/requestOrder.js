@@ -71,6 +71,12 @@ export const handler = async (event) => {
         price: product.price,
         sellerId: derivedSellerId
       }],
+      products: [{
+        productId: body.productId,
+        status: ORDER_STATUSES.REQUESTED,
+        quantity: body.quantity || 1,
+        sellerId: derivedSellerId
+      }],
       total: (body.quantity || 1) * product.price,
       status: ORDER_STATUSES.REQUESTED,
       timeline: [

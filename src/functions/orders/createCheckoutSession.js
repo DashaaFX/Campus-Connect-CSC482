@@ -63,11 +63,12 @@ export const handler = async (event) => {
     if (order.status !== ORDER_STATUSES.APPROVED) return createErrorResponse('Order must be approved before checkout', 409);
 
     // Determine digital product and seller Stripe account
-    const firstItem = order.items?.[0];
+    // Prefer products array for per-product status
+    const firstProductEntry = order.items?.[0] || order.products?.[0] || null;
     const productModel = new ProductModel();
     let product = null;
-    if (firstItem) {
-      const pid = firstItem.productId || firstItem.product?.id || firstItem.product?._id;
+    if (firstProductEntry) {
+      const pid = firstProductEntry.productId || firstProductEntry.product?.id || firstProductEntry.product?._id;
       if (pid) product = await productModel.getById(pid);
     }
     const isDigital = !!product?.isDigital;

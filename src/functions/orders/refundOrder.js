@@ -79,7 +79,12 @@ export const handler = async (event) => {
 
     // Webhook will finalize status/paymentStatus changes; we append timeline marker proactively
     const now = new Date().toISOString();
-  const timeline = [ ...(order.timeline || []), { at: now, type: 'refund_full_initiated', actor: userId, actorType: 'user', actorId: userId, meta: { refundId: refund.id } } ];
+      // Update all products to REFUNDED
+      const updatedProducts = (order.products || []).map(p => ({ ...p, status: ORDER_STATUSES.REFUNDED }));
+      await orderModel.update(orderId, {
+        products: updatedProducts,
+        timeline: [ ...(order.timeline || []), { at: now, type: 'refund_full_initiated', actor: userId, actorType: 'user', actorId: userId, meta: { refundId: refund.id } } ]
+      });
   await orderModel.update(orderId, { updatedAt: now, timeline });
 
   return createSuccessResponse({ message: 'Refund initiated', orderId, refundId: refund.id });

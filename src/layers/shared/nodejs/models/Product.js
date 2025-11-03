@@ -11,7 +11,7 @@ export class ProductModel extends BaseModel {
 
   async create(productData) {
     const searchTerms = this.generateSearchTerms(productData);
-    
+    // Only use 'title' for product naming
     const product = {
       ...productData,
       quantitySold: 0,
@@ -19,15 +19,15 @@ export class ProductModel extends BaseModel {
       status: productData.status || 'active',
       condition: productData.condition || 'new',
       images: productData.images || [],
-      // Digital product metadata (TODO: )
+      // Digital product metadata
       isDigital: !!productData.isDigital,
       digitalFormat: productData.digitalFormat || null,
       documentKey: productData.documentKey || null,
       documentOriginalName: productData.documentOriginalName || null,
       previewImage: productData.previewImage || null,
-  digitalStatus: productData.isDigital ? (productData.digitalStatus || 'ready') : null,
-  fileSizeBytes: productData.fileSizeBytes || null,
-  digitalAutoComplete: productData.isDigital ? !!productData.digitalAutoComplete : false
+      digitalStatus: productData.isDigital ? (productData.digitalStatus || 'ready') : null,
+      fileSizeBytes: productData.fileSizeBytes || null,
+      digitalAutoComplete: productData.isDigital ? !!productData.digitalAutoComplete : false
     };
 
     // Ensure images are properly formatted with CloudFront/S3 URLs
@@ -50,14 +50,13 @@ export class ProductModel extends BaseModel {
 
   generateSearchTerms(productData) {
     const searchableFields = [
-      productData.name || productData.title,
+      productData.title,
       productData.description,
       productData.category,
       productData.condition,
       productData.isDigital ? 'digital' : null,
       productData.digitalFormat || null
     ].filter(Boolean);
-    
     return searchableFields.join(' ').toLowerCase();
   }
   

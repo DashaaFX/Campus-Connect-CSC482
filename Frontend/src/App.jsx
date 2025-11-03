@@ -33,6 +33,7 @@ import OrderDetailPage from "./pages/OrderDetailPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import PaymentFailedPage from "./pages/PaymentFailedPage";
 import ChatPage from './pages/ChatPage';
+import SellerOrdersPage from "./pages/SellerOrdersPage";
 
 const appRouter = createBrowserRouter([
   {
@@ -61,7 +62,8 @@ const appRouter = createBrowserRouter([
   { path: "order/:orderId", element: <OrderDetailPage /> }, 
   { path: "orders/:orderId/success", element: <OrderSuccessPage /> },
   { path: "orders/:orderId/failed", element: <PaymentFailedPage /> },
-      { path: "my-sales", element: <MySalesPage /> },
+  { path: "my-sales", element: <MySalesPage /> },
+  { path: "seller/orders", element: <SellerOrdersPage /> },
       { path: "products/create", element: <PostProduct /> },
       { path: "admin/products/:id", element: <EditProductForm /> },
       { 

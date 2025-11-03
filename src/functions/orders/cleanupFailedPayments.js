@@ -24,7 +24,9 @@ export const handler = async () => {
     for (const order of toCancel) {
       try {
         const timeline = [ ...(order.timeline || []), { at: nowIso, type: 'status_cancelled', actor: 'system', actorType: 'system', actorId: 'system', meta: { reason: 'failed_payment_timeout' } } ];
-        await orderModel.update(order._id || order.id, { status: ORDER_STATUSES.CANCELLED, updatedAt: nowIso, timeline });
+        // Update all products to CANCELLED
+        const updatedProducts = (order.products || []).map(p => ({ ...p, status: ORDER_STATUSES.CANCELLED }));
+        await orderModel.update(order._id || order.id, { status: ORDER_STATUSES.CANCELLED, products: updatedProducts, updatedAt: nowIso, timeline });
         updated++;
       } catch (e) {
         console.error('Failed to cancel stale failed payment order', { orderId: order._id || order.id, error: e.message });

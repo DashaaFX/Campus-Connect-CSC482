@@ -7,8 +7,10 @@ import * as markPaid from './markPaid.js';
 import * as createCheckoutSession from './createCheckoutSession.js';
 import { createErrorResponse } from '/opt/nodejs/utils/response.js';
 import * as refundOrder from './refundOrder.js';
+import * as deleteOrder from './deleteOrder.js';
 
 export const handler = async (event) => {
+    
   try {
     const path = event.path || event.resource;
     const method = event.httpMethod;
@@ -16,6 +18,10 @@ export const handler = async (event) => {
     // Route to appropriate handler based on path and method
     if (path === '/orders' && method === 'POST') {
       return await createOrder.handler(event);
+    }
+
+    if (path.includes('/orders/') && method === 'DELETE') {
+      return await deleteOrder.handler(event);
     }
     
     if (path === '/orders/request' && method === 'POST') {

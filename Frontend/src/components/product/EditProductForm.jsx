@@ -75,7 +75,7 @@ const EditProductForm = () => {
         });
         const product = res.data.product || res.data;
         setFormData({
-          title: product.name || "",
+          title: product.title || "",
           description: product.description || "",
           price: product.price || 0,
           category: product.category?._id || product.category || "",

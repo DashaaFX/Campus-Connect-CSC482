@@ -59,7 +59,7 @@ export const handler = async (event) => {
                 isDigital: !!p.isDigital,
                 digitalFormat: p.isDigital ? p.digitalFormat : null,
                 previewImage: p.isDigital ? (p.previewImage || null) : null,
-                title: p.title || p.name,
+                title: p.title ,
                 price: p.price,
               };
             }

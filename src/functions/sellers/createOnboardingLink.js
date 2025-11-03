@@ -38,7 +38,8 @@ export const handler = async (event) => {
     const stripe = new Stripe(secretKey);
 
     let stripeAccountId = user.stripeAccountId;
-    if (!stripeAccountId) {
+    // If stripeAccountId is not set or is an empty string, create a new Stripe account
+    if (!stripeAccountId || typeof stripeAccountId !== 'string' || stripeAccountId.trim() === "") {
       const account = await stripe.accounts.create({
         type: 'express',
         capabilities: { transfers: { requested: true } },
@@ -62,8 +63,6 @@ export const handler = async (event) => {
 
     await userModel.update(userId, { stripeOnboardingStatus: 'incomplete' });
 
-    // Timeline event (optional, if you want to append)
-    // ...existing code...
 
     return { ...createSuccessResponse({ onboardingUrl: link.url, stripeAccountId }), headers: CORS_HEADERS };
   } catch (error) {

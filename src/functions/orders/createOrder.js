@@ -49,6 +49,7 @@ export const handler = async (event) => {
     // Ensure each item has sellerId at item level and in product
     for (const it of items) {
       const existingSeller = it.sellerId || it.product?.sellerId || it.product?.userId;
+
       if (!existingSeller) {
         // Fallback: fetch product once to enrich (no extensive logging per instructions)
         try {
@@ -70,6 +71,8 @@ export const handler = async (event) => {
           it.product.sellerId = it.product.sellerId || existingSeller;
         }
       }
+      // Add per-product status field
+      it.status = ORDER_STATUSES.REQUESTED;
     }
 
     // Validate every item has a sellerId after enrichment
@@ -114,10 +117,19 @@ export const handler = async (event) => {
         const price = it.product?.price || it.price || 0;
         return sum + (price * it.quantity);
       }, 0);
+      // Build products array for per-product status
+      const products = groupItems.map(it => ({
+        productId: it.productId || it.product?.id || it.product?._id,
+        status: it.status || ORDER_STATUSES.REQUESTED,
+        quantity: it.quantity,
+        sellerId: it.sellerId,
+        // Add other fields as needed
+      }));
       const orderData = {
         userId,
         userEmail: email,
-        items: groupItems,
+        items: groupItems, // legacy
+        products, // per-product status
         total,
         sellerId: sid,
         shippingAddress: body.shippingAddress,

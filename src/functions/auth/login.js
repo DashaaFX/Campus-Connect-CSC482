@@ -24,7 +24,7 @@ export const handler = async (event) => {
 
     // Verify password
     const isValidPassword = await userModel.verifyPassword(user, password);
-    if (!isValidPassword) {
+    if (!isValidPassword) {   
       return createErrorResponse('Invalid email or password', 401);
     }
 

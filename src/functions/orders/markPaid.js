@@ -38,6 +38,7 @@ export const handler = async (event) => {
 
     const now = new Date().toISOString();
     // Transition APPROVED -> PAID
+    // Update all products to PAID
     const updated = await orderModel.update(orderId, {
       status: ORDER_STATUSES.PAID,
       updatedAt: now,
@@ -49,12 +50,12 @@ export const handler = async (event) => {
     let finalOrder = updated;
     if (isDigital) {
       const now2 = new Date().toISOString();
+      // Update all products to COMPLETED
       finalOrder = await orderModel.update(orderId, {
         status: ORDER_STATUSES.COMPLETED,
         completedAt: now2,
         timeline: [ ...(updated.timeline || []), { at: now2, type: 'completed', actor: 'system' } ]
       });
-          timeline: [ ...(updated.timeline || []), { at: now2, type: 'completed', actor: 'system' } ]
     }
 
     const resp = createSuccessResponse({

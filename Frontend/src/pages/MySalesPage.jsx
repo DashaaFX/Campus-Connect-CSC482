@@ -90,9 +90,14 @@
         <div className="flex-1 p-6">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">My Product Listings</h1>
-            <Button onClick={() => navigate('/products/create')}>
-              Add New Product
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => navigate('/products/create')}>
+                Add New Product
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/seller/orders')}>
+                Incoming Orders
+              </Button>
+            </div>
           </div>
 
           {loading ? (
@@ -126,7 +131,7 @@
                       {product.images?.length > 0 ? (
                         <img
                           src={getProductImageUrl({images: product.images})}
-                          alt={product.title || product.name}
+                          alt={product.title}
                           className="object-cover w-16 h-16 rounded cursor-pointer hover:opacity-80"
                         />
                       ) : product.pdf?.length > 0 ? (
@@ -148,7 +153,7 @@
                       {product.images?.length > 0 ? (
                         <img
                           src={getProductImageUrl({images: product.images})}
-                          alt={product.title || product.name}
+                          alt={product.title}
                           className="object-contain w-full h-full rounded"
                         />
                       ) : product.pdf?.length > 0 ? (
@@ -172,7 +177,7 @@
                   </Dialog>
 
                   <div>
-                    <div>{product.name}</div>
+                    <div>{product.title}</div>
                     <div className="text-sm text-gray-500">
                       {product.description?.slice(0, 20)}...
                     </div>

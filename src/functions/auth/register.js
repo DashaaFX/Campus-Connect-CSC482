@@ -13,7 +13,7 @@ export const handler = async (event) => {
       return createErrorResponse(validation.message, 400);
     }
 
-    const { email, password, fullname, phoneNumber, idnum, profilePicture } = body;
+  const { email, password, fullname, phoneNumber, idnum, profilePicture, stripeAccountId } = body;
 
     // Validate profile picture URL if provided
     if (profilePicture && !profilePicture.startsWith('https://')) {
@@ -31,17 +31,22 @@ export const handler = async (event) => {
     const [firstName, ...lastNameParts] = fullname.trim().split(' ');
     const lastName = lastNameParts.join(' ') || '';
 
-    // Create new user
-    const newUser = await userModel.create({
-      email,
-      password,
-      firstName,
-      lastName,
-      fullname,
-      phoneNumber,
-      idnum,
-      profilePicture: profilePicture || null
-    });
+  // Only include stripeAccountId if it is a non-empty string
+  const userPayload = {
+    email,
+    password,
+    firstName,
+    lastName,
+    fullname,
+    phoneNumber,
+    idnum,
+    profilePicture: profilePicture || null
+  };
+  if (typeof stripeAccountId === 'string' && stripeAccountId.trim() !== "") {
+    userPayload.stripeAccountId = stripeAccountId.trim();
+  }
+  // Create new user
+  const newUser = await userModel.create(userPayload);
 
     // Remove password from response
     const { password: _, ...userResponse } = newUser;

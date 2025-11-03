@@ -9,13 +9,48 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/useAuthStore';
 import { buildChatUrl, collectSellerIds, fetchUsersIfNeeded, deriveSellerPeerFromItem } from '@/utils/chatHelpers';
 import api from '@/utils/axios';
-import { PRODUCT_API_ENDPOINT } from '@/utils/data'
+import { PRODUCT_API_ENDPOINT, ORDER_API_ENDPOINT } from '@/utils/data'
 import { fetchDigitalDownloadUrl } from '@/utils/digitalDownload';
 import { FileText, Package } from 'lucide-react';
 import { toast } from 'sonner';
 const MyOrdersPage = () => {
-  
+  // Cache for fetched product details
+  const [productDetails, setProductDetails] = React.useState({});
   const { orders, fetchOrders, loading, error, createCheckoutSession, redirecting, cancelOrder } = useOrderStore();
+  // Fetch missing product details for items with only productId
+  useEffect(() => {
+    const missingIds = [];
+    (orders || []).forEach(order => {
+      (order.products || order.items || []).forEach(item => {
+        const pid = item.productId || item.product?.id || item.product?._id;
+        if (pid && !productDetails[pid] && !item.product?.title && !item.title && !item.productTitle) {
+          missingIds.push(pid);
+        }
+      });
+    });
+    if (!missingIds.length) return;
+    Promise.all(missingIds.map(async pid => {
+      try {
+        const res = await api.get(`${PRODUCT_API_ENDPOINT}/${pid}`);
+        const prod = res.data.product || res.data.data || {};
+        setProductDetails(prev => ({ ...prev, [pid]: prod }));
+      } catch {
+        setProductDetails(prev => ({ ...prev, [pid]: { title: 'Unknown', price: 0 } }));
+      }
+    }));
+  }, [orders, productDetails]);
+  
+  const [statusFilter, setStatusFilter] = React.useState('active');
+  // Filter orders by status
+  const visibleOrders = React.useMemo(() => {
+    if (statusFilter === 'all') return orders;
+    if (statusFilter === 'cancelled') return orders.filter(order => order.status === 'cancelled');
+    if (statusFilter === 'requested') return orders.filter(order => order.status === 'requested');
+    if (statusFilter === 'approved') return orders.filter(order => order.status === 'approved');
+    if (statusFilter === 'completed') return orders.filter(order => order.status === 'completed');
+    // 'active' = all except cancelled
+    return orders.filter(order => order.status !== 'cancelled');
+  }, [orders, statusFilter]);
   const navigate = useNavigate();
   const currentUser = useAuthStore(s => s.user);
   const [sellerEmails, setSellerEmails] = React.useState({});
@@ -24,7 +59,7 @@ const MyOrdersPage = () => {
   // Poll for order status after payment to enable download promptly
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(() => fetchOrders(), 5000); // Poll every 5s for faster update after payment
+    const interval = setInterval(() => fetchOrders(), 10000); // Poll every 5s for faster update after payment
     const vis = () => { if (document.visibilityState === 'visible') fetchOrders(); };
     document.addEventListener('visibilitychange', vis);
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', vis); };
@@ -71,7 +106,21 @@ const MyOrdersPage = () => {
   }, [orders, currentUser, sellerUsers]);
  return (
     <div className="max-w-5xl px-4 py-6 mx-auto">
-      <h1 className="mb-4 text-2xl font-bold">My Orders</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">My Orders</h1>
+        <select
+          className="px-2 py-1 border rounded text-sm bg-white"
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+        >
+          <option value="active">Active</option>
+          <option value="all">All</option>
+          <option value="requested">Requested</option>
+          <option value="approved">Approved</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
       {error && (
         <div className="my-4 font-semibold text-red-500">
           {error}
@@ -79,24 +128,24 @@ const MyOrdersPage = () => {
       )}
       {loading ? (
         <p>Loading...</p>
-      ) : orders.length === 0 ? (
+      ) : visibleOrders.length === 0 ? (
         <p>You haven't placed any orders yet.</p>
       ) : (
         <div className="space-y-4">
-          {orders.some(order => order.status === 'approved' && order.paymentStatus === 'initiated') && (
+          {visibleOrders.some(order => order.status === 'approved' && order.paymentStatus === 'initiated') && (
             <div className="flex items-center gap-2 p-3 mb-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded">
               <svg className="w-5 h-5 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
               <span>Waiting for payment confirmation... Your download will be enabled automatically once payment is complete.</span>
             </div>
           )}
-          {orders.map(order => (
+          {visibleOrders.map(order => (
             <div key={order._id || order.id} className="p-4 border rounded shadow-sm">
               <div className="flex justify-between text-sm text-gray-500">
                 <span>Order ID: {order._id || order.id}</span>
                 <span>{order.createdAt ? format(new Date(order.createdAt), 'PPpp') : ''}</span>
               </div>
               <div className="mt-2">
-                {(order.items || []).map(item => {
+                {(order.products || order.items || []).map(item => {
                   const pid = item.product?.id || item.product?._id || item.productId;
                   const email = sellerEmails[pid] || 'Loading...';
                   const isDigital = item.product?.isDigital;
@@ -120,9 +169,17 @@ const MyOrdersPage = () => {
                           ) : (
                             <Package className="w-4 h-4 text-gray-500" />
                           )}
-                          <span>{item.product?.title || item.title || 'Product Title'}</span>
+                          <span>{
+                            item.product?.title
+                            || (item.productId && productDetails[item.productId]?.title)
+                            || 'Untitled Product'
+                          }</span>
                         </div>
-                        <div>Qty: {item.quantity} @ ${Number(item.product?.price || item.price || 0).toFixed(2)}</div>
+                        <div>Qty: {item.quantity} @ ${
+                          (item.product?.price ?? (item.productId && productDetails[item.productId]?.price))
+                            ? Number(item.product?.price ?? productDetails[item.productId]?.price).toFixed(2)
+                            : 'N/A'
+                        }</div>
                       </div>
                       <div className="flex items-center justify-between text-xs text-gray-600">
                         <span>Seller Email: {email}</span>
@@ -151,22 +208,13 @@ const MyOrdersPage = () => {
                           </Button>
                         )}
                         {isDigital && blockedReason === 'review' && (
-                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded">Download blocked: Payment under review</span>
+                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-orange-700 bg-orange-50 border-orange-200 rounded">Download blocked: Payment under review</span>
                         )}
                         {isDigital && blockedReason === 'refund' && (
-                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-yellow-800 bg-yellow-50 border border-yellow-200 rounded">Download blocked: Refunded</span>
+                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-yellow-800 bg-yellow-50 border-yellow-200 rounded">Download blocked: Refunded</span>
                         )}
                         {isDigital && blockedReason === 'rate_limit' && (
-                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-blue-800 bg-blue-50 border border-blue-200 rounded">Download blocked: Rate limit</span>
-                        )}
-                        {isDigital && order.status === 'approved' && !isBlockedReview && !isBlockedRefund && !isBlockedRate && (
-                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">Approved - Payment Required</span>
-                        )}
-                        {isDigital && order.paymentStatus === 'failed' && !isBlockedReview && !isBlockedRefund && !isBlockedRate && (
-                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 rounded">Payment Failed</span>
-                        )}
-                        {isDigital && order.status === 'refunded' && !isBlockedReview && !isBlockedRefund && !isBlockedRate && (
-                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-yellow-800 bg-yellow-50 border border-yellow-200 rounded">Refunded</span>
+                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-blue-800 bg-blue-50 border-blue-200 rounded">Download blocked: Rate limit</span>
                         )}
                       </div>
                     </div>
@@ -178,7 +226,7 @@ const MyOrdersPage = () => {
                   Total: ${(() => {
                     if (order.total) return Number(order.total).toFixed(2);
                     if (order.totalAmount) return Number(order.totalAmount).toFixed(2);
-                    const calc = (order.items || []).reduce((sum, it) => {
+                    const calc = (order.products || order.items || []).reduce((sum, it) => {
                       const price = Number(it.product?.price || it.price || 0);
                       return sum + price * Number(it.quantity || 1);
                     }, 0);
@@ -193,6 +241,24 @@ const MyOrdersPage = () => {
                 </span>
               </div>
               <div className="flex flex-wrap justify-end gap-2 mt-3">
+                {order.status === 'cancelled' && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={async () => {
+                      const endpoint = `${ORDER_API_ENDPOINT}/${order.id || order._id}`;
+                      
+                      try {
+                        await api.delete(endpoint);
+                        toast.success('Order deleted');
+                        fetchOrders();
+                      } catch (e) {
+                        console.error('Delete order error:', e);
+                        toast.error(e.response?.data?.message || 'Delete failed');
+                      }
+                    }}
+                  >Delete</Button>
+                )}
                 <Button
                   size="sm"
                   variant="default"
@@ -219,8 +285,17 @@ const MyOrdersPage = () => {
                   </Button>
                 )}
                 {(() => {
-                  const hasDigital = (order.items || []).some(it => it.product?.isDigital);
+                  // Find first product with seller info
+                  const firstItem = (order.products || order.items || [])[0];
+                  const peer = deriveSellerPeerFromItem(firstItem, currentUser, sellerUsers);
+                  // Detect digital products using both product and productDetails
+                  const hasDigital = (order.products || order.items || []).some(it => {
+                    if (it.product?.isDigital) return true;
+                    if (it.productId && productDetails[it.productId]?.isDigital) return true;
+                    return false;
+                  });
                   if (!hasDigital) return null;
+                  // Show Pay Now button only if order.status === 'approved' or paymentStatus === 'failed'
                   if (order.status === 'approved' || order.paymentStatus === 'failed') {
                     return (
                       <Button
@@ -242,18 +317,25 @@ const MyOrdersPage = () => {
                   return <span className={`px-2 py-0.5 text-[10px] font-medium rounded ${p.className}`}>{p.label}</span>;
                 })()}
                 {(() => {
-                  const firstItem = (order.items || [])[0];
+                  // Find first product with seller info
+                  const firstItem = (order.products || order.items || [])[0];
                   const peer = deriveSellerPeerFromItem(firstItem, currentUser, sellerUsers);
-                  const disabled = !peer;
+                  const sellerId = firstItem?.sellerId;
+                  const disabled = !peer && !sellerId;
                   return (
                     <Button
                       size="sm"
                       variant={disabled ? 'outline' : 'default'}
                       disabled={disabled}
                       onClick={() => {
-                        if (!peer) return;
-                        const url = buildChatUrl(peer);
-                        navigate(url);
+                        if (peer) {
+                          const url = buildChatUrl(peer);
+                          navigate(url);
+                        } else if (sellerId) {
+                          // Fallback: build chat URL with sellerId only
+                          const url = `/chat?sellerId=${sellerId}`;
+                          navigate(url);
+                        }
                       }}
                       title={disabled ? 'Seller chat not available yet' : 'Chat with seller'}
                     >

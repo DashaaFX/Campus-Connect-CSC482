@@ -18,7 +18,19 @@ export const handler = async (event) => {
     return await createOnboardingLink(event);
   }
 
-  // ...existing routing logic...
+  if (path.includes('/sellers/check-onboarding-status') && method === 'OPTIONS') {
+    return { statusCode: 200, headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+      'Access-Control-Allow-Methods': 'POST,OPTIONS'
+    }, body: '{}' };
+  }
+  // Check onboarding status endpoint
+  if (path.includes('/sellers/check-onboarding-status') && method === 'POST') {
+    const { handler: checkOnboardingStatus } = await import('./checkOnboardingStatus.js');
+    return await checkOnboardingStatus(event);
+  }
+
 
   // Default: not found
   return {

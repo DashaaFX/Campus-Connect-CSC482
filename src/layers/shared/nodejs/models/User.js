@@ -26,11 +26,16 @@ export class UserModel extends BaseModel {
     
 
     // Stripe Connect fields for seller payouts
-    const stripeConnectFields = {
-      stripeAccountId: userData.stripeAccountId || null,
+    let stripeConnectFields = {
       stripeOnboardingStatus: userData.stripeOnboardingStatus || 'pending', // pending, incomplete, complete, restricted
       payoutsDeferred: userData.payoutsDeferred || false
     };
+    if (typeof userData.stripeAccountId === 'string') {
+      const trimmedStripeAccountId = userData.stripeAccountId.trim();
+      if (trimmedStripeAccountId !== "") {
+        stripeConnectFields.stripeAccountId = trimmedStripeAccountId;
+      }
+    }
 
     const user = {
       ...otherData,
@@ -90,8 +95,8 @@ export class UserModel extends BaseModel {
       const params = {
         TableName: this.tableName,
         IndexName: 'StripeAccountIdIndex',
-        KeyConditionExpression: 'stripeAccountId = :acct',
-        ExpressionAttributeValues: { ':acct': stripeAccountId }
+        KeyConditionExpression: 'stripeAccountId = :s',
+        ExpressionAttributeValues: { ':s': stripeAccountId }
       };
       try {
         const result = await docClient.send(new QueryCommand(params));

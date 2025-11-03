@@ -32,6 +32,30 @@ const CheckoutPage = () => {
       clearTimeout(initialRetryTimeout);
     };
   }, []);
+  // Track pending order state for current cart items
+  const [pendingOrderMessage, setPendingOrderMessage] = React.useState("");
+  React.useEffect(() => {
+    const checkPendingOrder = async () => {
+      if (!token || items.length === 0) return;
+      try {
+        // Query user's orders for open status and matching product
+        const res = await api.get(ORDER_API_ENDPOINT + "/my-orders", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const openOrders = (res.data.orders || []).filter(o => ["requested","approved","initiated","pending"].includes(o.status));
+        const cartProductIds = items.map(it => it.productId || it.product?.id || it.product?._id);
+        const duplicate = openOrders.find(o => (o.items || []).some(it => cartProductIds.includes(it.productId || it.product?.id || it.product?._id)));
+        if (duplicate) {
+          setPendingOrderMessage("You already have a pending order for this product. Please complete or cancel it before placing a new order.");
+        } else {
+          setPendingOrderMessage("");
+        }
+      } catch (err) {
+        setPendingOrderMessage("");
+      }
+    };
+    checkPendingOrder();
+  }, [items, token]);
 
     // Calculate total
   const total = items.reduce((acc, item) => {
@@ -49,7 +73,10 @@ const CheckoutPage = () => {
       navigate('/login');
       return;
     }
-
+    if (pendingOrderMessage) {
+      toast.error(pendingOrderMessage);
+      return;
+    }
     try {
       setIsProcessing(true);
       // Calculate total price from cart items to ensure it's included with the order
@@ -57,14 +84,12 @@ const CheckoutPage = () => {
         if (!item?.product?.price) return acc;
         return acc + (parseFloat(item.product.price) * (parseInt(item.quantity) || 1));
       }, 0);
-      
       // Make sure each item has the price directly on the item object
       const itemsWithPrice = items.map(item => ({
         ...item,
         price: item.product?.price || 0,  // Ensure price is directly on the item
         productTitle: item.product?.title // Keep product title for reference
       }));
-      
       // Send the order with calculated total and shippingAddress
       await api.post(ORDER_API_ENDPOINT, { 
         shippingAddress: {}, // Required field
@@ -85,6 +110,7 @@ const CheckoutPage = () => {
       setIsProcessing(false);
     }
   };
+
 
   return (
     <div className="max-w-4xl py-8 mx-auto">
@@ -127,7 +153,7 @@ const CheckoutPage = () => {
                             {item.product ? (
                               <img
                                 src={getProductImageUrl(item.product)}
-                                alt={item.product.title}
+                                alt={item.product?.title || item.product?.name || 'Product'}
                                 className="object-cover w-full h-full"
                                 onError={(e) => {
                                   e.target.onerror = null;
@@ -141,7 +167,7 @@ const CheckoutPage = () => {
                             )}
                           </div>
                           <div className="flex-1 ml-4">
-                            <h3 className="font-medium">{item.product?.title || 'Product'}</h3>
+                            <h3 className="font-medium">{item.product?.title || item.product?.name || 'Product'}</h3>
                             <p className="text-sm text-gray-500">
                               Quantity: {item.quantity} × ${parseFloat(item.product?.price || 0).toFixed(2)}
                             </p>

@@ -78,6 +78,20 @@ Resources:
             Path: /sellers/onboarding-link
             Method: options
             RestApiId: !Ref CampusConnectApi
+        CheckOnboardingStatusApi:
+          Type: Api
+          Properties:
+            Path: /sellers/check-onboarding-status
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        CheckOnboardingStatusOptionsApi:
+          Type: Api
+          Properties:
+            Path: /sellers/check-onboarding-status
+            Method: options
+            RestApiId: !Ref CampusConnectApi
         GetSellersApi:
           Type: Api
           Properties:
@@ -380,6 +394,20 @@ Resources:
           STRIPE_WEBHOOK_SECRET_ARN: !Ref StripeWebhookSigningSecret
           CLEANUP_FAILED_PAYMENT_MINUTES: 180
       Events:
+        DeleteOrderApi:
+          Type: Api
+          Properties:
+            Path: /orders/{id}
+            Method: delete
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        DeleteOrderOptionsApi:
+          Type: Api
+          Properties:
+            Path: /orders/{id}
+            Method: options
+            RestApiId: !Ref CampusConnectApi
         CreateOrderApi:
           Type: Api
           Properties:

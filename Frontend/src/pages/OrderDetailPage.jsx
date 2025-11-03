@@ -150,7 +150,7 @@ const OrderDetailPage = () => {
         <div className="mb-6">
           <h2 className="mb-2 text-lg font-semibold">Items</h2>
           <div className="space-y-4">
-            {(order.items || []).map((item, idx) => {
+            {(order.products || order.items || []).map((item, idx) => {
               const productId = item.product?.id || item.product?._id || item.productId;
               const sellerEmail = sellerEmails[productId] || "Loading...";
               const isDigital = item.product?.isDigital;
@@ -160,12 +160,12 @@ const OrderDetailPage = () => {
                   {item.product?.images?.length > 0 && (
                     <img
                       src={item.product.images[0]}
-                      alt={item.product.title || item.product.name}
+                      alt={item.product.title}
                       className="object-cover w-32 h-32 rounded"
                     />
                   )}
                   <div>
-                    <div className="font-semibold">{item.product?.title || item.product?.name || "Product"}</div>
+                    <div className="font-semibold">{item.product?.title || item.title || item.product?.name || item.name || "Product"}</div>
                     <div className="text-sm text-gray-500">{item.product?.description}</div>
                     <div className="flex gap-4 mt-1 text-sm">
                       <Badge variant="secondary">Quantity: {item.quantity}</Badge>
