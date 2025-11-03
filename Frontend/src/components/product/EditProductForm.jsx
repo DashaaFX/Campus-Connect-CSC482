@@ -1,11 +1,13 @@
 //Component for editing an existing product
 //Dashnyam
-
+//Fixed Deleting feature to remove product from list
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "@/utils/axios"; // Use custom axios instance
+import { toast } from 'sonner';
 import { PRODUCT_API_ENDPOINT, CATEGORY_API_ENDPOINT } from "@/utils/data";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +36,7 @@ const EditProductForm = () => {
     images: []
   });
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -74,6 +77,12 @@ const EditProductForm = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         const product = res.data.product || res.data;
+        // Ownership check to avoid showing edit form for someone else's product)
+        if (product.sellerId && user?.id && product.sellerId !== user.id) {
+          toast.error('You are not authorized to edit this product');
+          navigate('/products');
+          return;
+        }
         setFormData({
           title: product.name || "",
           description: product.description || "",
@@ -92,7 +101,7 @@ const EditProductForm = () => {
       }
     };
     fetchProduct();
-  }, [id, token]);
+  }, [id, token, navigate, user?.id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -105,35 +114,42 @@ const EditProductForm = () => {
     setError("");
 
     try {
+      // Delete title field 
+      const payload = { ...formData, name: formData.title };
+      delete payload.title;
       await api.put(
         `${PRODUCT_API_ENDPOINT}/${id}`,
-        formData,
+        payload,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      
+      toast.success('Product updated');
       navigate("/my-sales");
-      
     } catch (err) {
       setError(err.response?.data?.message || "An error occurred");
+      toast.error(err.response?.data?.message || 'Failed to update product');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
-    setLoading(true);
+    if (deleting) return; // Prevent double clicks
+    setDeleting(true);
+    setError('');
     try {
-      await api.delete(`${PRODUCT_API_ENDPOINT}/${id}`, {
+      const res = await api.delete(`${PRODUCT_API_ENDPOINT}/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      navigate("/my-sales");
+      toast.success(res.data?.message || 'Product deleted');
+      navigate('/my-sales');
     } catch (err) {
-      setError("Failed to delete product");
+      const msg = err.response?.data?.message || 'Failed to delete product';
+      setError(msg);
+      toast.error(msg);
     } finally {
-      setLoading(false);
+      setDeleting(false);
     }
   };
 
@@ -196,8 +212,28 @@ const EditProductForm = () => {
           </Select>
         </div>
         <div className="flex justify-between gap-2">
-          <Button type="submit" disabled={loading}>{loading ? "Updating..." : "Update Product"}</Button>
-          <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>{loading ? "Deleting..." : "Delete Product"}</Button>
+          <Button type="submit" disabled={loading || deleting}>{loading ? "Updating..." : "Update Product"}</Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="destructive" disabled={loading || deleting}>{deleting ? "Deleting..." : "Delete Product"}</Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64">
+              <p className="mb-3 text-sm font-medium">Delete this product?</p>
+              <p className="mb-4 text-xs text-muted-foreground">It will be marked inactive and removed from public listings.</p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm">Cancel</Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleting}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDelete();
+                  }}
+                >{deleting ? 'Deleting…' : 'Confirm'}</Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </form>
     </div>

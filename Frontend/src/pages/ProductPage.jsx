@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import api from "@/utils/axios";
@@ -31,7 +31,41 @@ const PublicProductPage = () => {
   const [digitalFilter, setDigitalFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const PRODUCTS_PER_PAGE = 9;
+  const didReloadResetRef = useRef(false);
   useEffect(() => {
+    // reset all filters to defaults on refresh
+    let isReload = false;
+    try {
+      const navEntry = performance.getEntriesByType?.('navigation')?.[0];
+      if (navEntry?.type === 'reload') {
+        isReload = true;
+      } else if (performance.navigation && performance.navigation.type === performance.navigation.TYPE_RELOAD) {
+        isReload = true;
+      }
+    } catch (e) {
+      // treat as normal navigation
+    }
+
+    // Run the reset Only once
+    if (isReload && !didReloadResetRef.current) {
+      setSearch("");
+      setSelectedCategory("");
+      setSelectedSubcategory("");
+      setSort("");
+      setDigitalFilter('all');
+      setCurrentPage(1);
+      // Remove any query params 
+      if (location.search) {
+        navigate('/products', { replace: true });
+      }
+      didReloadResetRef.current = true;
+      return; // Skip hydrating from URL params
+    }
+
+    if (isReload && didReloadResetRef.current) {
+      return;
+    }
+
     const initialSearch = searchParams.get('search') || "";
     const initialCategory = searchParams.get('category') || "";
     const initialSubcategory = searchParams.get('subcategory') || "";
@@ -44,7 +78,7 @@ const PublicProductPage = () => {
     setSelectedSubcategory(initialSubcategory);
     setSort(initialSort);
     setDigitalFilter(initialDigital);
-  }, [location.search]);
+  }, [location.search, navigate, searchParams]);
 
   // Load categories
   useEffect(() => {
@@ -103,6 +137,8 @@ const PublicProductPage = () => {
 
       const res = await api.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
       let allProducts = res.data.products || [];
+      // Exclude deleted / inactive products
+      allProducts = allProducts.filter(p => p.status !== 'inactive' && p.status !== 'deleted');
       // Filter out products created by the logged-in user
       if (user && user.id) {
         allProducts = allProducts.filter(
@@ -128,7 +164,7 @@ const PublicProductPage = () => {
         allProducts = [...allProducts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 
-      setProducts(allProducts);
+  setProducts(allProducts);
     } catch (err) {
       console.error("Failed to fetch products", err);
     }

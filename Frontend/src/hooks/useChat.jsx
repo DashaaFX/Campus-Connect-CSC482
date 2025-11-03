@@ -24,6 +24,17 @@ export function directConversationId(userIdA, userIdB) {
   return [userIdA, userIdB].sort().join('_');
 }
 
+// Parse 2 user IDs from direct conversation ID, smaller ID is 'a', larger is 'b'
+export function parseDirectConversationId(conversationId) {
+  if (!conversationId || typeof conversationId !== 'string') return { a: null, b: null };
+  const parts = conversationId.split('_');
+  if (parts.length !== 2) return { a: null, b: null };
+  const [p1, p2] = parts;
+  if (!p1 || !p2) return { a: null, b: null };
+  const ordered = [p1, p2].sort();
+  return { a: ordered[0], b: ordered[1] };
+}
+
 //Check for existing conversation between two users, if not found create a new one
 export async function ensureDirectConversation({ currentUser, otherUser, orderContext }) {
   if (!currentUser?.id || !otherUser?.id) throw new Error('Missing user ids');
@@ -53,14 +64,22 @@ export async function ensureDirectConversation({ currentUser, otherUser, orderCo
       const data = existingSnap.data();
       const pfus = data.participantFirebaseUids;
       if (Array.isArray(pfus) && pfus.includes(currentFirebaseUid) && pfus.includes(otherFirebaseUid)) {
+        // Merge order context fields if provided
+        const updates = {};
         if (orderContext?.orderId && (!Array.isArray(data.orderIds) || !data.orderIds.includes(orderContext.orderId))) {
+          updates.orderIds = Array.isArray(data.orderIds) ? [...data.orderIds, orderContext.orderId] : [orderContext.orderId];
+        }
+        if (orderContext?.productTitle && !data.primaryProductTitle) {
+          updates.primaryProductTitle = orderContext.productTitle;
+        }
+        if (orderContext?.productId && !data.primaryProductId) {
+          updates.primaryProductId = orderContext.productId;
+        }
+        if (Object.keys(updates).length) {
           try {
-            await updateDoc(ref, {
-              orderIds: Array.isArray(data.orderIds) ? [...data.orderIds, orderContext.orderId] : [orderContext.orderId],
-              updatedAt: serverTimestamp()
-            });
+            await updateDoc(ref, { ...updates, updatedAt: serverTimestamp() });
           } catch (e) {
-            console.error('[chat] appendOrderIdExisting:updateDoc failed', e.code, e.message);
+            console.error('[chat] mergeOrderContextExisting:updateDoc failed', e.code, e.message);
           }
         }
         return convoId;
@@ -91,7 +110,9 @@ export async function ensureDirectConversation({ currentUser, otherUser, orderCo
       updatedAt: serverTimestamp(),
       lastMessage: null,
       lastReadAt: { [currentUser.id]: serverTimestamp(), [otherUser.id]: null },
-      orderIds: orderContext?.orderId ? [orderContext.orderId] : []
+      orderIds: orderContext?.orderId ? [orderContext.orderId] : [],
+      ...(orderContext?.productTitle ? { primaryProductTitle: orderContext.productTitle } : {}),
+      ...(orderContext?.productId ? { primaryProductId: orderContext.productId } : {}),
     };
   })();
 
@@ -135,8 +156,44 @@ export async function sendMessage({ conversationId, senderAppUserId, senderFireb
   return res.id;
 }
 
+// Append a system message when meeting location or datetime is finalized
+export async function appendSystemEvent({ conversationId, type, payload = {}, actorAppUserId, text }) {
+  if (!conversationId || !type) return;
+  const messagesCol = collection(db, ROOT_COLLECTION, conversationId, 'messages');
+  const createdAt = serverTimestamp();
+  const autoText = (() => {
+    if (text) return text;
+    switch (type) {
+      case 'location-finalized': return `Meeting location confirmed: ${payload?.location || ''}`.trim();
+      case 'datetime-finalized': return `Meeting date & time confirmed: ${payload?.dateTime ? payload.dateTime : ''}`.trim();
+      default: return `[${type}]`;
+    }
+  })();
+  const senderFirebaseUid = auth.currentUser?.uid || null; // ensure rule compatibility for system messages
+  const docData = {
+    type: 'system',
+    eventType: type,
+    payload,
+    createdAt,
+    actorId: actorAppUserId || null,
+    text: autoText,
+    senderFirebaseUid, // add sender ID 
+  };
+  const res = await addDoc(messagesCol, docData);
+  try {
+    await updateDoc(doc(db, ROOT_COLLECTION, conversationId), {
+      lastMessage: { text: autoText, senderId: actorAppUserId || null, createdAt },
+      updatedAt: createdAt,
+    });
+  } catch (e) {
+    console.debug('[chat] appendSystemEvent lastMessage skipped', e.message);
+  }
+  return res.id;
+}
+
 // Listen to messages from oldest first
 export function subscribeToMessages(conversationId, callback, { pageSize = 50 } = {}) {
+  const sessionUid = auth.currentUser?.uid; // store current users id
   const q = query(
     collection(db, ROOT_COLLECTION, conversationId, 'messages'),
     orderBy('createdAt', 'asc'),
@@ -149,7 +206,19 @@ export function subscribeToMessages(conversationId, callback, { pageSize = 50 } 
       callback(messages);
     },
     (error) => {
-      console.error('[chat] subscribe error:', error.code, error.message);
+      const currentUid = auth.currentUser?.uid;
+      const userLoggedOut = !auth.currentUser;
+      const uidChanged = currentUid && sessionUid && currentUid !== sessionUid;
+      // Suppresspermission-denied errors triggered after logout, cleared after logout
+      if ((userLoggedOut || uidChanged) && error.code === 'permission-denied') {
+        if (import.meta.env.DEV) console.debug('[chat] suppress permission-denied after auth change/logout (messages)');
+        return;
+      }
+      if (error.code === 'permission-denied') {
+        console.error('[chat] subscribe error (messages)', error.code, error.message);
+      } else {
+        console.error('[chat] subscribe error (messages)', error.code, error.message);
+      }
     }
   );
 }

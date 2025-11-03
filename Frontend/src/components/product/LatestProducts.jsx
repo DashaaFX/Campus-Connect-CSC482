@@ -22,7 +22,9 @@ const LatestProducts = ({ limit = 6 }) => {
     api
       .get(`${PRODUCT_API_ENDPOINT}?limit=${limit}&sort=-createdAt`)
       .then(res => {
-        let allProducts = res.data.products || [];
+      let allProducts = res.data.products || [];
+      // Filter out inactive/deleted products
+      allProducts = allProducts.filter(p => p.status !== 'inactive' && p.status !== 'deleted');
         // Filter out products created by the logged-in user
         if (user && user.id) {
           allProducts = allProducts.filter(
