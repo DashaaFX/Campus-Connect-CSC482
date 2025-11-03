@@ -1,3 +1,6 @@
+  //Sales page where sellers can view and manage their listed products.
+  //Deleting products mark them as inactive and hide them from this view.
+  
   import React, { useEffect, useState } from 'react';
   import { useNavigate } from 'react-router-dom';
   import api from "@/utils/axios";
@@ -68,11 +71,14 @@
       if ((user?._id || user?.id) && token) fetchMyProducts();
     }, [user, token]);
 
-    const filteredProducts = products.filter((product) => {
-      if (selectedCategory && product.category !== selectedCategory) return false;
-      if (selectedSubcategory && product.subcategory !== selectedSubcategory) return false;
-      return true;
-    });
+    const filteredProducts = products
+      // Exclude inactive/deleted products from seller view 
+      .filter(p => p.status !== 'inactive' && p.status !== 'deleted')
+      .filter((product) => {
+        if (selectedCategory && product.category !== selectedCategory) return false;
+        if (selectedSubcategory && product.subcategory !== selectedSubcategory) return false;
+        return true;
+      });
 
     const handleClearFilters = () => {
       setSelectedCategory(null);

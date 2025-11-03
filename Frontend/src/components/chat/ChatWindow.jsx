@@ -17,16 +17,22 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
   const loadOlder = useChatStore(s => s.loadOlder);
   const hasMoreHistory = useChatStore(s => s.hasMoreHistory);
   const orderContext = useChatStore(s => s.orderContext);
+  const meetingLocation = useChatStore(s => s.meetingLocation);
+  const meetingLocationConfirmedBy = useChatStore(s => s.meetingLocationConfirmedBy) || [];
+  const meetingDateTime = useChatStore(s => s.meetingDateTime);
+  const meetingDateTimeConfirmedBy = useChatStore(s => s.meetingDateTimeConfirmedBy) || [];
   const markActiveRead = useChatStore(s => s.markActiveRead);
   const currentUser = useAuthStore(s => s.user);
 
   const [text, setText] = useState('');
+  const [showMap, setShowMap] = useState(false); 
   const scrollRef = useRef(null);
   const atBottomRef = useRef(true);
   // Track last markRead call to avoid repeated state updates
   const lastMarkRef = useRef({ convoId: null, msgCount: 0, lastTime: 0 });
 
   // Throttle markActiveRead to avoid rapid successive updates (e.g., burst loads)
+  //Generated with ChatGPT for a more efficient throttle implementation - Messaging Best Practice
   const throttledMarkRead = useCallback(() => {
     const now = Date.now();
     if (now - lastMarkRef.current.lastTime < 500) return; // 0.5s throttle
@@ -83,26 +89,6 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
     return map;
   }, [users]);
 
-  let peerDisplay = null;
-  if (activeConversationId) {
-    const parts = activeConversationId.split('_');
-    if (parts.length === 2) {
-      const uA = userIndex.get(parts[0]);
-      const uB = userIndex.get(parts[1]);
-
-      if (uA && uB) {
-        peerDisplay = `${uA.name || uA.email || uA.id} ↔ ${uB.name || uB.email || uB.id}`;
-      } else if (uA) {
-        peerDisplay = uA.name || uA.email || uA.id;
-      } else if (uB) {
-        peerDisplay = uB.name || uB.email || uB.id;
-      } else {
-        peerDisplay = activeConversationId;
-      }
-    } else {
-      peerDisplay = activeConversationId;
-    }
-  }
 
   if (!activeConversationId) {
     return <div className="p-4 text-sm text-gray-500">Select a user to start chatting. {loading && <span className="ml-2 text-xs">(starting...)</span>} {error && <span className="ml-2 text-xs text-red-600">{error}</span>}</div>;
@@ -117,12 +103,13 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
   };
 
   const bodyHeightStyle = compact ? { maxHeight: `${maxBodyHeight}px`, display: 'flex', flexDirection: 'column' } : { display:'flex', flexDirection:'column' };
+  const showMeetingBanner = meetingLocation && meetingLocationConfirmedBy.length === 2 
+    && meetingDateTime && meetingDateTimeConfirmedBy.length === 2;
 
   return (
-  <div className={`flex flex-col bg-white border rounded ${compact ? 'h-auto' : 'h-full'} overflow-hidden`} style={bodyHeightStyle}>
-      <div className="flex items-center justify-between px-3 py-2 text-xs text-gray-600 border-b bg-gradient-to-r from-gray-50 to-gray-100">
-        <div className="font-semibold text-gray-700 truncate max-w-[60%]">{peerDisplay}</div>
-        <div className="flex items-center gap-2">
+    <div className={`flex flex-col bg-white border rounded ${compact ? 'h-auto' : 'h-full'} overflow-hidden`} style={bodyHeightStyle}>
+      {(orderContext?.orderId || orderContext?.productTitle) && (
+        <div className="flex items-center justify-end px-3 py-2 text-[10px] gap-2 text-gray-600 border-b bg-gradient-to-r from-gray-50 to-gray-100">
           {orderContext?.orderId && (
             <Badge variant="outline" className="text-[10px]">Order #{orderContext.orderId}</Badge>
           )}
@@ -130,8 +117,8 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
             <span className="hidden sm:inline text-[10px] text-gray-500 truncate max-w-[120px]">{orderContext.productTitle}</span>
           )}
         </div>
-      </div>
-  <div className="flex flex-col flex-1 min-h-0">
+      )}
+    <div className="flex flex-col flex-1 min-h-0">
         <div className="flex justify-center p-1 border-b bg-gray-50/60">
           {hasMoreHistory ? (
             <button onClick={loadOlder} className="text-[10px] text-blue-600 hover:underline">Load earlier messages</button>
@@ -139,8 +126,28 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
             <span className="text-[9px] text-gray-400">Beginning of conversation</span>
           )}
         </div>
-    <div ref={scrollRef} className="flex-1 min-h-0 px-3 py-2 space-y-3 overflow-y-auto bg-white custom-scrollbar">
+         <div ref={scrollRef} className="flex-1 min-h-0 px-3 py-2 space-y-3 overflow-y-auto bg-white custom-scrollbar">
           {activeMessages.map(m => {
+            // System message styling
+            if (m.type === 'system') {
+              const ts = formatTs(m.createdAt);
+              const eventLabel = (() => {
+                if (m.text) return m.text; 
+                switch (m.eventType) {
+                  case 'location-finalized': return `Meeting location confirmed: ${m.payload?.location || ''}`.trim();
+                  case 'datetime-finalized': return `Meeting date & time confirmed: ${m.payload?.dateTime || ''}`.trim();
+                  default: return `[${m.eventType}]`;
+                }
+              })();
+              return (
+                <div key={m.id} className="flex justify-center">
+                  <div className="flex items-center max-w-[80%] gap-2 px-3 py-1 mt-1 text-[10px] font-medium tracking-wide text-gray-700 bg-gradient-to-r from-gray-100 to-gray-50 border border-gray-300 rounded-full shadow-sm">
+                    <span>{eventLabel}</span>
+                    {ts && <span className="text-[9px] opacity-60">{ts}</span>}
+                  </div>
+                </div>
+              );
+            }
             const sender = userIndex.get(m.senderId);
             const senderLabel = sender ? getUserDisplayName(sender) : m.senderId;
             const isSelf = currentUser && m.senderId === currentUser.id;
@@ -168,6 +175,37 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
           })}
           {activeMessages.length === 0 && (
             <div className="py-6 text-[11px] text-gray-400 text-center">No messages yet. Say hello!</div>
+          )}
+          {/* Meeting Banner after Location and Date confirmed*/}
+          {showMeetingBanner && (
+            <div className="flex justify-center mt-2">
+              <div className="w-full max-w-sm px-3 py-2 text-[11px] bg-green-50 border border-green-200 rounded shadow-sm flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-green-700">Meeting Confirmed</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMap(m => !m)}
+                    className="text-[10px] px-2 py-0.5 rounded border border-green-300 bg-white text-green-700 hover:bg-green-100 focus:outline-none"
+                  >{showMap ? 'Hide Map' : 'Show Map'}</button>
+                </div>
+                <div className="text-[10px] text-gray-700"><span className="font-medium">Location:</span> {meetingLocation}</div>
+                <div className="text-[10px] text-gray-700"><span className="font-medium">Date & Time:</span> {meetingDateTime ? new Date(meetingDateTime).toLocaleString() : ''}</div>
+                {showMap && (
+                  <div className="mt-1 overflow-hidden rounded-md">
+                    <iframe
+                      title="Meeting Location Map"
+                      width="100%"
+                      height="130"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={`https://www.google.com/maps?q=${encodeURIComponent(meetingLocation)}&output=embed`}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
         <div className="flex gap-2 p-3 border-t bg-gray-50">

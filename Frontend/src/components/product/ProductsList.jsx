@@ -32,7 +32,8 @@ const ProductList = ({ products = [] }) => {
 
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
-      {products.map((product) => (
+    {/* Filter out inactive/ deleted products */}
+    {products.filter(p => p.status !== 'inactive' && p.status !== 'deleted').map((product) => (
         <div
           key={product.id || product._id}
           className="flex flex-col justify-between p-4 transition bg-white rounded-lg shadow-md hover:shadow-xl"
@@ -40,7 +41,7 @@ const ProductList = ({ products = [] }) => {
           <div className="relative">
             <Link to={`/products/${getProductId(product)}`}>
               {product.isDigital ? (
-                <div className="relative w-full h-48 overflow-hidden rounded-md bg-gray-50 flex items-center justify-center">
+                <div className="relative flex items-center justify-center w-full h-48 overflow-hidden rounded-md bg-gray-50">
                   <img
                     src={product.previewImage || getPlaceholderImage()}
                     alt={getProductTitle(product)}

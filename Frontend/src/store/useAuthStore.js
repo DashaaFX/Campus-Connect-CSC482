@@ -137,26 +137,11 @@ export const useAuthStore = create(
 
       logout: async () => {
         try {
-
-          // Stop chat listeners when logging out
+          // Centralized chat cleanup
           const { useChatStore } = await import('./useChatStore');
-          const chatState = useChatStore.getState();
-          if (chatState._unsubscribeConversations) {
-            try { chatState._unsubscribeConversations(); } catch {}
-          }
-          if (chatState._unsubscribeMessages) {
-            try { chatState._unsubscribeMessages(); } catch {}
-          }
-          // Clear chat store state
-          useChatStore.setState({
-            _unsubscribeConversations: null,
-            _unsubscribeMessages: null,
-            conversations: [],
-            activeConversationId: null,
-            activeMessages: [],
-          });
+          useChatStore.getState().clearChat();
         } catch (e) {
-          if (import.meta.env.DEV) console.debug('[auth] chat cleanup during logout skipped', e.message);
+          if (import.meta.env.DEV) console.debug('[auth] chat cleanup skipped:', e.message);
         }
         try { await firebaseSignOut(auth); } catch { /* ignore */ }
 
