@@ -134,7 +134,10 @@ const MyOrdersPage = () => {
         <div className="space-y-4">
           {visibleOrders.some(order => order.status === 'approved' && order.paymentStatus === 'initiated') && (
             <div className="flex items-center gap-2 p-3 mb-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded">
-              <svg className="w-5 h-5 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+              <svg className="w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
               <span>Waiting for payment confirmation... Your download will be enabled automatically once payment is complete.</span>
             </div>
           )}
@@ -145,81 +148,61 @@ const MyOrdersPage = () => {
                 <span>{order.createdAt ? format(new Date(order.createdAt), 'PPpp') : ''}</span>
               </div>
               <div className="mt-2">
+                {/* Show seller email for every product in all orders */}
                 {(order.products || order.items || []).map(item => {
                   const pid = item.product?.id || item.product?._id || item.productId;
-                  const email = sellerEmails[pid] || 'Loading...';
-                  const isDigital = item.product?.isDigital;
-                  // Blocked download states (single source of truth)
-                  const blockedReason = (() => {
-                    if (order.timeline?.some(ev => ev.type === 'download_blocked_review')) return 'review';
-                    if (order.timeline?.some(ev => ev.type === 'download_blocked_refund')) return 'refund';
-                    if (order.timeline?.some(ev => ev.type === 'download_attempt' && ev.meta?.blocked === 'rate_limit')) return 'rate_limit';
-                    return null;
-                  })();
-                  const canDownload = isDigital && (['completed','paid'].includes(order.status)) && order.paymentStatus !== 'failed' && order.status !== 'refunded' && !blockedReason;
                   return (
-                    <div
-                      key={pid || Math.random()}
-                      className="flex flex-col gap-1 py-2 text-sm border-b last:border-b-0"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1">
-                          {isDigital ? (
-                            <FileText className="w-4 h-4 text-indigo-600" />
-                          ) : (
-                            <Package className="w-4 h-4 text-gray-500" />
-                          )}
-                          <span>{
-                            item.product?.title
-                            || (item.productId && productDetails[item.productId]?.title)
-                            || 'Untitled Product'
-                          }</span>
-                        </div>
-                        <div>Qty: {item.quantity} @ ${
-                          (item.product?.price ?? (item.productId && productDetails[item.productId]?.price))
-                            ? Number(item.product?.price ?? productDetails[item.productId]?.price).toFixed(2)
-                            : 'N/A'
-                        }</div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-600">
-                        <span>Seller Email: {email}</span>
-                        {isDigital && (
+                    <div key={pid} className="mb-1">
+                      <span className="text-xs text-gray-500">Seller Email: {sellerEmails[pid] || 'N/A'}</span>
+                    </div>
+                  );
+                })}
+                {/* Only show download links/buttons for completed orders */}
+                {order.status === 'completed' && (
+                  order.downloadLinks?.length > 0 ? (
+                    <div className="space-y-2 mb-2">
+                      <h3 className="font-semibold">Download your products:</h3>
+                      {order.downloadLinks.map(link => (
+                        <a
+                          key={link.productId}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block px-4 py-2 text-white bg-indigo-600 rounded hover:bg-indigo-700"
+                        >
+                          Download File
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    (order.products || order.items || []).filter(item => item.product?.isDigital).map(item => {
+                      const pid = item.product?.id || item.product?._id || item.productId;
+                      const title = item.product?.title || item.title || 'Digital Product';
+                      return (
+                        <div key={pid} className="p-3 mb-2 bg-white border rounded-lg flex items-center justify-between">
+                          <div className="text-sm font-medium text-gray-900">{title}</div>
                           <Button
-                            size="xs"
-                            variant={canDownload ? 'outline' : 'outline'}
-                            disabled={!canDownload}
+                            size="sm"
+                            variant="default"
                             onClick={async () => {
                               try {
                                 const url = await fetchDigitalDownloadUrl(pid);
                                 if (!url) { toast.error('Download unavailable'); return; }
                                 window.location.href = url;
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                                await fetchOrders();
                               } catch (e) {
                                 toast.error(e.response?.data?.message || 'Download failed');
                               }
                             }}
                           >
-                            {canDownload ? 'Download'
-                              : blockedReason === 'review' ? 'Blocked: Payment Under Review'
-                              : blockedReason === 'refund' ? 'Blocked: Refunded'
-                              : blockedReason === 'rate_limit' ? 'Blocked: Rate Limit'
-                              : (order.status === 'approved' ? 'Awaiting Payment'
-                                : (order.paymentStatus === 'failed' ? 'Payment Failed'
-                                  : (order.status === 'refunded' ? 'Refunded' : 'Requested')))}
+                            Download File
                           </Button>
-                        )}
-                        {isDigital && blockedReason === 'review' && (
-                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-orange-700 bg-orange-50 border-orange-200 rounded">Download blocked: Payment under review</span>
-                        )}
-                        {isDigital && blockedReason === 'refund' && (
-                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-yellow-800 bg-yellow-50 border-yellow-200 rounded">Download blocked: Refunded</span>
-                        )}
-                        {isDigital && blockedReason === 'rate_limit' && (
-                          <span className="px-2 py-0.5 ml-2 text-[10px] font-medium text-blue-800 bg-blue-50 border-blue-200 rounded">Download blocked: Rate limit</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                        </div>
+                      );
+                    })
+                  )
+                )}
               </div>
               <div className="flex justify-between mt-3 font-semibold">
                 <span>

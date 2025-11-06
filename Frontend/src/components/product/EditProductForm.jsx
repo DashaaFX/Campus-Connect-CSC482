@@ -115,8 +115,10 @@ const EditProductForm = () => {
 
     try {
       // Delete title field 
-      const payload = { ...formData, name: formData.title };
-      delete payload.title;
+      //const payload = { ...formData, name: formData.title };
+      //delete payload.title;
+      const payload = { ...formData };
+      
       await api.put(
         `${PRODUCT_API_ENDPOINT}/${id}`,
         payload,

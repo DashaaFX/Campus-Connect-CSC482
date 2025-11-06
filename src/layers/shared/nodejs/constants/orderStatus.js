@@ -7,9 +7,9 @@
 export const ORDER_STATUSES = {
   REQUESTED: 'requested',
   APPROVED: 'approved',
-  PAID: 'paid', // payment succeeded for digital orders
+  PAID: 'paid', 
   COMPLETED: 'completed',
-  REFUNDED: 'refunded', // full refund processed
+  REFUNDED: 'refunded',  //for future use
   CANCELLED: 'cancelled',
   REJECTED: 'rejected'
 };
@@ -20,7 +20,7 @@ export const ORDER_STATUS_LIST = Object.values(ORDER_STATUSES);
 export const OPEN_ORDER_STATUSES = [
   ORDER_STATUSES.REQUESTED,
   ORDER_STATUSES.APPROVED,
-  ORDER_STATUSES.PAID // still not completed yet (e.g. waiting manual finalize)
+  ORDER_STATUSES.PAID 
 ];
 
 // Allowed transitions map

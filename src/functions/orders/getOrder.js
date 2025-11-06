@@ -2,43 +2,70 @@ import { orderModel } from '/opt/nodejs/models/Order.js';
 import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+  'Access-Control-Allow-Methods': 'GET,OPTIONS'
+};
+
 export const handler = async (event) => {
+  // Handle CORS preflight requests
+  // CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': '*',
+      },
+      body: JSON.stringify({ message: 'CORS preflight OK' }),
+    };
+  }
   try {
     // Get user info from JWT authorizer context
     const userId = event.requestContext?.authorizer?.userId;
-    
     if (!userId) {
-      return createErrorResponse('User authentication required', 401);
+      const errorResponse = createErrorResponse('User authentication required', 401);
+      errorResponse.headers = { ...CORS_HEADERS };
+      return errorResponse;
     }
 
     // Check if this is a product-orders request
     if (event.path === '/orders/product-orders') {
       const productId = event.queryStringParameters?.productId;
       if (!productId) {
-        return createErrorResponse('Product ID required as query parameter', 400);
+        const errorResponse = createErrorResponse('Product ID required as query parameter', 400);
+        errorResponse.headers = { ...CORS_HEADERS };
+        return errorResponse;
       }
-
       // Get orders for a specific product (only if the user is the seller)
       const orders = await orderModel.getByProductAndSeller(productId, userId);
-      return createSuccessResponse({
-        orders: orders || []
-      });
+      const response = createSuccessResponse({ orders: orders || [] });
+      response.headers = { ...CORS_HEADERS };
+      return response;
     }
 
     // Regular order retrieval by ID
     const orderId = event.pathParameters?.id;
     if (!orderId) {
-      return createErrorResponse('Order ID required', 400);
+      const errorResponse = createErrorResponse('Order ID required', 400);
+      errorResponse.headers = { ...CORS_HEADERS };
+      return errorResponse;
     }
 
     const order = await orderModel.get(orderId);
     if (!order) {
-      return createErrorResponse('Order not found', 404);
+      const errorResponse = createErrorResponse('Order not found', 404);
+      errorResponse.headers = { ...CORS_HEADERS };
+      return errorResponse;
     }
 
     // Users can only view their own orders (as buyer or seller)
     if (order.userId !== userId && order.sellerId !== userId) {
-      return createErrorResponse('Not authorized to view this order', 403);
+      const errorResponse = createErrorResponse('Not authorized to view this order', 403);
+      errorResponse.headers = { ...CORS_HEADERS };
+      return errorResponse;
     }
 
     // Enrich single order with minimal digital metadata
@@ -48,7 +75,7 @@ export const handler = async (event) => {
         const cache = {};
         for (const it of order.items) {
           const pid = it.product?.id || it.product?._id || it.productId;
-            if (!pid) continue;
+          if (!pid) continue;
           const hasDigitalInfo = it.product && (typeof it.product.isDigital === 'boolean');
           if (!hasDigitalInfo && !cache.hasOwnProperty(pid)) {
             try {
@@ -59,7 +86,7 @@ export const handler = async (event) => {
                   isDigital: !!p.isDigital,
                   digitalFormat: p.isDigital ? p.digitalFormat : null,
                   previewImage: p.isDigital ? (p.previewImage || null) : null,
-                  title: p.title ,
+                  title: p.title,
                   price: p.price,
                 };
               } else {
@@ -88,12 +115,14 @@ export const handler = async (event) => {
       console.error('Single order enrichment error:', enrichErr);
     }
 
-    return createSuccessResponse({
-      order
-    });
+    const response = createSuccessResponse({ order });
+    response.headers = { ...CORS_HEADERS };
+    return response;
 
   } catch (error) {
     console.error('Get order error:', error);
-    return createErrorResponse(error.message, 500);
+    const errorResponse = createErrorResponse(error.message, 500);
+    errorResponse.headers = { ...CORS_HEADERS };
+    return errorResponse;
   }
 };

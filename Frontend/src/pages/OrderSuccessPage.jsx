@@ -109,25 +109,44 @@ const OrderSuccessPage = () => {
           )}
           {ready && (
             <div className="space-y-3">
-              {(order.products || order.items || []).filter(i => i.product?.isDigital).map(i => {
-                const pid = i.product?.id || i.product?._id || i.productId;
-                return (
-                  <Button
-                    key={pid}
-                    onClick={async () => {
-                      try {
-                        const url = await fetchDigitalDownloadUrl(pid);
-                        if (!url) { toast.error('Download unavailable'); return; }
-                        window.location.href = url;
-                      } catch (e) {
-                        toast.error(e.response?.data?.message || 'Download failed');
-                      }
-                    }}
-                  >
-                    Download {i.product?.title || i.title || i.product?.name || i.name || 'File'}
-                  </Button>
-                );
-              })}
+              {/* Render download links from order.downloadLinks if present */}
+              {order.downloadLinks?.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Download your products:</h3>
+                  {order.downloadLinks.map(link => (
+                    <a
+                      key={link.productId}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block px-4 py-2 text-white bg-indigo-600 rounded hover:bg-indigo-700"
+                    >
+                      Download Product {link.productId}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {/* Fallback: old download button logic if needed */}
+              {(order.downloadLinks?.length === 0 || !order.downloadLinks) &&
+                (order.products || order.items || []).filter(i => i.product?.isDigital).map(i => {
+                  const pid = i.product?.id || i.product?._id || i.productId;
+                  return (
+                    <Button
+                      key={pid}
+                      onClick={async () => {
+                        try {
+                          const url = await fetchDigitalDownloadUrl(pid);
+                          if (!url) { toast.error('Download unavailable'); return; }
+                          window.location.href = url;
+                        } catch (e) {
+                          toast.error(e.response?.data?.message || 'Download failed');
+                        }
+                      }}
+                    >
+                      Download {i.product?.title || i.title || i.product?.name || i.name || 'File'}
+                    </Button>
+                  );
+                })}
               {['refunded'].includes(order.status) && (
                 <div className="p-2 text-xs text-red-700 border rounded bg-red-50">Refunded — downloads disabled.</div>
               )}

@@ -87,31 +87,38 @@ export const handler = async (event) => {
 
     // Duplicate payment attempt guard: reuse existing session if still initiated AND < 30 min old
     const THIRTY_MIN_MS = 30 * 60 * 1000;
-    if (order.stripeCheckoutSessionId && order.stripeCheckoutSessionUrl && order.paymentStatus === 'initiated') {
-      const createdAt = order.checkoutSessionCreatedAt ? Date.parse(order.checkoutSessionCreatedAt) : null;
-      const fresh = createdAt ? (Date.now() - createdAt) < THIRTY_MIN_MS : false;
-      if (fresh) {
-      // Ensure timeline has a payment_initiated marker; add if missing (idempotent enhancement)
-      const hasInitiated = (order.timeline || []).some(ev => ev.type === 'payment_initiated');
-      if (!hasInitiated) {
-  await orderModel.update(orderId, { timeline: [...(order.timeline||[]), { at: new Date().toISOString(), type: 'payment_initiated', actor: userId, actorType: 'user', actorId: userId } ] });
-      }
-      const expiresAt = createdAt ? new Date(createdAt + THIRTY_MIN_MS).toISOString() : undefined;
-      // Add payment_reused event if not already present
-      const hasReused = (order.timeline || []).some(ev => ev.type === 'payment_reused');
-      if (!hasReused) {
-        try { await orderModel.update(orderId, { timeline: [...(order.timeline||[]), { at: new Date().toISOString(), type: 'payment_reused', actor: userId, actorType: 'user', actorId: userId }] }); } catch (_) {}
-      }
-      const resp = createSuccessResponse({ orderId, sessionUrl: order.stripeCheckoutSessionUrl, sessionId: order.stripeCheckoutSessionId, reused: true, expiresAt });
-      resp.headers = { ...resp.headers, 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token', 'Access-Control-Allow-Methods': 'POST,OPTIONS' };
-      return resp;
+    const stripeKey = await getStripeSecretKey();
+    if (order.stripeCheckoutSessionId && order.stripeCheckoutSessionUrl && order.paymentStatus === 'initiated' && stripeKey) {
+      try {
+        const Stripe = (await import('stripe')).default;
+        const stripe = new Stripe(stripeKey);
+        const existingSession = await stripe.checkout.sessions.retrieve(order.stripeCheckoutSessionId);
+        if (existingSession.status === 'open') {
+          // Ensure timeline has a payment_initiated marker; add if missing (idempotent enhancement)
+          const hasInitiated = (order.timeline || []).some(ev => ev.type === 'payment_initiated');
+          if (!hasInitiated) {
+            await orderModel.update(orderId, { timeline: [...(order.timeline||[]), { at: new Date().toISOString(), type: 'payment_initiated', actor: userId, actorType: 'user', actorId: userId } ] });
+          }
+          const createdAt = order.checkoutSessionCreatedAt ? Date.parse(order.checkoutSessionCreatedAt) : null;
+          const expiresAt = createdAt ? new Date(createdAt + THIRTY_MIN_MS).toISOString() : undefined;
+          // Add payment_reused event if not already present
+          const hasReused = (order.timeline || []).some(ev => ev.type === 'payment_reused');
+          if (!hasReused) {
+            try { await orderModel.update(orderId, { timeline: [...(order.timeline||[]), { at: new Date().toISOString(), type: 'payment_reused', actor: userId, actorType: 'user', actorId: userId }] }); } catch (_) {}
+          }
+          const resp = createSuccessResponse({ orderId, sessionUrl: order.stripeCheckoutSessionUrl, sessionId: order.stripeCheckoutSessionId, reused: true, expiresAt });
+          resp.headers = { ...resp.headers, 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token', 'Access-Control-Allow-Methods': 'POST,OPTIONS' };
+          return resp;
+        }
+      } catch (e) {
+        console.log('Existing session invalid or expired:', e.message);
+        // Continue to create new session
       }
     }
 
     const amountCents = Math.round((order.total || 0) * 100);
     if (amountCents <= 0) return createErrorResponse('Invalid order amount', 400);
 
-  const stripeKey = await getStripeSecretKey();
     const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
     let sessionUrl;
     let sessionId;
@@ -123,7 +130,7 @@ export const handler = async (event) => {
         if (!orderId) {
           return createErrorResponse('Order metadata missing', 500);
         }
-        const PLATFORM_FEE_RATE = 0.10; // 10% commission
+        const PLATFORM_FEE_RATE = parseFloat(process.env.PLATFORM_FEE_RATE || '0.10'); // 10% commission
         const platformFeeCents = Math.round(amountCents * PLATFORM_FEE_RATE);
         const session = await stripe.checkout.sessions.create({
           mode: 'payment',

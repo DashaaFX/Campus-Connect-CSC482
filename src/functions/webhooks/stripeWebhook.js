@@ -10,12 +10,17 @@ async function loadStripeSecrets(forceRefresh = false) {
     const age = Date.now() - cachedStripeSecrets.loadedAt;
     if (age < STRIPE_SECRET_CACHE_TTL_MS) return cachedStripeSecrets;
   }
-  const result = { secretKey: process.env.STRIPE_SECRET_KEY, webhookSecret: process.env.STRIPE_WEBHOOK_SECRET };
-  if (result.secretKey && result.webhookSecret) {
+  const result = {
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    platformWebhookSecret: process.env.STRIPE_PLATFORM_WEBHOOK_SECRET
+  };
+  if (result.secretKey && result.webhookSecret && result.platformWebhookSecret) {
     cachedStripeSecrets = { ...result, loadedAt: Date.now() }; return cachedStripeSecrets;
   }
   const secretArn = process.env.STRIPE_SECRET_ARN;
   const webhookArn = process.env.STRIPE_WEBHOOK_SECRET_ARN;
+  const platformWebhookArn = process.env.STRIPE_PLATFORM_WEBHOOK_SECRET_ARN;
   const client = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
   async function fetch(arn) {
     if (!arn) return {};
@@ -26,48 +31,56 @@ async function loadStripeSecrets(forceRefresh = false) {
       try { return JSON.parse(raw); } catch { return { secret: raw }; }
     } catch (e) { console.error('Secrets Manager fetch failed:', e.message); return {}; }
   }
-  const [s1, s2] = await Promise.all([fetch(secretArn), fetch(webhookArn)]);
+  const [s1, s2, s3] = await Promise.all([
+    fetch(secretArn),
+    fetch(webhookArn),
+    fetch(platformWebhookArn)
+  ]);
   result.secretKey = result.secretKey || s1.secretKey || s1.secret || s1.STRIPE_SECRET_KEY;
   result.webhookSecret = result.webhookSecret || s2.webhookSecret || s2.secret || s2.STRIPE_WEBHOOK_SECRET;
+  result.platformWebhookSecret = result.platformWebhookSecret || s3.platformWebhookSecret || s3.secret || s3.STRIPE_PLATFORM_WEBHOOK_SECRET;
   cachedStripeSecrets = { ...result, loadedAt: Date.now() };
   return cachedStripeSecrets;
 }
 
 // Stripe webhook handler with signature verification.
-// Expects environment variables: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
-// IMPORTANT: API Gateway / Lambda integration must pass the RAW body string (disable automatic JSON parsing)
-// and set `isBase64Encoded=true` only when body actually base64 encoded.
 export const handler = async (event) => {
-  try {
-  const { secretKey: stripeKey, webhookSecret } = await loadStripeSecrets();
-    if (!stripeKey || !webhookSecret) {
-      return createErrorResponse('Stripe webhook not configured', 500);
-    }
 
-    // Retrieve raw body (before JSON parse) for signature verification
-    let rawBody;
-    if (event.isBase64Encoded) {
-      rawBody = Buffer.from(event.body || '', 'base64').toString('utf8');
-    } else {
-      rawBody = event.body || '';
-    }
+  try {
+  const { secretKey: stripeKey, webhookSecret, platformWebhookSecret } = await loadStripeSecrets();
+  if (!stripeKey || (!webhookSecret && !platformWebhookSecret)) {
+    return createErrorResponse('Stripe webhook not configured', 500);
+  }
+
+  // Retrieve raw body (before JSON parse) for signature verification
+  let rawBody;
+  if (event.isBase64Encoded) {
+    rawBody = Buffer.from(event.body || '', 'base64').toString('utf8');
+  } else {
+    rawBody = event.body || '';
+  }
     if (!rawBody) return createErrorResponse('Empty webhook body', 400);
 
-    // Header keys can come in different casings; normalize
-    const headers = Object.fromEntries(Object.entries(event.headers || {}).map(([k, v]) => [k.toLowerCase(), v]));
-    const signature = headers['stripe-signature'];
-    if (!signature) return createErrorResponse('Missing Stripe-Signature header', 400);
+  // Header keys can come in different casings; normalize
+  const headers = Object.fromEntries(Object.entries(event.headers || {}).map(([k, v]) => [k.toLowerCase(), v]));
+  const signature = headers['stripe-signature'];
+  if (!signature) return createErrorResponse('Missing Stripe-Signature header', 400);
 
-    // Verify signature & construct event
-    let stripeEvent;
+  // Verify signature & construct event
+  let stripeEvent;
+  try {
+    const Stripe = (await import('stripe')).default;
+    const stripe = new Stripe(stripeKey);
+    // Try platform webhook secret first (for payment events)
     try {
-      const Stripe = (await import('stripe')).default;
-      const stripe = new Stripe(stripeKey);
+      stripeEvent = stripe.webhooks.constructEvent(rawBody, signature, platformWebhookSecret);
+    } catch (platformErr) {
+      // If platform secret fails, try connected account secret
       stripeEvent = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-    } catch (err) {
-      console.error('Stripe signature verification failed:', err.message);
-      return createErrorResponse('Invalid signature', 400);
     }
+  } catch (err) {
+    return createErrorResponse('Invalid signature', 400);
+  }
 
     const eventType = stripeEvent.type;
     // 1. Successful checkout completion -> COMPLETE order (existing flow)
@@ -104,16 +117,44 @@ export const handler = async (event) => {
       // Timeline: payment succeeded
       let timeline = [ ...(order.timeline || []), { at: now, type: 'payment_succeeded', actor: 'system', actorType: 'system', actorId: 'system', meta: { amountTotal, expectedCents, suspicious } } ];
 
+      // Generate download links for digital products
+      const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
+      const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
+      const ProductModel = (await import('/opt/nodejs/models/Product.js')).ProductModel;
+      const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+      const BUCKET_NAME = process.env.UPLOADS_BUCKET || 'campus-connect-uploads';
+      let downloadLinks = [];
+      if (Array.isArray(order.items)) {
+        for (const item of order.items) {
+          const productId = item.productId || item.id || item.product?.id || item.product?._id || item.product?.productId;
+          if (!productId) continue;
+          try {
+            const productModel = new ProductModel();
+            const product = await productModel.getById(productId);
+            if (product && product.isDigital && product.documentKey && product.documentKey.startsWith('private/')) {
+              const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: product.documentKey });
+              const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour expiry
+              downloadLinks.push({ productId, url });
+            }
+          } catch (e) {
+            console.error('Error generating download link for product', productId, e);
+          }
+        }
+      }
+      // Clean workaround: update order in three steps to avoid overlapping document paths
       await orderModel.update(orderId, {
         status: ORDER_STATUSES.COMPLETED,
         paymentStatus: 'succeeded',
         stripePaymentIntentId: session.payment_intent,
-        updatedAt: now,
-        completedAt: now,
-        suspiciousPayment: suspicious,
+        downloadLinks
+      });
+      await orderModel.update(orderId, {
         timeline: timeline
       });
-      return createSuccessResponse({ message: 'Order completed', orderId }, 200);
+      await orderModel.update(orderId, {
+        completedAt: now
+      });
+      return createSuccessResponse({ message: 'Order completed', orderId, downloadLinks }, 200);
     }
 
     // 2. Payment intent failed -> mark paymentStatus failed (do NOT change status so buyer can retry)
@@ -130,6 +171,7 @@ export const handler = async (event) => {
       const now = new Date().toISOString();
   const timeline = [ ...(order.timeline || []), { at: now, type: 'payment_failed', actor: 'system', actorType: 'system', actorId: 'system', meta: { paymentIntentId: paymentIntent.id } } ];
       await orderModel.update(orderId, { paymentStatus: 'failed', updatedAt: now, timeline });
+  await orderModel.update(orderId, { paymentStatus: 'failed', timeline });
       return createSuccessResponse({ message: 'Payment failure recorded', orderId }, 200);
     }
 
@@ -194,7 +236,6 @@ export const handler = async (event) => {
       await orderModel.update(orderId, {
         status: ORDER_STATUSES.REFUNDED,
         paymentStatus: 'refunded',
-        updatedAt: now,
         refundedAt: now,
         refundAmount: (refunded / 100),
         timeline
@@ -207,10 +248,7 @@ export const handler = async (event) => {
       const account = stripeEvent.data?.object;
       const sellerStripeAccountId = account?.id;
 
-      console.log('Received account.updated:', JSON.stringify(account?.id ? { id: account.id, details_submitted: account.details_submitted, charges_enabled: account.charges_enabled, payouts_enabled: account.payouts_enabled, capabilities: account.capabilities, requirements: account.requirements } : account));
-
       if (!sellerStripeAccountId) {
-        console.log('No account id in account.updated; ignoring');
         return createSuccessResponse({ message: 'No account id in account.updated; ignoring' }, 200);
       }
 
@@ -237,7 +275,6 @@ export const handler = async (event) => {
       const userModel = new UserModel();
       const users = await userModel.listByStripeAccountId(sellerStripeAccountId);
 
-      console.log('Found users for stripeAccountId:', sellerStripeAccountId, 'count:', users?.length || 0);
 
       if (users && users.length > 0) {
         for (const user of users) {
@@ -250,20 +287,19 @@ export const handler = async (event) => {
               attrs.stripeOnboardingCompletedAt = new Date().toISOString();
             }
             const updateResult = await userModel.update(user.id, attrs);
-            console.log('Updated user onboarding status:', user.id, '->', newStatus, 'result:', !!updateResult);
           } catch (e) {
             console.error('Failed updating user onboarding status for', user.id, e.message);
           }
         }
         return createSuccessResponse({ message: 'Seller onboarding status updated', sellerStripeAccountId, newStatus }, 200);
       } else {
-        console.log('No user found for Stripe account:', sellerStripeAccountId);
         return createSuccessResponse({ message: 'No user found for Stripe account', sellerStripeAccountId }, 200);
       }
     }
 
-    // Acknowledge other event types
-    return createSuccessResponse({ message: 'Event ignored', type: eventType }, 200);
+  // Log unhandled event types for monitoring
+  console.warn('Unhandled Stripe event type:', eventType);
+  return createSuccessResponse({ message: 'Event ignored', type: eventType }, 200);
   } catch (error) {
     console.error('Stripe webhook error:', error);
     return createErrorResponse(error.message, 500);

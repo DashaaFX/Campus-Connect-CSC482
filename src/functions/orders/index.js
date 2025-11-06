@@ -20,6 +20,10 @@ export const handler = async (event) => {
       return await createOrder.handler(event);
     }
 
+    if (path.includes('/orders/') && method === 'OPTIONS') {
+      return await deleteOrder.handler(event);
+    }
+
     if (path.includes('/orders/') && method === 'DELETE') {
       return await deleteOrder.handler(event);
     }
@@ -43,6 +47,7 @@ export const handler = async (event) => {
     if (path.includes('/orders/') && path.includes('/mark-paid') && method === 'POST') {
       return await markPaid.handler(event);
     }
+
 
     if (path.includes('/orders/') && path.includes('/checkout-session') && method === 'POST') {
       return await createCheckoutSession.handler(event);

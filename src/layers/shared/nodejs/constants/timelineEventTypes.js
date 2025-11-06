@@ -1,4 +1,6 @@
-
+//Baljinnyam Puntsagnorov
+// Timeline event types for order lifecycle tracking
+//Per Stripe Integration Documentation
 export const TIMELINE_EVENTS = {
   PAYMENT_INITIATED: 'payment_initiated',
   PAYMENT_REUSED: 'payment_reused',

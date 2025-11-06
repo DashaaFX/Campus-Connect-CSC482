@@ -1,3 +1,4 @@
+
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Campus Connect -Serverless Backend with JWT Authorizer
@@ -26,7 +27,7 @@ Globals:
 Parameters:
   Environment:
     Type: String
-    Default: dev1
+    Default: dev2
     AllowedValues: [dev2, dev1, dev, staging, prod]
 
 Resources:
@@ -133,6 +134,12 @@ Resources:
         GenerateStringKey: placeholder
         PasswordLength: 16
         ExcludePunctuation: true
+
+  StripePlatformWebhookSigningSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub campus-connect-stripe-platform-webhook-secret-${Environment}
+      Description: Stripe Platform Webhook Signing Secret
 
 
 
@@ -524,6 +531,7 @@ Resources:
         Variables:
           STRIPE_SECRET_ARN: !Ref StripeApiKeySecret
           STRIPE_WEBHOOK_SECRET_ARN: !Ref StripeWebhookSigningSecret
+          STRIPE_PLATFORM_WEBHOOK_SECRET_ARN: !Ref StripePlatformWebhookSigningSecret
       Events:
         StripeWebhookApi:
           Type: Api
@@ -533,12 +541,21 @@ Resources:
             RestApiId: !Ref CampusConnectApi
 
       Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref ProductsTable
         - Statement:
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
               Resource:
                 - !Ref StripeApiKeySecret
                 - !Ref StripeWebhookSigningSecret
+                - !Ref StripePlatformWebhookSigningSecret
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub "${UploadsBucket.Arn}/*"
 
   AdminFunction:
     Type: AWS::Serverless::Function

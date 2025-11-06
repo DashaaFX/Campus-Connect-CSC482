@@ -4,7 +4,7 @@ import { ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
 
 // Cleanup handler: cancels approved orders stuck with paymentStatus failed older than threshold minutes.
 // Intended to be triggered by a scheduled CloudWatch event (e.g., every hour).
-// Environment var CLEANUP_FAILED_PAYMENT_MINUTES (default 180 minutes)
+// Per Best Practices, default 180 minutes can be overridden via environment variable.
 export const handler = async () => {
   try {
     const thresholdMinutes = parseInt(process.env.CLEANUP_FAILED_PAYMENT_MINUTES || '180', 10);
