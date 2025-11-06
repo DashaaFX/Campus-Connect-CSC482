@@ -128,12 +128,10 @@ const PublicProductPage = () => {
   const fetchProducts = async () => {
     try {
       const params = new URLSearchParams();
-
-    if (search) params.append('search', search);
-    if (selectedCategory) params.append('category', selectedCategory);
-    //if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
-    if (sort) params.append('sort', sort);
-    if (digitalFilter && digitalFilter !== 'all') params.append('digital', digitalFilter);
+      if (search) params.append('search', search);
+      if (selectedCategory) params.append('category', selectedCategory);
+      if (sort) params.append('sort', sort);
+      if (digitalFilter && digitalFilter !== 'all') params.append('digital', digitalFilter);
 
       const res = await api.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
       let allProducts = res.data.products || [];
@@ -144,6 +142,12 @@ const PublicProductPage = () => {
         allProducts = allProducts.filter(
           (p) => p.sellerId !== user.id && p.userId !== user.id
         );
+      }
+      // Apply digital/physical filter on frontend
+      if (digitalFilter === 'true') {
+        allProducts = allProducts.filter(p => p.isDigital === true);
+      } else if (digitalFilter === 'false') {
+        allProducts = allProducts.filter(p => !p.isDigital);
       }
       //filter subcategory separately, for Sort by dropdown
       if (selectedSubcategory) {
@@ -164,7 +168,7 @@ const PublicProductPage = () => {
         allProducts = [...allProducts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 
-  setProducts(allProducts);
+      setProducts(allProducts);
     } catch (err) {
       console.error("Failed to fetch products", err);
     }
@@ -172,7 +176,7 @@ const PublicProductPage = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [search, selectedCategory, selectedSubcategory, sort]);
+  }, [search, selectedCategory, selectedSubcategory, sort, digitalFilter]);
 
   //  When user changes filters, update URL
   const updateUrlParams = () => {
