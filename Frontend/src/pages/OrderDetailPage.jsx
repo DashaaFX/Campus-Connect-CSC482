@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
 import api from "@/utils/axios";
-import { PRODUCT_API_ENDPOINT } from "@/utils/data";
+import { PRODUCT_API_ENDPOINT, ORDER_API_ENDPOINT } from "@/utils/data";
 import { fetchDigitalDownloadUrl } from '@/utils/digitalDownload';
 import { toast } from 'sonner';
 
@@ -142,6 +142,12 @@ const OrderDetailPage = () => {
               </Badge>
             );
           })()}
+          {/* Dispute status badge */}
+          {order.disputeStatus && (
+            <Badge variant="outline" className={`px-2 py-1 text-xs ${order.disputeStatus === 'open' ? 'bg-red-100 text-red-700 border-red-300' : order.disputeStatus === 'won' ? 'bg-green-100 text-green-700 border-green-300' : order.disputeStatus === 'lost' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+              Dispute: {order.disputeStatus.charAt(0).toUpperCase() + order.disputeStatus.slice(1)}
+            </Badge>
+          )}
         </div>
         <div className="mb-4">
           <strong>Total:</strong>
@@ -164,7 +170,7 @@ const OrderDetailPage = () => {
                       className="object-cover w-32 h-32 rounded"
                     />
                   )}
-                  <div>
+                  <div> 
                     <div className="font-semibold">{item.product?.title || item.title || item.product?.name || item.name || "Product"}</div>
                     <div className="text-sm text-gray-500">{item.product?.description}</div>
                     <div className="flex gap-4 mt-1 text-sm">
@@ -218,6 +224,7 @@ const OrderDetailPage = () => {
                             disabled={!canDownload}
                             onClick={async () => {
                               try {
+                                // Always request a fresh download link from backend
                                 const url = await fetchDigitalDownloadUrl(productId);
                                 if (!url) {
                                   toast.error('Download unavailable');
@@ -278,7 +285,11 @@ function translateTimelineEvent(ev) {
     case 'payment_succeeded': return 'Payment succeeded';
     case 'payment_failed': return 'Payment failed';
     case 'refund_full': return 'Full refund processed';
-  case 'refund_full_initiated': return 'Full refund initiated';
+    case 'refund_full_initiated': return 'Full refund initiated';
+    case 'dispute_created': return 'Dispute opened';
+    case 'dispute_closed': return 'Dispute closed';
+    case 'dispute_funds_reinstated': return 'Dispute won (funds reinstated)';
+    case 'dispute_funds_withdrawn': return 'Dispute lost (funds withdrawn)';
     default:
       if (type?.startsWith('status_')) return `Status changed: ${type.replace('status_','')}`;
       return type || 'Event';

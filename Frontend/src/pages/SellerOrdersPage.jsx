@@ -13,6 +13,7 @@ const SellerOrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('active');
+  const [archivedOrderIds, setArchivedOrderIds] = useState([]);
   const [productDetails, setProductDetails] = useState({});
   const navigate = useNavigate();
   // Fetch missing product details for items with only productId
@@ -55,14 +56,15 @@ const SellerOrdersPage = () => {
 
   // Filter orders by status
   const visibleOrders = React.useMemo(() => {
-    if (statusFilter === 'all') return orders;
-    if (statusFilter === 'cancelled') return orders.filter(order => order.status === 'cancelled');
-    if (statusFilter === 'requested') return orders.filter(order => order.status === 'requested');
-    if (statusFilter === 'approved') return orders.filter(order => order.status === 'approved');
-    if (statusFilter === 'completed') return orders.filter(order => order.status === 'completed');
-    // 'active' = all except cancelled
-    return orders.filter(order => order.status !== 'cancelled');
-  }, [orders, statusFilter]);
+    if (statusFilter === 'all') return orders.filter(order => !archivedOrderIds.includes(order._id || order.id));
+    if (statusFilter === 'cancelled') return orders.filter(order => order.status === 'cancelled' && !archivedOrderIds.includes(order._id || order.id));
+    if (statusFilter === 'requested') return orders.filter(order => order.status === 'requested' && !archivedOrderIds.includes(order._id || order.id));
+    if (statusFilter === 'approved') return orders.filter(order => order.status === 'approved' && !archivedOrderIds.includes(order._id || order.id));
+    if (statusFilter === 'completed') return orders.filter(order => order.status === 'completed' && !archivedOrderIds.includes(order._id || order.id));
+    if (statusFilter === 'archived') return orders.filter(order => archivedOrderIds.includes(order._id || order.id));
+    // 'active' = all except cancelled and archived
+    return orders.filter(order => order.status !== 'cancelled' && !archivedOrderIds.includes(order._id || order.id));
+  }, [orders, statusFilter, archivedOrderIds]);
 
   return (
     <div className="max-w-5xl px-4 py-6 mx-auto">
@@ -84,6 +86,7 @@ const SellerOrdersPage = () => {
           <option value="approved">Approved</option>
           <option value="completed">Completed</option>
           <option value="cancelled">Cancelled</option>
+          <option value="archived">Archived</option>
         </select>
       </div>
       {loading ? <p>Loading...</p> : visibleOrders.length === 0 ? <p>No incoming orders.</p> : (
@@ -140,7 +143,28 @@ const SellerOrdersPage = () => {
                 </span>
                 {/* Whole order approve/reject buttons */}
                 <div className="flex gap-2 ml-4">
-                  {order.status === 'cancelled' && (
+                  {/* Archive/Unarchive button for completed/refunded/disputed orders */}
+                  {(['completed','refunded','disputed'].includes(order.status) && !archivedOrderIds.includes(order._id || order.id)) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setArchivedOrderIds(ids => [...ids, order._id || order.id]);
+                        toast.success('Order archived');
+                      }}
+                    >Archive</Button>
+                  )}
+                  {archivedOrderIds.includes(order._id || order.id) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setArchivedOrderIds(ids => ids.filter(id => id !== (order._id || order.id)));
+                        toast.success('Order unarchived');
+                      }}
+                    >Unarchive</Button>
+                  )}
+                  {(order.status === 'cancelled' || order.status === 'rejected') && (
                     <Button
                       size="sm"
                       variant="destructive"
@@ -188,6 +212,33 @@ const SellerOrdersPage = () => {
                       >Reject Order</Button>
                     </>
                   )}
+                    {/* Refund button for eligible digital/completed orders */}
+                    {(() => {
+                      const isDigital =
+                        (order.downloadLinks && order.downloadLinks.length > 0) ||
+                        !!order.stripeCheckoutSessionUrl;
+                      const eligibleForRefund = isDigital && order.status === 'completed' && order.paymentStatus !== 'refunded' && order.disputeStatus !== 'open';
+              
+                      if (!eligibleForRefund) return null;
+                      return (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200"
+                          onClick={async () => {
+                            if (!window.confirm('Initiate full refund for this order? This cannot be undone.')) return;
+                            try {
+                              await api.post(`${ORDER_API_ENDPOINT}/${order.id || order._id}/refund`);
+                              toast.success('Refund initiated');
+                              const res = await api.get(`${ORDER_API_ENDPOINT}/seller-orders`);
+                              setOrders(res.data.orders || []);
+                            } catch (e) {
+                              toast.error(e.response?.data?.message || 'Refund failed');
+                            }
+                          }}
+                        >Initiate Refund</Button>
+                      );
+                    })()}
                   <Button
                     size="sm"
                     variant="outline"
@@ -204,6 +255,30 @@ const SellerOrdersPage = () => {
                   >Chat</Button>
                 </div>
               </div>
+                {/* Refund/dispute status and timeline events */}
+                <div className="mt-2">
+                  {order.paymentStatus === 'refunded' && (
+                    <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800 border border-yellow-300 mr-2">Refunded</span>
+                  )}
+                  {order.disputeStatus && (
+                    <span className={`inline-block px-2 py-1 text-xs font-semibold rounded mr-2 ${order.disputeStatus === 'open' ? 'bg-red-100 text-red-700 border border-red-300' : order.disputeStatus === 'won' ? 'bg-green-100 text-green-700 border border-green-300' : order.disputeStatus === 'lost' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' : 'bg-gray-100 text-gray-700 border border-gray-300'}`}>
+                      Dispute: {order.disputeStatus.charAt(0).toUpperCase() + order.disputeStatus.slice(1)}
+                    </span>
+                  )}
+                  {Array.isArray(order.timeline) && order.timeline.length > 0 && (
+                    <div className="mt-2">
+                      <h3 className="text-xs font-semibold mb-1">Activity</h3>
+                      <ul className="space-y-1 text-xs">
+                        {order.timeline.slice(-10).map((ev, i) => (
+                          <li key={i}>
+                            <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-medium mr-1">{new Date(ev.at).toLocaleString()}</span>
+                            <span>{translateTimelineEvent(ev)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
             </div>
           ))}
         </div>
@@ -213,3 +288,25 @@ const SellerOrdersPage = () => {
 };
 
 export default SellerOrdersPage;
+// Minimal translation for timeline events
+function translateTimelineEvent(ev) {
+  const type = ev.type;
+  switch (type) {
+    case 'requested': return 'Order requested';
+    case 'status_approved': return 'Seller approved order';
+    case 'status_rejected': return 'Seller rejected order';
+    case 'status_cancelled': return 'Buyer cancelled order';
+    case 'payment_initiated': return 'Payment initiated';
+    case 'payment_succeeded': return 'Payment succeeded';
+    case 'payment_failed': return 'Payment failed';
+    case 'refund_full': return 'Full refund processed';
+    case 'refund_full_initiated': return 'Full refund initiated';
+    case 'dispute_created': return 'Dispute opened';
+    case 'dispute_closed': return 'Dispute closed';
+    case 'dispute_funds_reinstated': return 'Dispute won (funds reinstated)';
+    case 'dispute_funds_withdrawn': return 'Dispute lost (funds withdrawn)';
+    default:
+      if (type?.startsWith('status_')) return `Status changed: ${type.replace('status_','')}`;
+      return type || 'Event';
+  }
+}

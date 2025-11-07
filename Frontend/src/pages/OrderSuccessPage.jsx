@@ -114,15 +114,21 @@ const OrderSuccessPage = () => {
                 <div className="space-y-2">
                   <h3 className="font-semibold">Download your products:</h3>
                   {order.downloadLinks.map(link => (
-                    <a
+                    <Button
                       key={link.productId}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      onClick={async () => {
+                        try {
+                          const url = await fetchDigitalDownloadUrl(link.productId);
+                          if (!url) { toast.error('Download unavailable'); return; }
+                          window.location.href = url;
+                        } catch (e) {
+                          toast.error(e.response?.data?.message || 'Download failed');
+                        }
+                      }}
                       className="inline-block px-4 py-2 text-white bg-indigo-600 rounded hover:bg-indigo-700"
                     >
                       Download Product {link.productId}
-                    </a>
+                    </Button>
                   ))}
                 </div>
               )}

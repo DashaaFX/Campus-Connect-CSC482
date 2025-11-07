@@ -9,7 +9,7 @@ export const ORDER_STATUSES = {
   APPROVED: 'approved',
   PAID: 'paid', 
   COMPLETED: 'completed',
-  REFUNDED: 'refunded',  //for future use
+  REFUNDED: 'refunded', 
   CANCELLED: 'cancelled',
   REJECTED: 'rejected'
 };

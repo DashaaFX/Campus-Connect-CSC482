@@ -20,8 +20,8 @@ export const handler = async (event) => {
   if (!order) {
     return { statusCode: 404, headers: CORS_HEADERS, body: JSON.stringify({ message: 'Order not found' }) };
   }
-  if (order.status !== 'cancelled') {
-    return { statusCode: 403, headers: CORS_HEADERS, body: JSON.stringify({ message: 'Only cancelled orders can be deleted' }) };
+  if (order.status !== 'cancelled' && order.status !== 'rejected') {
+    return { statusCode: 403, headers: CORS_HEADERS, body: JSON.stringify({ message: 'Only cancelled or rejected orders can be deleted' }) };
   }
   await orderModel.delete(orderId);
   return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ message: 'Order deleted' }) };

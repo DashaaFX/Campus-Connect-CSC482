@@ -5,6 +5,7 @@
   import { useNavigate } from 'react-router-dom';
   import api from "@/utils/axios";
   import { PRODUCT_API_ENDPOINT } from '@/utils/data';
+  import { fetchDigitalDownloadUrl } from '@/utils/digitalDownload';
   import { getProductImageUrl } from '@/utils/productHelpers';
 
   import ProductSidebar from '../components/product/ProductSideBar';
@@ -219,6 +220,23 @@
                           <Button variant="outline" size="sm" onClick={() => navigate(`/admin/products/${product._id || product.id}/status`)}>
                             Status
                           </Button>
+                          {product.isDigital && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const url = await fetchDigitalDownloadUrl(product._id || product.id);
+                                  if (!url) { toast.error('Download unavailable'); return; }
+                                  window.open(url, '_blank');
+                                } catch (e) {
+                                  toast.error(e.response?.data?.message || 'Download failed');
+                                }
+                              }}
+                            >
+                              Download
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

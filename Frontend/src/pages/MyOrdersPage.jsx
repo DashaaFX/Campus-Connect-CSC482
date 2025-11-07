@@ -41,16 +41,18 @@ const MyOrdersPage = () => {
   }, [orders, productDetails]);
   
   const [statusFilter, setStatusFilter] = React.useState('active');
+  const [archivedOrderIds, setArchivedOrderIds] = React.useState([]);
   // Filter orders by status
   const visibleOrders = React.useMemo(() => {
-    if (statusFilter === 'all') return orders;
-    if (statusFilter === 'cancelled') return orders.filter(order => order.status === 'cancelled');
-    if (statusFilter === 'requested') return orders.filter(order => order.status === 'requested');
-    if (statusFilter === 'approved') return orders.filter(order => order.status === 'approved');
-    if (statusFilter === 'completed') return orders.filter(order => order.status === 'completed');
-    // 'active' = all except cancelled
-    return orders.filter(order => order.status !== 'cancelled');
-  }, [orders, statusFilter]);
+    if (statusFilter === 'all') return orders.filter(order => !archivedOrderIds.includes(order._id || order.id));
+    if (statusFilter === 'cancelled') return orders.filter(order => order.status === 'cancelled' && !archivedOrderIds.includes(order._id || order.id));
+    if (statusFilter === 'requested') return orders.filter(order => order.status === 'requested' && !archivedOrderIds.includes(order._id || order.id));
+    if (statusFilter === 'approved') return orders.filter(order => order.status === 'approved' && !archivedOrderIds.includes(order._id || order.id));
+    if (statusFilter === 'completed') return orders.filter(order => order.status === 'completed' && !archivedOrderIds.includes(order._id || order.id));
+    if (statusFilter === 'archived') return orders.filter(order => archivedOrderIds.includes(order._id || order.id));
+    // 'active' = all except cancelled and archived
+    return orders.filter(order => order.status !== 'cancelled' && !archivedOrderIds.includes(order._id || order.id));
+  }, [orders, statusFilter, archivedOrderIds]);
   const navigate = useNavigate();
   const currentUser = useAuthStore(s => s.user);
   const [sellerEmails, setSellerEmails] = React.useState({});
@@ -119,6 +121,7 @@ const MyOrdersPage = () => {
           <option value="approved">Approved</option>
           <option value="completed">Completed</option>
           <option value="cancelled">Cancelled</option>
+          <option value="archived">Archived</option>
         </select>
       </div>
       {error && (
@@ -163,15 +166,25 @@ const MyOrdersPage = () => {
                     <div className="space-y-2 mb-2">
                       <h3 className="font-semibold">Download your products:</h3>
                       {order.downloadLinks.map(link => (
-                        <a
+                        <Button
                           key={link.productId}
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          size="sm"
+                          variant="default"
+                          onClick={async () => {
+                            try {
+                              const url = await fetchDigitalDownloadUrl(link.productId);
+                              if (!url) { toast.error('Download unavailable'); return; }
+                              window.location.href = url;
+                              await new Promise(resolve => setTimeout(resolve, 1000));
+                              await fetchOrders();
+                            } catch (e) {
+                              toast.error(e.response?.data?.message || 'Download failed');
+                            }
+                          }}
                           className="inline-block px-4 py-2 text-white bg-indigo-600 rounded hover:bg-indigo-700"
                         >
                           Download File
-                        </a>
+                        </Button>
                       ))}
                     </div>
                   ) : (
@@ -224,7 +237,28 @@ const MyOrdersPage = () => {
                 </span>
               </div>
               <div className="flex flex-wrap justify-end gap-2 mt-3">
-                {order.status === 'cancelled' && (
+                {/* Archive/Unarchive button for completed/refunded/disputed orders */}
+                {(['completed','refunded','disputed'].includes(order.status) && !archivedOrderIds.includes(order._id || order.id)) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setArchivedOrderIds(ids => [...ids, order._id || order.id]);
+                      toast.success('Order archived');
+                    }}
+                  >Archive</Button>
+                )}
+                {archivedOrderIds.includes(order._id || order.id) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setArchivedOrderIds(ids => ids.filter(id => id !== (order._id || order.id)));
+                      toast.success('Order unarchived');
+                    }}
+                  >Unarchive</Button>
+                )}
+                {(order.status === 'cancelled' || order.status === 'rejected') && (
                   <Button
                     size="sm"
                     variant="destructive"
