@@ -8,6 +8,7 @@ import * as createCheckoutSession from './createCheckoutSession.js';
 import { createErrorResponse } from '/opt/nodejs/utils/response.js';
 import * as refundOrder from './refundOrder.js';
 import * as deleteOrder from './deleteOrder.js';
+import * as archiveOrder from './archiveOrders.js';
 
 export const handler = async (event) => {
     
@@ -30,6 +31,10 @@ export const handler = async (event) => {
     
     if (path === '/orders/request' && method === 'POST') {
       return await requestOrder.handler(event);
+    }
+
+    if (path.includes('/orders/archive')) {
+      return await archiveOrder.handler(event);
     }
     
     if ((path === '/orders' || path === '/orders/my-orders' || path === '/orders/seller-orders') && method === 'GET') {

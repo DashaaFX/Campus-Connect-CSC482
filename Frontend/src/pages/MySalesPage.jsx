@@ -206,9 +206,17 @@
                         </TableCell>
                         <TableCell>{product.stock}</TableCell>
                         <TableCell>
-                          <Badge variant={product.stock > 0 ? 'default' : 'destructive'}>
-                            {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={product.stock > 0 ? 'default' : 'destructive'}>
+                              {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                            </Badge>
+                            {/* Approval status badge */}
+                            {product.status === 'pending' && <Badge variant="secondary">Pending</Badge>}
+                            {product.status === 'approved' && <Badge variant="success">Approved</Badge>}
+                            {product.status === 'rejected' && <Badge variant="destructive">Rejected</Badge>}
+                            {/* Inactive badge */}
+                            {product.active === false && <Badge variant="outline">Inactive</Badge>}
+                          </div>
                         </TableCell>
                         <TableCell className="flex flex-wrap gap-2">
                           <Button variant="outline" size="sm" onClick={() => navigate(`/products/${product._id || product.id}`)}>

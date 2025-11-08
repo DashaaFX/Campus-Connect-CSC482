@@ -5,6 +5,19 @@ import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient } from '../utils/dynamodb.js';
 
 export class ProductModel extends BaseModel {
+  // Query products by status
+  async queryByStatus(status) {
+    const allProducts = await this.getAll();
+    return allProducts.filter(product => product.status === status);
+  }
+
+  // Update product status (preserves active/inactive logic)
+  async updateStatus(productId, status) {
+    const product = await this.getById(productId);
+    if (!product) throw new Error('Product not found');
+    // Only update status, preserve active field
+    return this.update(productId, { status });
+  }
   constructor() {
     super(process.env.PRODUCTS_TABLE);
   }

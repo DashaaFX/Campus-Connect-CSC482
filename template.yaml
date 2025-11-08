@@ -28,7 +28,7 @@ Parameters:
   Environment:
     Type: String
     Default: dev2
-    AllowedValues: [dev2, dev1, dev, staging, prod]
+    AllowedValues: [dev2, dev3, dev, staging, prod]
 
 Resources:
   SharedLayer:
@@ -401,6 +401,14 @@ Resources:
           STRIPE_WEBHOOK_SECRET_ARN: !Ref StripeWebhookSigningSecret
           CLEANUP_FAILED_PAYMENT_MINUTES: 180
       Events:
+        ArchiveOrdersApi:
+          Type: Api
+          Properties:
+            Path: /orders/archive
+            Method: ANY
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
         DeleteOrderApi:
           Type: Api
           Properties:
@@ -583,6 +591,50 @@ Resources:
               - 'lambda:InvokeFunction'
             Resource: !GetAtt ProductsFunction.Arn
       Events:
+        AdminProductsPendingOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/products/pending
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+        AdminProductsPendingApi:
+          Type: Api
+          Properties:
+            Path: /admin/products/pending
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        AdminProductViewApi:
+          Type: Api
+          Properties:
+            Path: /admin/products/{id}
+            Method: get
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        AdminProductViewOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/products/{id}
+            Method: options
+            RestApiId: !Ref CampusConnectApi
+        AdminProductApproveApi:
+          Type: Api
+          Properties:
+            Path: /admin/products/{id}/approve
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        AdminProductRejectApi:
+          Type: Api
+          Properties:
+            Path: /admin/products/{id}/reject
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
         SeedCategoriesApi:
           Type: Api
           Properties:

@@ -39,8 +39,11 @@ export const handler = async (event) => {
       products = await productModel.getAll();
     }
     
-    // Filter out any null or undefined products
-    products = products.filter(product => !!product);
+  // Filter out any null or undefined products
+  products = products.filter(product => !!product);
+
+  // Only show products that are approved and active
+  products = products.filter(product => product.status === 'approved' && product.active !== false);
 
     // Optional digital filter
     if (digital === 'true') {

@@ -42,6 +42,28 @@ const MyOrdersPage = () => {
   
   const [statusFilter, setStatusFilter] = React.useState('active');
   const [archivedOrderIds, setArchivedOrderIds] = React.useState([]);
+
+  // Fetch archived order IDs from backend on mount
+  React.useEffect(() => {
+    async function fetchArchived() {
+      try {
+        const res = await api.get(`${ORDER_API_ENDPOINT}/archive`);
+        setArchivedOrderIds(res.data.archivedOrderIds || []);
+      } catch {}
+    }
+    fetchArchived();
+  }, []);
+
+  // Archive/unarchive order
+  const handleArchive = async (orderId, action) => {
+    try {
+      const res = await api.post(`${ORDER_API_ENDPOINT}/archive`, { orderId, action });
+      setArchivedOrderIds(res.data.archivedOrderIds || []);
+      toast.success(action === 'archive' ? 'Order archived' : 'Order unarchived');
+    } catch (e) {
+      toast.error('Archive action failed');
+    }
+  };
   // Filter orders by status
   const visibleOrders = React.useMemo(() => {
     if (statusFilter === 'all') return orders.filter(order => !archivedOrderIds.includes(order._id || order.id));
@@ -242,20 +264,14 @@ const MyOrdersPage = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      setArchivedOrderIds(ids => [...ids, order._id || order.id]);
-                      toast.success('Order archived');
-                    }}
+                    onClick={() => handleArchive(order._id || order.id, 'archive')}
                   >Archive</Button>
                 )}
                 {archivedOrderIds.includes(order._id || order.id) && (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      setArchivedOrderIds(ids => ids.filter(id => id !== (order._id || order.id)));
-                      toast.success('Order unarchived');
-                    }}
+                    onClick={() => handleArchive(order._id || order.id, 'unarchive')}
                   >Unarchive</Button>
                 )}
                 {(order.status === 'cancelled' || order.status === 'rejected') && (

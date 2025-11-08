@@ -28,6 +28,7 @@ import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import MyOrdersPage from "./pages/MyOrdersPage";
 import MySalesPage from "./pages/MySalesPage";
+import AdminProductApproval from "./components/admin/AdminProductApproval";
 import ProductStatus from "./components/product/ProductStatus";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
@@ -59,13 +60,21 @@ const appRouter = createBrowserRouter([
 
       
       { path: "my-orders", element: <MyOrdersPage /> },
-  { path: "order/:orderId", element: <OrderDetailPage /> }, 
-  { path: "orders/:orderId/success", element: <OrderSuccessPage /> },
-  { path: "orders/:orderId/failed", element: <PaymentFailedPage /> },
-  { path: "my-sales", element: <MySalesPage /> },
-  { path: "seller/orders", element: <SellerOrdersPage /> },
+    { path: "order/:orderId", element: <OrderDetailPage /> }, 
+    { path: "orders/:orderId/success", element: <OrderSuccessPage /> },
+    { path: "orders/:orderId/failed", element: <PaymentFailedPage /> },
+    { path: "my-sales", element: <MySalesPage /> },
+    { path: "seller/orders", element: <SellerOrdersPage /> },
       { path: "products/create", element: <PostProduct /> },
       { path: "admin/products/:id", element: <EditProductForm /> },
+      {
+        path: "admin/products/approval",
+        element: (
+          <AdminRoute>
+            <AdminProductApproval />
+          </AdminRoute>
+        )
+      },
       { 
         path: "admin/categories", 
         element: (

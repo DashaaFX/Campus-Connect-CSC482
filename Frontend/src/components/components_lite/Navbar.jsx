@@ -154,11 +154,19 @@ const logoutHandler = async () => {
 
                   {/* Admin Navigation */}
                   {user?.role === 'Admin' && (
-                    <div className="flex items-center gap-2 cursor-pointer w-fit">
-                      <Settings/>
-                      <Button variant="link">
-                        <Link to={"/admin/categories"}>Manage Categories</Link>
-                      </Button>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 cursor-pointer w-fit">
+                        <Settings/>
+                        <Button variant="link">
+                          <Link to={"/admin/categories"}>Manage Categories</Link>
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2 cursor-pointer w-fit">
+                        <Settings/>
+                        <Button variant="link">
+                          <Link to={"/admin/products/approval"}>Product Approval</Link>
+                        </Button>
+                      </div>
                     </div>
                   )}
 

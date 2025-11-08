@@ -17,9 +17,10 @@ export const handler = async (event) => {
       }
     }
 
-    // Get seller's products
-    const productModel = new ProductModel();
-    const products = await productModel.getBySellerId(sellerId);
+  // Get seller's products
+  const productModel = new ProductModel();
+  const products = await productModel.getBySellerId(sellerId);
+  // Sellers see all their products, including status and active fields
     
     // Ensure consistent ID format for all products
     if (products && products.length > 0) {

@@ -96,7 +96,8 @@ export const handler = async (event) => {
       sellerEmail: userEmail,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      status: 'active',
+      status: 'pending',
+      active: true,
       // Digital metadata
       isDigital,
       digitalFormat: isDigital ? digitalFormat : null,

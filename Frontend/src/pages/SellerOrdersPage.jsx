@@ -14,6 +14,28 @@ const SellerOrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('active');
   const [archivedOrderIds, setArchivedOrderIds] = useState([]);
+
+  // Fetch archived order IDs from backend on mount
+  useEffect(() => {
+    async function fetchArchived() {
+      try {
+        const res = await api.get(`${ORDER_API_ENDPOINT}/archive`);
+        setArchivedOrderIds(res.data.archivedOrderIds || []);
+      } catch {}
+    }
+    fetchArchived();
+  }, []);
+
+  // Archive/unarchive order
+  const handleArchive = async (orderId, action) => {
+    try {
+      const res = await api.post(`${ORDER_API_ENDPOINT}/archive`, { orderId, action });
+      setArchivedOrderIds(res.data.archivedOrderIds || []);
+      toast.success(action === 'archive' ? 'Order archived' : 'Order unarchived');
+    } catch (e) {
+      toast.error('Archive action failed');
+    }
+  };
   const [productDetails, setProductDetails] = useState({});
   const navigate = useNavigate();
   // Fetch missing product details for items with only productId
@@ -148,20 +170,14 @@ const SellerOrdersPage = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        setArchivedOrderIds(ids => [...ids, order._id || order.id]);
-                        toast.success('Order archived');
-                      }}
+                      onClick={() => handleArchive(order._id || order.id, 'archive')}
                     >Archive</Button>
                   )}
                   {archivedOrderIds.includes(order._id || order.id) && (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        setArchivedOrderIds(ids => ids.filter(id => id !== (order._id || order.id)));
-                        toast.success('Order unarchived');
-                      }}
+                      onClick={() => handleArchive(order._id || order.id, 'unarchive')}
                     >Unarchive</Button>
                   )}
                   {(order.status === 'cancelled' || order.status === 'rejected') && (
