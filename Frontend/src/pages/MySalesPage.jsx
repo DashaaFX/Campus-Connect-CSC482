@@ -149,7 +149,7 @@
                       />
                       ) : (
                         <img
-                          src="/placeholder-image.jpg"
+                          src="/placeholder2.png"
                           alt="placeholder"
                           className="object-cover w-16 h-16 rounded cursor-pointer"
                         />
@@ -175,7 +175,7 @@
                         />
                       ) : (
                         <img
-                          src="/placeholder-image.jpg"
+                          src="/placeholder2.png"
                           alt="placeholder"
                           className="object-contain w-full h-full rounded"
                         />

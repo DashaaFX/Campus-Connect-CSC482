@@ -85,7 +85,6 @@ export const handler = async (event) => {
         products: updatedProducts,
         timeline: [ ...(order.timeline || []), { at: now, type: 'refund_full_initiated', actor: userId, actorType: 'user', actorId: userId, meta: { refundId: refund.id } } ]
       });
-  await orderModel.update(orderId, { updatedAt: now, timeline });
 
   return createSuccessResponse({ message: 'Refund initiated', orderId, refundId: refund.id });
   } catch (error) {

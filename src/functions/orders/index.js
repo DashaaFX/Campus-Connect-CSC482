@@ -8,7 +8,7 @@ import * as createCheckoutSession from './createCheckoutSession.js';
 import { createErrorResponse } from '/opt/nodejs/utils/response.js';
 import * as refundOrder from './refundOrder.js';
 import * as deleteOrder from './deleteOrder.js';
-import * as archiveOrder from './archiveOrders.js';
+import * as archiveOrder from './archiveOrder.js';
 
 export const handler = async (event) => {
     

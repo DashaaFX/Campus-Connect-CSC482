@@ -23,7 +23,7 @@ export const handler = async (event) => {
 
   // Fetch archived order IDs
   if (method === 'GET') {
-    const user = await userModel.get(userId);
+    const user = await userModel.getById(userId);
     return createSuccessResponse({ archivedOrderIds: user?.archivedOrderIds || [] });
   }
 
@@ -33,7 +33,7 @@ export const handler = async (event) => {
     if (!orderId || !['archive', 'unarchive'].includes(action)) {
       return createErrorResponse('Missing orderId or invalid action', 400);
     }
-    const user = await userModel.get(userId);
+    const user = await userModel.getById(userId);
     let archivedOrderIds = Array.isArray(user?.archivedOrderIds) ? user.archivedOrderIds : [];
     if (action === 'archive' && !archivedOrderIds.includes(orderId)) {
       archivedOrderIds.push(orderId);

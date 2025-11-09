@@ -387,7 +387,7 @@ Resources:
             TableName: !Ref ProductsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref CartsTable
-        - DynamoDBReadPolicy:
+        - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
         - Statement:
             Effect: Allow

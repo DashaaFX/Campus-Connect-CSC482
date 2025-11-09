@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from 'react';
 import api from '@/utils/axios';
 import { Badge } from '@/components/ui/badge';
@@ -94,6 +92,8 @@ const AdminProductApproval = () => {
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
           </select>
         </label>
       </div>
@@ -119,8 +119,14 @@ const AdminProductApproval = () => {
                 <TableCell>{product.type === 'digital' ? 'Digital' : 'Physical'}</TableCell>
                 <TableCell>
                   {product.type === 'physical' && product.mainImage ? (
-                    <img src={product.mainImage} alt="Product" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} />
-                  ) : product.type === 'digital' ? <span>-</span> : null}
+                    <img src={product.mainImage} alt="Product" className="object-cover w-16 h-16 rounded cursor-pointer"/>
+                  ) : product.type === 'digital' ? 
+                  <img
+                          src="/placeholder2.png"
+                          alt="placeholder"
+                          className="object-cover w-16 h-16 rounded cursor-pointer"
+                        />
+                  : null}
                 </TableCell>
                 <TableCell>{product.sellerEmail}</TableCell>
                 <TableCell>
@@ -151,8 +157,12 @@ const AdminProductApproval = () => {
           <div><strong>Status:</strong> {viewedProduct.status}</div>
           <div><strong>Seller:</strong> {viewedProduct.sellerEmail}</div>
           <div><strong>Type:</strong> {viewedProduct.type === 'digital' ? 'Digital' : 'Physical'}</div>
-          {viewedProduct.type === 'physical' && viewedProduct.mainImage && (
-            <div className="my-2"><img src={viewedProduct.mainImage} alt="Product" style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8 }} /></div>
+          {viewedProduct.type === 'physical' && Array.isArray(viewedProduct.images) && viewedProduct.images.length > 0 && (
+            <div className="my-2 flex gap-2">
+              {viewedProduct.images.map((img, idx) => (
+                <img key={idx} src={img} alt={`Product ${idx + 1}`} style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8 }} />
+              ))}
+            </div>
           )}
           {viewedProduct.type === 'digital' && (
             <Button size="sm" className="mt-2" onClick={() => handleDownload(viewedProduct.id)}>Download Digital File</Button>
