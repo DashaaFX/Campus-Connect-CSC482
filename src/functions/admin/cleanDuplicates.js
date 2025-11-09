@@ -51,29 +51,30 @@ async function cleanCategoriesDuplicates() {
   const scanParams = {
     TableName: CATEGORIES_TABLE
   };
-  
   const result = await docClient.send(new ScanCommand(scanParams));
   const categories = result.Items || [];
-  
-  // Group by name to find duplicates
-  const nameGroups = {};
+
+  // lowercase, strip trailing digits/spaces, and s removed
+  function normalize(name) {
+    let n = name?.toLowerCase().replace(/\s*\d+$/, '').trim();
+    if (n.endsWith('s') && n.length > 3) n = n.slice(0, -1);
+    return n;
+  }
+
+  // Group by normalized name
+  const normGroups = {};
   categories.forEach(category => {
-    const name = category.name?.toLowerCase();
-    if (!nameGroups[name]) {
-      nameGroups[name] = [];
-    }
-    nameGroups[name].push(category);
+    const norm = normalize(category.name);
+    if (!normGroups[norm]) normGroups[norm] = [];
+    normGroups[norm].push(category);
   });
 
   let duplicatesRemoved = 0;
 
-  // For each group with duplicates, keep the first one and delete the rest
-  for (const [name, group] of Object.entries(nameGroups)) {
+  // For each group with similar names under the same category, keep the oldest and delete the rest
+  for (const [norm, group] of Object.entries(normGroups)) {
     if (group.length > 1) {
-      // Sort by createdAt to keep the oldest
       group.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-      
-      // Delete all but the first one
       for (let i = 1; i < group.length; i++) {
         await docClient.send(new DeleteCommand({
           TableName: CATEGORIES_TABLE,
@@ -92,29 +93,30 @@ async function cleanSubcategoriesDuplicates() {
   const scanParams = {
     TableName: SUBCATEGORIES_TABLE
   };
-  
   const result = await docClient.send(new ScanCommand(scanParams));
   const subcategories = result.Items || [];
-  
-  // Group by name + categoryId to find duplicates
+
+  function normalize(name) {
+    let n = name?.toLowerCase().replace(/\s*\d+$/, '').trim();
+    if (n.endsWith('s') && n.length > 3) n = n.slice(0, -1);
+    return n;
+  }
+
+  // Group by normalized name + categoryId
   const compositeGroups = {};
   subcategories.forEach(subcategory => {
-    const key = `${subcategory.categoryId}-${subcategory.name?.toLowerCase()}`;
-    if (!compositeGroups[key]) {
-      compositeGroups[key] = [];
-    }
+    const norm = normalize(subcategory.name);
+    const key = `${subcategory.categoryId}-${norm}`;
+    if (!compositeGroups[key]) compositeGroups[key] = [];
     compositeGroups[key].push(subcategory);
   });
 
   let duplicatesRemoved = 0;
 
-  // For each group with duplicates, keep the first one and delete the rest
+  // For each group with similar names under the same category, keep the oldest and delete the rest
   for (const [key, group] of Object.entries(compositeGroups)) {
     if (group.length > 1) {
-      // Sort by createdAt to keep the oldest
       group.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-      
-      // Delete all but the first one
       for (let i = 1; i < group.length; i++) {
         await docClient.send(new DeleteCommand({
           TableName: SUBCATEGORIES_TABLE,

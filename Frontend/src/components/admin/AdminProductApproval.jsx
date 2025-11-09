@@ -157,12 +157,8 @@ const AdminProductApproval = () => {
           <div><strong>Status:</strong> {viewedProduct.status}</div>
           <div><strong>Seller:</strong> {viewedProduct.sellerEmail}</div>
           <div><strong>Type:</strong> {viewedProduct.type === 'digital' ? 'Digital' : 'Physical'}</div>
-          {viewedProduct.type === 'physical' && Array.isArray(viewedProduct.images) && viewedProduct.images.length > 0 && (
-            <div className="my-2 flex gap-2">
-              {viewedProduct.images.map((img, idx) => (
-                <img key={idx} src={img} alt={`Product ${idx + 1}`} style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8 }} />
-              ))}
-            </div>
+          {viewedProduct.type === 'physical' && viewedProduct.image && (
+            <div className="my-2"><img src={viewedProduct.image} alt="Product" style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8 }} /></div>
           )}
           {viewedProduct.type === 'digital' && (
             <Button size="sm" className="mt-2" onClick={() => handleDownload(viewedProduct.id)}>Download Digital File</Button>
