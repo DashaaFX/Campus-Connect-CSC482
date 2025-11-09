@@ -8,7 +8,8 @@ import * as createCheckoutSession from './createCheckoutSession.js';
 import { createErrorResponse } from '/opt/nodejs/utils/response.js';
 import * as refundOrder from './refundOrder.js';
 import * as deleteOrder from './deleteOrder.js';
-import * as archiveOrder from './archiveOrders.js';
+// Fixed incorrect filename (was archiveOrders.js) causing Lambda ERR_MODULE_NOT_FOUND
+import * as archiveOrder from './archiveOrder.js';
 
 export const handler = async (event) => {
     

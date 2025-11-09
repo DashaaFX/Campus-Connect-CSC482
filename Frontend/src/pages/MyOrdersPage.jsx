@@ -133,7 +133,7 @@ const MyOrdersPage = () => {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">My Orders</h1>
         <select
-          className="px-2 py-1 border rounded text-sm bg-white"
+          className="px-2 py-1 text-sm bg-white border rounded"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
         >
@@ -158,7 +158,7 @@ const MyOrdersPage = () => {
       ) : (
         <div className="space-y-4">
           {visibleOrders.some(order => order.status === 'approved' && order.paymentStatus === 'initiated') && (
-            <div className="flex items-center gap-2 p-3 mb-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded">
+            <div className="flex items-center gap-2 p-3 mb-2 text-sm text-blue-700 border border-blue-200 rounded bg-blue-50">
               <svg className="w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -185,7 +185,7 @@ const MyOrdersPage = () => {
                 {/* Only show download links/buttons for completed orders */}
                 {order.status === 'completed' && (
                   order.downloadLinks?.length > 0 ? (
-                    <div className="space-y-2 mb-2">
+                    <div className="mb-2 space-y-2">
                       <h3 className="font-semibold">Download your products:</h3>
                       {order.downloadLinks.map(link => (
                         <Button
@@ -214,7 +214,7 @@ const MyOrdersPage = () => {
                       const pid = item.product?.id || item.product?._id || item.productId;
                       const title = item.product?.title || item.title || 'Digital Product';
                       return (
-                        <div key={pid} className="p-3 mb-2 bg-white border rounded-lg flex items-center justify-between">
+                        <div key={pid} className="flex items-center justify-between p-3 mb-2 bg-white border rounded-lg">
                           <div className="text-sm font-medium text-gray-900">{title}</div>
                           <Button
                             size="sm"

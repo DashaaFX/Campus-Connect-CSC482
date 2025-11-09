@@ -5,7 +5,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
-import { getProfilePictureUrl } from "@/utils/userHelpers";
 import {
   LogOut,
   User2,
@@ -20,6 +19,10 @@ import {
 import { toast } from "sonner";
 import { useCartStore } from "@/store/useCartStore"; // Zustand store
 import { useAuthStore } from "@/store/useAuthStore"; // Zustand auth store
+import { useChatStore } from "@/store/useChatStore"; // Chat store for block subscriptions
+import { useNotificationStore } from "@/store/useNotificationStore"; // Notifications store
+import { Bell } from 'lucide-react';
+import NotificationDropdown from './NotificationDropdown';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -31,15 +34,37 @@ const Navbar = () => {
   // Cart store
   const items = useCartStore((state) => state.items);
 
+  // Notifications store
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const subscribeNotifications = useNotificationStore((s) => s.subscribe);
+  const clearNotifications = useNotificationStore((s) => s.clear);
+
   // Recalculate item count whenever `items` changes
   const itemCount = items.reduce((acc, item) => acc + (item.quantity || 0), 0);
 
-  // Fetch cart when user is present
+  // Fetch cart + notifications when user is present
   useEffect(() => {
     if (user) {
+      // Fetch cart items
       useCartStore.getState().fetchCart();
+      // Subscribe to notifications
+      subscribeNotifications();
+    } else {
+      clearNotifications();
     }
-  }, [user]);
+    // Cleanup when component unmounts or user changes
+    return () => {
+      if (!user) return;
+      // Leave subscription cleanup to store clear()
+    };
+  }, [user, subscribeNotifications, clearNotifications]);
+
+  // Early block subscription for persisted sessions 
+  useEffect(() => {
+    if (import.meta.env.VITE_ENABLE_FIREBASE_CHAT === 'true' && user?.firebaseUid) {
+      try { useChatStore.getState().ensureBlockSubscriptions(); } catch {/* ignore */}
+    }
+  }, [user?.firebaseUid]);
 
   // Logout handler
   // Navbar.jsx (inside the component)
@@ -50,8 +75,9 @@ const logoutHandler = async () => {
     // Call Zustand store logout
     await useAuthStore.getState().logout();
 
-    // Clear cart too (optional, if you want cart cleared on logout)
+    // Clear cart & notifications on logout
     useCartStore.getState().clearCart?.();
+    clearNotifications();
 
     toast.success("Logged out successfully!");
     navigate("/"); 
@@ -112,6 +138,28 @@ const logoutHandler = async () => {
                     <PackageSearch size={18} className="text-purple-300" />
                     My Sales
                   </Link>
+                </li>
+                <li className="relative">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        aria-label="Notifications"
+                        type="button"
+                        className="relative flex items-center hover:text-yellow-300 focus:outline-none"
+                      >
+                        <Bell size={20} className="text-yellow-300" />
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-2 inline-flex items-center justify-center px-1.5 py-[2px] 
+                          text-[10px] font-bold text-white bg-red-600 rounded-full min-w-[20px]">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        )}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="p-0 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 border border-white/10 shadow-xl w-[400px] backdrop-blur-md overflow-hidden rounded-lg">
+                      <NotificationDropdown />
+                    </PopoverContent>
+                  </Popover>
                 </li>
               </>
             )}

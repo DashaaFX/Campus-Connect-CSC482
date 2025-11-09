@@ -108,6 +108,13 @@ export const useAuthStore = create(
               featureFlagEnabled: true,
               updateUser: (u) => set({ user: u })
             });
+            // early block subscription (will retry if auth not yet ready)
+            try {
+              const { useChatStore } = await import('./useChatStore');
+              setTimeout(() => {
+                try { useChatStore.getState().subscribeBlockedUsers(); } catch {/* ignore */}
+              }, 600);
+            } catch {/* ignore */}
           }
 
           //Debug firebase linking - later
@@ -183,6 +190,12 @@ export const useAuthStore = create(
                 }
                 return {};
               });
+              // Ensure block subscription after reconciliation
+              try {
+                import('./useChatStore').then(m => {
+                  try { m.useChatStore.getState().subscribeBlockedUsers(); } catch {/* ignore */}
+                });
+              } catch {/* ignore */}
             }, 300);
           }
           return userData;

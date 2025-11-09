@@ -1,8 +1,10 @@
 //Chat window component
 //Dashnyam
 //Used Co-Pilot for throttle function and optimizations of useEffect for faster rendering
+// Prompt : how to optimize a React chat window component to avoid excessive re-renders when marking messages as read and scrolling?
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useChatStore } from '@/store/useChatStore';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +28,7 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
 
   const [text, setText] = useState('');
   const [showMap, setShowMap] = useState(false); 
+  const [showUnblockConfirm, setShowUnblockConfirm] = useState(false);
   const scrollRef = useRef(null);
   const atBottomRef = useRef(true);
   // Track last markRead call to avoid repeated state updates
@@ -78,9 +81,24 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
       await sendActiveMessage(trimmed);
       setText('');
     } catch (e) {
-      // Swallow; error surfaced via store error already
+      // error handled via store
     }
   }, [text, sendActiveMessage]);
+  // Get conversation and peer info from the chat store
+  const conversations = useChatStore(s => s.conversations);
+  const isBlockedFn = useChatStore(s => s.isBlocked); 
+  const isBlockedByPeerFn = useChatStore(s => s.isBlockedByPeer); 
+  const blockedFirebaseUids = useChatStore(s => s.blockedFirebaseUids); 
+  const blockedByFirebaseUids = useChatStore(s => s.blockedByFirebaseUids); 
+  const ensureBlockSubscriptions = useChatStore(s => s.ensureBlockSubscriptions);
+  const activeConvo = conversations.find(c => c.conversationId === activeConversationId);
+  const peerId = activeConvo?.otherUserId;
+  const peer = peerId ? (users.find(u => u.id === peerId) || { id: peerId }) : null;
+  // Recompute isBlocked when block/unblock occurs
+  const isBlocked = peer ? isBlockedFn(peer.id) : false;
+  const isBlockedByPeer = peer ? isBlockedByPeerFn(peer.id) : false;
+  const blockUser = useChatStore(s => s.blockUser);
+  const unblockUser = useChatStore(s => s.unblockUser);
 
   // Build quick index of users for name lookup
   const userIndex = useMemo(() => {
@@ -88,6 +106,8 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
     users.forEach(u => map.set(u.id, u));
     return map;
   }, [users]);
+  // Ensure block subscriptions if they haven't started yet (covers first render refresh case)
+  useEffect(() => { ensureBlockSubscriptions(); }, [ensureBlockSubscriptions]);
 
 
   if (!activeConversationId) {
@@ -119,6 +139,25 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
         </div>
       )}
     <div className="flex flex-col flex-1 min-h-0">
+        {/* Moderation controls */}
+        {peer && (
+          <div className="flex items-center justify-between px-3 py-1 text-[10px] bg-gray-50 border-b">
+            <span className="opacity-70">Chat with <strong>{getUserDisplayName(peer)}</strong></span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isBlocked) {
+                    setShowUnblockConfirm(true);
+                  } else {
+                    blockUser(peer.id);
+                  }
+                }}
+                className={`px-2 py-1 rounded border text-[10px] ${isBlocked ? 'border-green-400 text-green-600 hover:bg-green-50' : 'border-red-400 text-red-600 hover:bg-red-50'}`}
+              >{isBlocked ? 'Unblock User' : 'Block User'}</button>
+            </div>
+          </div>
+        )}
         <div className="flex justify-center p-1 border-b bg-gray-50/60">
           {hasMoreHistory ? (
             <button onClick={loadOlder} className="text-[10px] text-blue-600 hover:underline">Load earlier messages</button>
@@ -149,14 +188,15 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
               );
             }
             const sender = userIndex.get(m.senderId);
-            const senderLabel = sender ? getUserDisplayName(sender) : m.senderId;
+            //display User if user navigates to other chats on the chat list - for privacy
+            const senderLabel = sender ? getUserDisplayName(sender) : 'User';
             const isSelf = currentUser && m.senderId === currentUser.id;
             const bubbleColor = isSelf ? 'bg-blue-600 text-white' : 'bg-red-600 text-white';
             const align = isSelf ? 'items-end' : 'items-start';
             const dirBadge = null;
             return (
               <div key={m.id} className={`flex flex-col ${align} gap-0.5 group`}> 
-                <div className={`max-w-[75%] rounded-lg px-3 py-2 shadow-sm transition-colors ${bubbleColor} whitespace-pre-wrap break-words group-hover:shadow-md`}> 
+                <div className={`relative max-w-[75%] rounded-lg px-3 py-2 shadow-sm transition-colors ${bubbleColor} whitespace-pre-wrap break-words group-hover:shadow-md`}> 
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="font-semibold leading-none text-[11px] tracking-wide">
                       {senderLabel}{dirBadge}
@@ -215,17 +255,49 @@ export function ChatWindow({ users = [], compact = true, maxBodyHeight = 360 }) 
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
             placeholder="Type a message and press Enter"
+            disabled={isBlocked || isBlockedByPeer}
           />
           <button
             onClick={onSend}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded shadow hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
-            disabled={!text.trim()}
+            disabled={!text.trim() || isBlocked || isBlockedByPeer}
           >Send</button>
         </div>
+        {/* Show messages on who initiated blocking/unblocking*/}
+        {(isBlocked || isBlockedByPeer) && (
+          <div className="px-3 py-1 text-[11px] text-red-600 bg-red-50 border-t border-red-200">
+            {isBlocked && isBlockedByPeer && 'Both users have blocked each other. Unblock to resume chatting.'}
+            {isBlocked && !isBlockedByPeer && 'You blocked this user. Unblock to continue chatting.'}
+            {!isBlocked && isBlockedByPeer && 'This user has blocked you. You cannot send messages until they unblock you.'}
+          </div>
+        )}
         {error && (
           <div className="px-3 py-1 text-[11px] text-red-600 bg-red-50 border-t border-red-200">{error}</div>
         )}
       </div>
+      {/* Unblock confirmation dialog */}
+      <Dialog open={showUnblockConfirm} onOpenChange={setShowUnblockConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Unblock {peer ? getUserDisplayName(peer) : 'User'}?</DialogTitle>
+            <DialogDescription>
+              They will be able to send you new messages and see your replies again. You can block them anytime later if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <button
+              type="button"
+              className="h-8 px-3 text-xs border rounded border-input bg-background hover:bg-accent hover:text-accent-foreground"
+              onClick={() => setShowUnblockConfirm(false)}
+            >Cancel</button>
+            <button
+              type="button"
+              className="h-8 px-3 text-xs text-white bg-green-600 rounded hover:bg-green-500"
+              onClick={() => { if (peer) { unblockUser(peer.id); } setShowUnblockConfirm(false); }}
+            >Unblock</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

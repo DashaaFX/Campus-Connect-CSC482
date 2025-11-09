@@ -6,7 +6,8 @@ import MapEmbed from '@/components/chat/Map';
 import { Button } from '@/components/ui/button';
 import { Info } from 'lucide-react';
 import { useChatSession } from '@/hooks/chat/useChatSession';
-//Now handles meeting location and date/time management between users
+import { useNavigate } from 'react-router-dom';
+// ChatPage: Sidebar for meeting coordination + main Chat component
 export default function ChatPage() {
   function formatDateTime(dt) {
     if (!dt) return '';
@@ -17,15 +18,19 @@ export default function ChatPage() {
     }
   }
   const currentUser = useAuthStore(s => s.user);
-  // Use chat store actions for meeting location and date/time management
+  // Store actions
   const confirmMeetingLocation = useChatStore(s => s.confirmMeetingLocation);
   const proposeMeetingDateTime = useChatStore(s => s.proposeMeetingDateTime);
   const confirmMeetingDateTime = useChatStore(s => s.confirmMeetingDateTime);
   const updateMeetingLocation = useChatStore(s => s.updateMeetingLocation);
-  const { users, activeConversationId, meetingLocation, meetingDateTime, pendingOrderContext } = useChatSession();
+  const resetMeetingLocationConfirmation = useChatStore(s => s.resetMeetingLocationConfirmation);
+  const { users, activeConversationId, meetingLocation, meetingDateTime } = useChatSession();
   const meetingLocationConfirmedBy = useChatStore(s => s.meetingLocationConfirmedBy) || [];
+  const meetingLocationProposedBy = useChatStore(s => s.meetingLocationProposedBy);
   const meetingDateTimeProposedBy = useChatStore(s => s.meetingDateTimeProposedBy);
   const meetingDateTimeConfirmedBy = useChatStore(s => s.meetingDateTimeConfirmedBy) || [];
+
+  const navigate = useNavigate();
 
 
   function handleProposeDateTime(dt) {
@@ -52,10 +57,25 @@ export default function ChatPage() {
       </div>  
       {currentUser && (
       <div className="flex flex-col w-full gap-2 md:w-1/3">
-        <div className="flex items-center justify-between mb-2">
-          <Button variant="outline" size="sm" onClick={() => window.history.back()}>
-            Back
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+              Back
+            </Button>
+            {/* Navigation shortcuts */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate('/my-sales')}
+              className="text-indigo-700 border border-indigo-300 bg-indigo-50 hover:bg-indigo-100"
+            >My Sales</Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate('/my-orders')}
+              className="text-indigo-700 border border-indigo-300 bg-indigo-50 hover:bg-indigo-100"
+            >My Orders</Button>
+          </div>
           <div className="relative ml-2 group">
             <Info className="w-5 h-5 text-blue-500 cursor-pointer" />
             <div className="absolute right-0 z-10 hidden w-64 p-2 mt-2 text-xs text-gray-700 bg-white border rounded shadow group-hover:block">
@@ -71,6 +91,11 @@ export default function ChatPage() {
         </div>
         <div className="mb-1 font-semibold text-gray-700">
           Meeting Location: {meetingLocation}
+          {meetingLocation && meetingLocationProposedBy && meetingLocationConfirmedBy.length < 2 && (
+            <span className="ml-2 text-[10px] font-normal text-gray-500">
+              {meetingLocationProposedBy === currentUser?.id ? '(You proposed)' : '(Proposed by other user)'}
+            </span>
+          )}
         </div>
         <MapEmbed
           location={meetingLocation}
@@ -81,7 +106,7 @@ export default function ChatPage() {
             }
           }}
         />
-        {meetingLocationConfirmedBy.length < 2 && (
+        {meetingLocationConfirmedBy.length < 2 && meetingLocation && (
           <Button
             variant="default"
             size="sm"
@@ -98,8 +123,18 @@ export default function ChatPage() {
               : 'Confirm Meeting Location'}
           </Button>
         )}
-        {meetingLocationConfirmedBy.length === 2 && (
-          <div className="flex gap-2 mt-2">
+        {meetingLocation && meetingLocationConfirmedBy.length === 1 && meetingLocationConfirmedBy.includes(currentUser?.id) && (
+          <div className="mt-1 text-xs text-yellow-700">
+            Waiting for the other user to confirm the meeting location...
+          </div>
+        )}
+        {meetingLocation && meetingLocationConfirmedBy.length === 1 && !meetingLocationConfirmedBy.includes(currentUser?.id) && (
+          <div className="mt-1 text-xs text-blue-700">
+            Please confirm the proposed meeting location.
+          </div>
+        )}
+        {meetingLocationConfirmedBy.length === 2 && meetingLocation && (
+          <div className="flex items-center gap-2 mt-2">
             <Button
               variant="default"
               size="sm"
@@ -108,10 +143,26 @@ export default function ChatPage() {
             >
               Meeting Location Confirmed
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-blue-700 bg-white border-blue-600 hover:bg-blue-50"
+              onClick={() => { if (activeConversationId) resetMeetingLocationConfirmation(activeConversationId); }}
+            >
+              Change Location
+            </Button>
           </div>
         )}
         <div className="flex flex-col gap-2 p-2 mt-4 border rounded bg-gray-50">
-          <div className="font-semibold text-gray-700">Meeting Date & Time:</div>
+          <div className="flex items-center gap-1 font-semibold text-gray-700">
+            <span>Meeting Date & Time:</span>
+            <div className="relative ml-1 group">
+              <Info className="w-4 h-4 text-blue-500 cursor-pointer" aria-label="Meeting date & time info" />
+              <div className="absolute left-0 z-10 hidden w-56 p-2 mt-2 text-[10px] leading-snug text-gray-600 bg-white border border-gray-200 rounded shadow group-hover:block">
+                Propose a date & time; the proposer is auto-confirmed. The other user must confirm to finalize. Once both confirm, it's locked until you click <span className="font-medium">Change Date & Time</span>. Changing the meeting location also clears the date & time confirmations.
+              </div>
+            </div>
+          </div>
           {(!meetingLocation || meetingLocationConfirmedBy.length < 2) ? (
             <div className="text-xs text-gray-500">Please confirm the meeting location first.</div>
           ) : (
@@ -135,18 +186,39 @@ export default function ChatPage() {
                   )}
                 </div>
               )}
-              {meetingDateTime && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="mt-2 text-white bg-blue-600 shadow-md w-fit hover:bg-blue-700"
-                  disabled={meetingDateTimeConfirmedBy.includes(currentUser?.id) || meetingDateTimeConfirmedBy.length === 2}
-                  onClick={handleConfirmDateTime}
-                >
-                  {meetingDateTimeConfirmedBy.includes(currentUser?.id)
-                    ? 'You Confirmed'
-                    : 'Confirm Date & Time'}
-                </Button>
+              {meetingDateTime && meetingDateTimeConfirmedBy.length < 2 && (
+                <div className="flex items-center gap-2 mt-2">
+                  {!meetingDateTimeConfirmedBy.includes(currentUser?.id) && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="text-white bg-blue-600 shadow-md hover:bg-blue-700"
+                      onClick={handleConfirmDateTime}
+                    >
+                      Confirm Date & Time
+                    </Button>
+                  )}
+                  {meetingDateTimeConfirmedBy.includes(currentUser?.id) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-blue-700 bg-white border-blue-600 hover:bg-blue-50"
+                      onClick={async () => {
+                        if (activeConversationId) {
+                          const { doc, updateDoc } = await import('firebase/firestore');
+                          const chatRef = doc(await import('@/../firebase').then(m => m.db), 'chats', activeConversationId);
+                          await updateDoc(chatRef, {
+                            meetingDateTime: null,
+                            meetingDateTimeProposedBy: null,
+                            meetingDateTimeConfirmedBy: [],
+                          });
+                        }
+                      }}
+                    >
+                      Change Date & Time
+                    </Button>
+                  )}
+                </div>
               )}
               {meetingDateTime && meetingDateTimeConfirmedBy.length < 2 && (
                 <div className="mt-1 text-xs text-yellow-700">
@@ -157,6 +229,14 @@ export default function ChatPage() {
               )}
               {meetingDateTimeConfirmedBy.length === 2 && meetingDateTime && (
                 <div className="flex items-center gap-2 mt-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="text-white bg-blue-600 cursor-default"
+                    disabled
+                  >
+                    Date & Time Confirmed
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

@@ -129,15 +129,18 @@ export async function ensureDirectConversation({ currentUser, otherUser, orderCo
   return convoId;
 }
 
-// Send a message 
+// Send a message, now includes rate limiting and length checks
 export async function sendMessage({ conversationId, senderAppUserId, senderFirebaseUid, text, orderContext, otherUserId }) {
   if (!text || !text.trim()) return;
+  const body = text.trim();
+  if (body.length > 2000) throw new Error('Message too long (max 2000 chars)');
+  
   const messagesCol = collection(db, ROOT_COLLECTION, conversationId, 'messages');
   const createdAt = serverTimestamp();
   const messagePayload = {
     senderId: senderAppUserId,
     senderFirebaseUid,
-    text: text.trim(),
+    text: body,
     createdAt,
   };
   if (orderContext?.orderId) messagePayload.orderId = orderContext.orderId;
@@ -151,7 +154,7 @@ export async function sendMessage({ conversationId, senderAppUserId, senderFireb
       updatedAt: createdAt,
     });
   } catch (e) {
-    console.debug('lastMessage update skipped:', e.message);
+    console.warn('[chat] lastMessage update failed', e.code, e.message);
   }
   return res.id;
 }
@@ -176,6 +179,7 @@ export async function appendSystemEvent({ conversationId, type, payload = {}, ac
     payload,
     createdAt,
     actorId: actorAppUserId || null,
+    senderId: actorAppUserId || null,
     text: autoText,
     senderFirebaseUid, // add sender ID 
   };
@@ -186,39 +190,36 @@ export async function appendSystemEvent({ conversationId, type, payload = {}, ac
       updatedAt: createdAt,
     });
   } catch (e) {
-    console.debug('[chat] appendSystemEvent lastMessage skipped', e.message);
+  // lastMessage update skipped (rules / permission)
   }
   return res.id;
 }
 
-// Listen to messages from oldest first
-export function subscribeToMessages(conversationId, callback, { pageSize = 50 } = {}) {
-  const sessionUid = auth.currentUser?.uid; // store current users id
+// Subscribe to messages including newest ones even when count reaches pageSize.
+export function subscribeToMessages(conversationId, callback, { pageSize = 100 } = {}) {
+  const sessionUid = auth.currentUser?.uid;
   const q = query(
     collection(db, ROOT_COLLECTION, conversationId, 'messages'),
-    orderBy('createdAt', 'asc'),
+    orderBy('createdAt', 'desc'),
     limit(pageSize)
   );
   return onSnapshot(
     q,
     (snapshot) => {
-      const messages = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const raw = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const messages = raw.sort((a,b) => {
+        const ta = a.createdAt?.seconds || a.createdAt?.toMillis?.() || 0;
+        const tb = b.createdAt?.seconds || b.createdAt?.toMillis?.() || 0;
+        return ta - tb;
+      });
       callback(messages);
     },
     (error) => {
       const currentUid = auth.currentUser?.uid;
       const userLoggedOut = !auth.currentUser;
       const uidChanged = currentUid && sessionUid && currentUid !== sessionUid;
-      // Suppresspermission-denied errors triggered after logout, cleared after logout
-      if ((userLoggedOut || uidChanged) && error.code === 'permission-denied') {
-        if (import.meta.env.DEV) console.debug('[chat] suppress permission-denied after auth change/logout (messages)');
-        return;
-      }
-      if (error.code === 'permission-denied') {
-        console.error('[chat] subscribe error (messages)', error.code, error.message);
-      } else {
-        console.error('[chat] subscribe error (messages)', error.code, error.message);
-      }
+      if ((userLoggedOut || uidChanged) && error.code === 'permission-denied') return;
+      console.error('[chat] subscribe error (messages)', error.code, error.message);
     }
   );
 }
