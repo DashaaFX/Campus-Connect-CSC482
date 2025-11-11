@@ -1,6 +1,7 @@
 import { orderModel } from '/opt/nodejs/models/Order.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
 import { ORDER_STATUS_LIST, canTransition, ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
+import { notifyOrderStatusChange } from '/opt/nodejs/services/notifications.js';
 
 export const handler = async (event) => {
   try {
@@ -65,7 +66,16 @@ export const handler = async (event) => {
       return createErrorResponse('Use payment endpoints to mark paid', 403);
     }
 
-    // Validate transition legality
+    // Guard: prevent APPROVED -> COMPLETED for digital products (must go through PAID first)
+    const containsDigital = Array.isArray(existingOrder.items) && existingOrder.items.some(it => {
+      const p = it.product || {};
+      return p.isDigital; // product model sets isDigital boolean
+    });
+    if (existingOrder.status === ORDER_STATUSES.APPROVED && status === ORDER_STATUSES.COMPLETED && containsDigital) {
+      return createErrorResponse('Digital products must be marked paid before completion.', 409);
+    }
+
+    // Validate transition legality AFTER digital guard
     if (!canTransition(existingOrder.status, status)) {
       return createErrorResponse(`Illegal status transition from ${existingOrder.status} to ${status}`, 409);
     }
@@ -103,6 +113,12 @@ export const handler = async (event) => {
       } catch (e) {
         console.error('Entitlement unlock hook error:', e);
       }
+    }
+    // Updates successful - send notifications
+    try {
+      await notifyOrderStatusChange(updatedOrder, { actorId: userId, fromStatus: existingOrder.status, toStatus: status });
+    } catch (e) {
+      console.warn('[notify] order.status.changed failed', e.message);
     }
 
     return createSuccessResponse({

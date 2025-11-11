@@ -7,13 +7,24 @@ import api from '@/utils/axios';
 import { PRODUCT_API_ENDPOINT, ORDER_API_ENDPOINT } from '@/utils/data';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-
+import { useChatStore } from '@/store/useChatStore';
+//now includes pagination feature
 const SellerOrdersPage = () => {
   const currentUser = useAuthStore(s => s.user);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('active');
   const [archivedOrderIds, setArchivedOrderIds] = useState([]);
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  // Chat conversations (for unread indicator)
+  const conversations = useChatStore(s => s.conversations);
+  const unreadByUser = React.useMemo(() => {
+    const map = {};
+    conversations.forEach(c => { if (c.unread > 0 && c.otherUserId) map[c.otherUserId] = (map[c.otherUserId] || 0) + c.unread; });
+    return map;
+  }, [conversations]);
 
   // Fetch archived order IDs from backend on mount
   useEffect(() => {
@@ -87,6 +98,14 @@ const SellerOrdersPage = () => {
     // 'active' = all except cancelled and archived
     return orders.filter(order => order.status !== 'cancelled' && !archivedOrderIds.includes(order._id || order.id));
   }, [orders, statusFilter, archivedOrderIds]);
+  //pagination feature
+  const pagedOrders = React.useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return visibleOrders.slice(start, start + pageSize);
+  }, [visibleOrders, page, pageSize]);
+
+  // Reset page when filter or data length changes
+  useEffect(() => { setPage(1); }, [statusFilter, visibleOrders.length]);
 
   return (
     <div className="max-w-5xl px-4 py-6 mx-auto">
@@ -98,7 +117,7 @@ const SellerOrdersPage = () => {
           <h1 className="text-2xl font-bold">Incoming Orders</h1>
         </div>
         <select
-          className="px-2 py-1 border rounded text-sm bg-white"
+          className="px-2 py-1 text-sm bg-white border rounded"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
         >
@@ -113,9 +132,9 @@ const SellerOrdersPage = () => {
       </div>
       {loading ? <p>Loading...</p> : visibleOrders.length === 0 ? <p>No incoming orders.</p> : (
         <div className="space-y-4">
-          {visibleOrders.map(order => (
+          {pagedOrders.map(order => (
             <div key={order.id || order._id} className="p-4 border rounded shadow-sm">
-              <div className="flex justify-between text-sm text-gray-500 mb-2">
+              <div className="flex justify-between mb-2 text-sm text-gray-500">
                 <span>Order ID: {order.id || order._id}</span>
                 <span>Buyer: {order.buyerEmail || order.userEmail || 'N/A'}</span>
                 <span>{order.createdAt ? format(new Date(order.createdAt), 'PPpp') : ''}</span>
@@ -201,7 +220,7 @@ const SellerOrdersPage = () => {
                       <Button
                         size="sm"
                         variant="default"
-                        className="bg-green-100 text-green-700 border-green-200 hover:bg-green-200"
+                        className="text-green-700 bg-green-100 border-green-200 hover:bg-green-200"
                         onClick={async () => {
                           try {
                             await api.put(`${ORDER_API_ENDPOINT}/${order.id || order._id}/status`, {
@@ -215,7 +234,7 @@ const SellerOrdersPage = () => {
                       <Button
                         size="sm"
                         variant="destructive"
-                        className="bg-red-100 text-red-700 border-red-200 hover:bg-red-200"
+                        className="text-red-700 bg-red-100 border-red-200 hover:bg-red-200"
                         onClick={async () => {
                           try {
                             await api.put(`${ORDER_API_ENDPOINT}/${order.id || order._id}/status`, {
@@ -240,7 +259,7 @@ const SellerOrdersPage = () => {
                         <Button
                           size="sm"
                           variant="destructive"
-                          className="bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200"
+                          className="text-yellow-800 bg-yellow-100 border-yellow-200 hover:bg-yellow-200"
                           onClick={async () => {
                             if (!window.confirm('Initiate full refund for this order? This cannot be undone.')) return;
                             try {
@@ -255,26 +274,37 @@ const SellerOrdersPage = () => {
                         >Initiate Refund</Button>
                       );
                     })()}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                    onClick={() => {
-                      // Open chat with buyer (use buyerEmail or userId)
-                      const buyerId = order.buyerId || order.userId || order.buyerEmail || order.userEmail;
-                      if (!buyerId) return;
-                      // If buyerId is an email, pass as query param
-                      const url = `/chat?buyer=${encodeURIComponent(buyerId)}`;
-                      navigate(url);
-                    }}
-                    title="Chat with buyer"
-                  >Chat</Button>
+                  {(() => {
+                    const buyerId = order.buyerId || order.userId || order.buyerEmail || order.userEmail;
+                    const disabled = !buyerId;
+                    const unread = buyerId ? unreadByUser[buyerId] : 0;
+                    return (
+                      <div className="relative inline-block">
+                        <Button
+                          size="sm"
+                          variant={disabled ? 'outline' : 'default'}
+                          disabled={disabled}
+                          title={disabled ? 'Chat not available yet (buyer info missing)' : unread > 0 ? 'Unread messages' : 'Chat with buyer'}
+                          onClick={() => {
+                            if (!buyerId) return;
+                            const url = `/chat?buyer=${encodeURIComponent(buyerId)}`;
+                            navigate(url);
+                          }}
+                        >Chat</Button>
+                        {unread > 0 && (
+                          <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-600 rounded-full shadow">
+                            {unread > 9 ? '9+' : unread}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
                 {/* Refund/dispute status and timeline events */}
                 <div className="mt-2">
                   {order.paymentStatus === 'refunded' && (
-                    <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800 border border-yellow-300 mr-2">Refunded</span>
+                    <span className="inline-block px-2 py-1 mr-2 text-xs font-semibold text-yellow-800 bg-yellow-100 border border-yellow-300 rounded">Refunded</span>
                   )}
                   {order.disputeStatus && (
                     <span className={`inline-block px-2 py-1 text-xs font-semibold rounded mr-2 ${order.disputeStatus === 'open' ? 'bg-red-100 text-red-700 border border-red-300' : order.disputeStatus === 'won' ? 'bg-green-100 text-green-700 border border-green-300' : order.disputeStatus === 'lost' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' : 'bg-gray-100 text-gray-700 border border-gray-300'}`}>
@@ -283,7 +313,7 @@ const SellerOrdersPage = () => {
                   )}
                   {Array.isArray(order.timeline) && order.timeline.length > 0 && (
                     <div className="mt-2">
-                      <h3 className="text-xs font-semibold mb-1">Activity</h3>
+                      <h3 className="mb-1 text-xs font-semibold">Activity</h3>
                       <ul className="space-y-1 text-xs">
                         {order.timeline.slice(-10).map((ev, i) => (
                           <li key={i}>
@@ -297,6 +327,47 @@ const SellerOrdersPage = () => {
                 </div>
             </div>
           ))}
+          {/* Pagination controls */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t">
+            <div className="text-sm text-gray-600">
+              {(() => {
+                const total = visibleOrders.length;
+                if (!total) return '';
+                const start = (page - 1) * pageSize + 1;
+                const end = Math.min(start + pageSize - 1, total);
+                return `Showing ${start}-${end} of ${total}`;
+              })()}
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-1">Page size:
+                <select
+                  value={pageSize}
+                  onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  className="px-2 py-1 border rounded"
+                >
+                  {[5,10,20,50].map(sz => <option key={sz} value={sz}>{sz}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >Prev</Button>
+              <span className="text-sm">Page {page}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const maxPage = Math.ceil(visibleOrders.length / pageSize) || 1;
+                  setPage(p => Math.min(maxPage, p + 1));
+                }}
+                disabled={page >= (Math.ceil(visibleOrders.length / pageSize) || 1)}
+              >Next</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

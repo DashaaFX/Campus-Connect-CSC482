@@ -1,3 +1,18 @@
+/**
+ * Chat Store (Zustand)
+ * ---------------------------------------------------------------
+ *   location & date/time changes do not create multiple overlapping listeners.
+ * - Moderation: forward (you blocked others) and reverse (others blocked you).
+ * - Rate limiting and chat max length checks
+ *
+ * Recent Changes:
+ * - Added reverse block subscription (blockedByFirebaseUids).
+ * - Added meetingLocation + meetingDateTime finalizedMessageSent flags to
+ *   prevent duplicate system messages.
+ * - Added persisted moderation lists
+ * - Added system messages for finalized meeting details with date/time.
+ * - Added resilient subscription rehydration after auth state changes.
+ */
 // Zustand store for chat state management
 // Now includes meeting location and date/time handling
 // Reverse block subscription feature prompted by Co-Pilot
@@ -447,6 +462,18 @@ export const useChatStore = create((set, get) => ({
         orderContext,
         otherUserId: peerId
       });
+      // Backend notification request 
+      try {
+        if (peerId && peerId !== currentUser.id) {
+          const token = useAuthStore.getState().token;
+          await api.post('/notifications/chat-message', {
+            conversationId: activeConversationId,
+            textPreview: trimmed.slice(0, 120)
+          }, { headers: { Authorization: `Bearer ${token}` } });
+        }
+      } catch (e) {
+        if (import.meta.env.DEV) console.warn('[notifications] backend chat notify failed', e.message);
+      }
     } catch (e) {
       console.warn('Send message failed:', e.message);
       set({ error: e.message });

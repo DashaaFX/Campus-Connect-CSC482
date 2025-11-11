@@ -16,7 +16,6 @@ export function ChatList({ users = [] }) {
   const isBlockedByPeerFn = useChatStore(s => s.isBlockedByPeer);
   //select both arrays so we re-render immediately on changes (forward + reverse blocks)
   const blockedFirebaseUids = useChatStore(s => s.blockedFirebaseUids);
-  const blockedByFirebaseUids = useChatStore(s => s.blockedByFirebaseUids);
   const currentUser = useAuthStore(state => state.user);
 
   useEffect(() => { initConversations(); }, [initConversations]);

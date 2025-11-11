@@ -35,6 +35,7 @@ import OrderSuccessPage from "./pages/OrderSuccessPage";
 import PaymentFailedPage from "./pages/PaymentFailedPage";
 import ChatPage from './pages/ChatPage';
 import SellerOrdersPage from "./pages/SellerOrdersPage";
+import AllNotificationPage from "./pages/AllNotificationPage";
 
 const appRouter = createBrowserRouter([
   {
@@ -85,7 +86,9 @@ const appRouter = createBrowserRouter([
       },
       //enable chat route if testing chat feature is enabled in env
       ...(import.meta.env.VITE_ENABLE_FIREBASE_CHAT === 'true' ? [{ path: 'chat', element: <ChatPage /> }] : []),
-     
+
+      // All notifications page
+      { path: 'notifications', element: <AllNotificationPage /> },
     ]
   }
 ]);

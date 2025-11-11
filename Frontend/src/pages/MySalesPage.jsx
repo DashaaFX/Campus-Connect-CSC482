@@ -12,7 +12,7 @@
   import { Button } from '@/components/ui/button';
   import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
   import { Badge } from '@/components/ui/badge';
-  import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+  import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog";
   import PdfIcon from '@/assets/Pdf.png';
   import { useAuthStore } from '@/store/useAuthStore';
   import { toast } from 'sonner';
@@ -157,6 +157,16 @@
                     </DialogTrigger>
 
                     <DialogContent className="w-full max-w-3xl h-[80vh]">
+                      <DialogTitle className="mb-2 text-lg font-semibold">
+                        {product.title || 'Product Preview'}
+                      </DialogTitle>
+                      <DialogDescription className="mb-4 text-sm text-gray-500">
+                        {(product.description && product.description.length > 0)
+                          ? (product.description.length > 160
+                              ? product.description.slice(0, 160) + '…'
+                              : product.description)
+                          : 'Preview of your product media.'}
+                      </DialogDescription>
                       {product.images?.length > 0 ? (
                         <img
                           src={getProductImageUrl({images: product.images})}

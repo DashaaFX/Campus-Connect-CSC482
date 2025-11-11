@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
-
+// Implemented a dropdown notification component with tabs for unread, read, and all notifications
+// Modified notification component for better view
+// Unread notifications can now be marked as read when clicked on it
 const NotificationDropdown = () => {
   const notifications = useNotificationStore(s => s.notifications);
   const markAllRead = useNotificationStore(s => s.markAllRead);
@@ -12,19 +14,38 @@ const NotificationDropdown = () => {
   const unread = notifications.filter(n => !n.readAt);
   const read = notifications.filter(n => !!n.readAt);
 
-  const renderItem = (n) => (
-    <button
-      key={n.id}
-      type="button"
-      onClick={() => { if (!n.readAt) markRead(n.id); }}
-      className={`relative w-full group rounded-md px-3 py-3 text-xs flex flex-col items-center text-center border border-white/10 bg-gray-800/50 backdrop-blur-sm hover:bg-gray-700/60 transition-colors shadow-sm ${!n.readAt ? 'font-semibold ring-1 ring-yellow-300/20' : 'opacity-80'}`}
-    >
-      {!n.readAt && <span className="absolute w-2 h-2 bg-red-500 rounded-full top-2 right-2" />}
-      <span className="truncate max-w-[180px]" title={n.title}>{n.title || 'Notification'}</span>
-      {n.body && <p className="mt-1 text-[11px] line-clamp-2 opacity-70" title={n.body}>{n.body}</p>}
-      <p className="mt-2 text-[10px] uppercase tracking-wide opacity-40">{n.type}</p>
-    </button>
-  );
+  const renderItem = (n) => {
+    const productTitle = n.payload?.productTitle;
+    const isOrder = n.type === 'order.requested' || n.type === 'order.status.changed';
+    // Product title as primary heading for notifications
+    const heading = isOrder && productTitle ? productTitle : (n.title || 'Notification');
+    // Format date
+    let dateStr = '';
+    if (n.createdAt) {
+      const d = typeof n.createdAt === 'string' ? new Date(n.createdAt) : n.createdAt.toDate?.() || new Date();
+      dateStr = d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    return (
+      <button
+        key={n.id}
+        type="button"
+        onClick={() => { if (!n.readAt) markRead(n.id); }}
+        className={`relative w-full group rounded-md px-3 py-3 text-xs flex flex-col items-center text-center border border-white/10 bg-gray-800/50 backdrop-blur-sm hover:bg-gray-700/60 transition-colors shadow-sm ${!n.readAt ? 'font-semibold ring-1 ring-yellow-300/20' : 'opacity-80'}`}
+      >
+        {!n.readAt && <span className="absolute w-2 h-2 bg-red-500 rounded-full top-2 right-2" />}
+        <span className="truncate max-w-[200px]" title={heading}>{heading}</span>
+        {isOrder && productTitle && n.title && productTitle !== n.title && (
+          <p className="mt-1 text-[11px] opacity-60 italic truncate max-w-[200px]" title={n.title}>{n.title}</p>
+        )}
+        {n.body && <p className="mt-1 text-[11px] line-clamp-2 opacity-70" title={n.body}>{n.body}</p>}
+        {/* Show date instead of type */}
+        {dateStr && <p className="mt-2 text-[10px] tracking-wide opacity-40">{dateStr}</p>}
+        {n.payload?.to && n.payload?.from && n.type === 'order.status.changed' && (
+          <p className="mt-1 text-[10px] opacity-50">{n.payload.from} → {n.payload.to}</p>
+        )}
+      </button>
+    );
+  };
 
       const renderList = () => {
         if (activeTab === 'unread') {
@@ -35,7 +56,10 @@ const NotificationDropdown = () => {
           if (!read.length) return <p className="py-6 text-center text-[11px] opacity-50">No read notifications yet</p>;
           return read.map(renderItem);
         }
-        return <p className="py-6 text-center text-[11px] opacity-50">All (placeholder)</p>;
+        // Merge read + unread, newest first (incoming already newest first from store)
+        const all = notifications;
+        if (!all.length) return <p className="py-6 text-center text-[11px] opacity-50">No notifications</p>;
+        return all.map(renderItem);
       };
 
       return (

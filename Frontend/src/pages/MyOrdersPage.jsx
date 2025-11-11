@@ -8,10 +8,10 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/useAuthStore';
 import { buildChatUrl, collectSellerIds, fetchUsersIfNeeded, deriveSellerPeerFromItem } from '@/utils/chatHelpers';
+import { useChatStore } from '@/store/useChatStore';
 import api from '@/utils/axios';
 import { PRODUCT_API_ENDPOINT, ORDER_API_ENDPOINT } from '@/utils/data'
 import { fetchDigitalDownloadUrl } from '@/utils/digitalDownload';
-import { FileText, Package } from 'lucide-react';
 import { toast } from 'sonner';
 const MyOrdersPage = () => {
   // Cache for fetched product details
@@ -79,6 +79,13 @@ const MyOrdersPage = () => {
   const currentUser = useAuthStore(s => s.user);
   const [sellerEmails, setSellerEmails] = React.useState({});
   const [sellerUsers, setSellerUsers] = React.useState({}); 
+  // Chat conversations for unread badge mapping
+  const conversations = useChatStore(s => s.conversations);
+  const unreadByUser = React.useMemo(() => {
+    const map = {};
+    conversations.forEach(c => { if (c.unread > 0 && c.otherUserId) map[c.otherUserId] = (map[c.otherUserId] || 0) + c.unread; });
+    return map;
+  }, [conversations]);
 
   // Poll for order status after payment to enable download promptly
   useEffect(() => {
@@ -169,7 +176,20 @@ const MyOrdersPage = () => {
           {visibleOrders.map(order => (
             <div key={order._id || order.id} className="p-4 border rounded shadow-sm">
               <div className="flex justify-between text-sm text-gray-500">
-                <span>Order ID: {order._id || order.id}</span>
+                <span>
+                  {(() => {
+                    const item = (order.products || order.items || [])[0];
+                    if (!item) return '';
+                    const pid = item.productId || item.product?.id || item.product?._id;
+                    return (
+                      item.product?.title ||
+                      item.title ||
+                      item.productTitle ||
+                      (productDetails[pid]?.title) ||
+                      'Unknown Product'
+                    );
+                  })()}
+                </span>
                 <span>{order.createdAt ? format(new Date(order.createdAt), 'PPpp') : ''}</span>
               </div>
               <div className="mt-2">
@@ -354,26 +374,35 @@ const MyOrdersPage = () => {
                   const firstItem = (order.products || order.items || [])[0];
                   const peer = deriveSellerPeerFromItem(firstItem, currentUser, sellerUsers);
                   const sellerId = firstItem?.sellerId;
+                  const chatKey = peer?.id || sellerId; // key to look up unread count
+                  const unread = chatKey ? unreadByUser[chatKey] : 0;
                   const disabled = !peer && !sellerId;
+                  // Chat button now indicates unread messages
                   return (
-                    <Button
-                      size="sm"
-                      variant={disabled ? 'outline' : 'default'}
-                      disabled={disabled}
-                      onClick={() => {
-                        if (peer) {
-                          const url = buildChatUrl(peer);
-                          navigate(url);
-                        } else if (sellerId) {
-                          // Fallback: build chat URL with sellerId only
-                          const url = `/chat?sellerId=${sellerId}`;
-                          navigate(url);
-                        }
-                      }}
-                      title={disabled ? 'Seller chat not available yet' : 'Chat with seller'}
-                    >
-                      Chat
-                    </Button>
+                    <div className="relative inline-block">
+                      <Button
+                        size="sm"
+                        variant={disabled ? 'outline' : 'default'}
+                        disabled={disabled}
+                        onClick={() => {
+                          if (peer) {
+                            const url = buildChatUrl(peer);
+                            navigate(url);
+                          } else if (sellerId) {
+                            const url = `/chat?sellerId=${sellerId}`;
+                            navigate(url);
+                          }
+                        }}
+                        title={disabled ? 'Seller chat not available yet' : unread > 0 ? 'Unread messages' : 'Chat with seller'}
+                      >
+                        Chat
+                      </Button>
+                      {unread > 0 && (
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-600 rounded-full shadow">
+                          {unread > 9 ? '9+' : unread}
+                        </span>
+                      )}
+                    </div>
                   );
                 })()}
               </div>

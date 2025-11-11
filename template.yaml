@@ -27,8 +27,8 @@ Globals:
 Parameters:
   Environment:
     Type: String
-    Default: dev2
-    AllowedValues: [dev2, dev3, dev, staging, prod]
+    Default: dev1
+    AllowedValues: [dev2, dev1, dev, staging, prod]
 
 Resources:
   SharedLayer:
@@ -395,10 +395,12 @@ Resources:
             Resource:
               - !Ref StripeApiKeySecret
               - !Ref StripeWebhookSigningSecret
+              - !Ref FirebaseServiceAccount
       Environment:
         Variables:
           STRIPE_SECRET_ARN: !Ref StripeApiKeySecret
           STRIPE_WEBHOOK_SECRET_ARN: !Ref StripeWebhookSigningSecret
+          FIREBASE_SECRET_ARN: !Ref FirebaseServiceAccount
           CLEANUP_FAILED_PAYMENT_MINUTES: 180
       Events:
         ArchiveOrdersApi:
@@ -540,6 +542,7 @@ Resources:
           STRIPE_SECRET_ARN: !Ref StripeApiKeySecret
           STRIPE_WEBHOOK_SECRET_ARN: !Ref StripeWebhookSigningSecret
           STRIPE_PLATFORM_WEBHOOK_SECRET_ARN: !Ref StripePlatformWebhookSigningSecret
+          FIREBASE_SECRET_ARN: !Ref FirebaseServiceAccount
       Events:
         StripeWebhookApi:
           Type: Api
@@ -560,10 +563,43 @@ Resources:
                 - !Ref StripeApiKeySecret
                 - !Ref StripeWebhookSigningSecret
                 - !Ref StripePlatformWebhookSigningSecret
+                - !Ref FirebaseServiceAccount
             - Effect: Allow
               Action:
                 - s3:GetObject
               Resource: !Sub "${UploadsBucket.Arn}/*"
+
+  NotificationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub campus-connect-notifications-${Environment}
+      CodeUri: src/functions/notifications/
+      Handler: index.handler
+      Layers:
+        - !Ref SharedLayer
+      Environment:
+        Variables:
+          FIREBASE_SECRET_ARN: !Ref FirebaseServiceAccount
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref FirebaseServiceAccount
+      Events:
+        ChatMessageNotificationApi:
+          Type: Api
+          Properties:
+            Path: /notifications/chat-message
+            Method: post
+            RestApiId: !Ref CampusConnectApi
+            Auth:
+              Authorizer: JWTAuth
+        ChatMessageNotificationOptionsApi:
+          Type: Api
+          Properties:
+            Path: /notifications/chat-message
+            Method: options
+            RestApiId: !Ref CampusConnectApi
 
   AdminFunction:
     Type: AWS::Serverless::Function

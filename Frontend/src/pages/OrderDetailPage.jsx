@@ -149,10 +149,7 @@ const OrderDetailPage = () => {
             </Badge>
           )}
         </div>
-        <div className="mb-4">
-          <strong>Total:</strong>
-          <Badge variant="outline" className="ml-2">${order.total ? Number(order.total).toFixed(2) : "0.00"}</Badge>
-        </div>
+        
         <div className="mb-6">
           <h2 className="mb-2 text-lg font-semibold">Items</h2>
           <div className="space-y-4">
@@ -160,22 +157,24 @@ const OrderDetailPage = () => {
               const productId = item.product?.id || item.product?._id || item.productId;
               const sellerEmail = sellerEmails[productId] || "Loading...";
               const isDigital = item.product?.isDigital;
-              const canDownload = isDigital && (['completed','paid'].includes(order.status)) && order.paymentStatus !== 'failed' && order.status !== 'refunded';
+              const canDownload = isDigital && (["completed","paid"].includes(order.status)) && order.paymentStatus !== 'failed' && order.status !== 'refunded';
+              const productTitle = item.product?.title;
+              const productPrice = order.total;
               return (
                 <div key={idx} className="flex items-center gap-4 p-3 border rounded bg-gray-50">
                   {item.product?.images?.length > 0 && (
                     <img
                       src={item.product.images[0]}
-                      alt={item.product.title}
+                      alt={productTitle}
                       className="object-cover w-32 h-32 rounded"
                     />
                   )}
                   <div> 
-                    <div className="font-semibold">{item.product?.title || item.title || item.product?.name || item.name || "Product"}</div>
-                    <div className="text-sm text-gray-500">{item.product?.description}</div>
+                    <div className="font-semibold">{productTitle}</div>
+                    <div className="text-sm text-gray-500">{item.product?.description || item.description || ''}</div>
                     <div className="flex gap-4 mt-1 text-sm">
                       <Badge variant="secondary">Quantity: {item.quantity}</Badge>
-                      <Badge variant="secondary">Price: ${Number(item.product?.price || item.price || 0).toFixed(2)}</Badge>
+                      <Badge variant="secondary">Price: ${Number(productPrice).toFixed(2)}</Badge>
                     </div>
                     <div className="mt-1 text-sm">
                       <strong>Seller Email:</strong> <Badge variant="outline" className="text-md">{sellerEmail}</Badge>

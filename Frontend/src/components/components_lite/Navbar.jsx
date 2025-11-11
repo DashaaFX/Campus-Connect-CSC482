@@ -113,8 +113,8 @@ const logoutHandler = async () => {
               <Info size={18} className="text-blue-300" />
               <Link to={"/Creator"} className="hover:text-blue-300">About</Link>
             </li>
-
-            {user && (
+            {/*Modified Navbar for admin to show Category Management and Product Approval */}
+            {user && user.role !== 'Admin' && (
               <>
                 <li>
                   <Link to={"/cart"} className="relative flex items-center gap-1 hover:text-red-300">
@@ -139,29 +139,43 @@ const logoutHandler = async () => {
                     My Sales
                   </Link>
                 </li>
-                <li className="relative">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        aria-label="Notifications"
-                        type="button"
-                        className="relative flex items-center hover:text-yellow-300 focus:outline-none"
-                      >
-                        <Bell size={20} className="text-yellow-300" />
-                        {unreadCount > 0 && (
-                          <span className="absolute -top-1 -right-2 inline-flex items-center justify-center px-1.5 py-[2px] 
-                          text-[10px] font-bold text-white bg-red-600 rounded-full min-w-[20px]">
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                          </span>
-                        )}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="p-0 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 border border-white/10 shadow-xl w-[400px] backdrop-blur-md overflow-hidden rounded-lg">
-                      <NotificationDropdown />
-                    </PopoverContent>
-                  </Popover>
+              </>
+            )}
+            {user && user.role === 'Admin' && (
+              <>
+                <li className="flex items-center gap-1">
+                  <Settings size={18} className="text-green-300" />
+                  <Link to={"/admin/categories"} className="hover:text-green-300">Manage Categories</Link>
+                </li>
+                <li className="flex items-center gap-1">
+                  <Settings size={18} className="text-purple-300" />
+                  <Link to={"/admin/products/approval"} className="hover:text-purple-300">Product Approval</Link>
                 </li>
               </>
+            )}
+            {user && (
+              <li className="relative">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      aria-label="Notifications"
+                      type="button"
+                      className="relative flex items-center hover:text-yellow-300 focus:outline-none"
+                    >
+                      <Bell size={20} className="text-yellow-300" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-2 inline-flex items-center justify-center px-1.5 py-[2px] 
+                        text-[10px] font-bold text-white bg-red-600 rounded-full min-w-[20px]">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="p-0 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 border border-white/10 shadow-xl w-[400px] backdrop-blur-md overflow-hidden rounded-lg">
+                    <NotificationDropdown />
+                  </PopoverContent>
+                </Popover>
+              </li>
             )}
           </ul>
 
@@ -200,23 +214,7 @@ const logoutHandler = async () => {
                     </Button>
                   </div>
 
-                  {/* Admin Navigation */}
-                  {user?.role === 'Admin' && (
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 cursor-pointer w-fit">
-                        <Settings/>
-                        <Button variant="link">
-                          <Link to={"/admin/categories"}>Manage Categories</Link>
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-2 cursor-pointer w-fit">
-                        <Settings/>
-                        <Button variant="link">
-                          <Link to={"/admin/products/approval"}>Product Approval</Link>
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                  {/* Removed admin navigation duplicates in popover; now in top bar */}
 
                   <div className="flex items-center gap-2 cursor-pointer w-fit">
                   <LogOut className="text-red-500" /> 

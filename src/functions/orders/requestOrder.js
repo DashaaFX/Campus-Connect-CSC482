@@ -2,6 +2,8 @@ import { OrderModel } from '/opt/nodejs/models/Order.js';
 import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
 import { ORDER_STATUSES, OPEN_ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
+// Notification publisher (firebase-admin)
+import { notifyOrderRequested } from '/opt/nodejs/services/notifications.js';
 import { CartModel } from '/opt/nodejs/models/Cart.js';
 
 export const handler = async (event) => {
@@ -86,8 +88,10 @@ export const handler = async (event) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-
-    const order = await orderModel.create(orderData);
+  //notifications for order request
+  //did not implement this, as notifications for order request were not working
+  const order = await orderModel.create(orderData);
+  try { await notifyOrderRequested(order); } catch {/* ignore */}
 
     // Remove or decrement the item from the user's cart 
     try {

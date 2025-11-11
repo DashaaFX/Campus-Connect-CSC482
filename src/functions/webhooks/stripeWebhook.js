@@ -1,6 +1,7 @@
 import { orderModel } from '/opt/nodejs/models/Order.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 import { ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
+import { notifyOrderStatusChange } from '/opt/nodejs/services/notifications.js';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 
 let cachedStripeSecrets = null;
@@ -184,6 +185,8 @@ export const handler = async (event) => {
       await orderModel.update(orderId, {
         completedAt: now
       });
+      // Notifications (system) for completion
+      try { await notifyOrderStatusChange({ ...order, status: ORDER_STATUSES.COMPLETED, userId: order.userId, sellerId: order.sellerId, id: orderId }, { actorId: 'system', fromStatus: order.status, toStatus: ORDER_STATUSES.COMPLETED }); } catch (e) { console.warn('[notify] completion failed', e.message); }
       
       return createSuccessResponse({ message: 'Order completed', orderId, downloadLinks }, 200);
     }
@@ -314,6 +317,8 @@ export const handler = async (event) => {
         refundAmount: (refunded / 100),
         timeline
       });
+      // Notifications  for refund
+      try { await notifyOrderStatusChange({ ...order, status: ORDER_STATUSES.REFUNDED, userId: order.userId, sellerId: order.sellerId, id: orderId }, { actorId: 'system', fromStatus: order.status, toStatus: ORDER_STATUSES.REFUNDED }); } catch (e) { console.warn('[notify] refund failed', e.message); }
       
       return createSuccessResponse({ message: 'Order refunded (full)', orderId }, 200);
     }
