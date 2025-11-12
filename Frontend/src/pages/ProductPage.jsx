@@ -128,8 +128,7 @@ const PublicProductPage = () => {
   const fetchProducts = async () => {
     try {
       const params = new URLSearchParams();
-      if (search) params.append('search', search);
-      if (selectedCategory) params.append('category', selectedCategory);
+      // Handle filters on the client side for better UX
       if (sort) params.append('sort', sort);
       if (digitalFilter && digitalFilter !== 'all') params.append('digital', digitalFilter);
 
@@ -143,19 +142,48 @@ const PublicProductPage = () => {
           (p) => p.sellerId !== user.id && p.userId !== user.id
         );
       }
+      // Apply category filter 
+      if (selectedCategory) {
+        allProducts = allProducts.filter(p => p.category === selectedCategory);
+      }
+      
+      // Apply search filter
+      if (search) {
+        const searchLower = search.toLowerCase();
+        allProducts = allProducts.filter(p => {
+          // Use searchTerms field if available (contains title, description, category, etc.)
+          if (p.searchTerms) {
+            return p.searchTerms.toLowerCase().includes(searchLower);
+          }
+          // Fallback to individual fields
+          return (
+            p.title?.toLowerCase().includes(searchLower) ||
+            p.description?.toLowerCase().includes(searchLower) ||
+            p.category?.toLowerCase().includes(searchLower) ||
+            p.subcategory?.toLowerCase().includes(searchLower) ||
+            p.condition?.toLowerCase().includes(searchLower)
+          );
+        });
+      }
       // Apply digital/physical filter on frontend
       if (digitalFilter === 'true') {
         allProducts = allProducts.filter(p => p.isDigital === true);
       } else if (digitalFilter === 'false') {
         allProducts = allProducts.filter(p => !p.isDigital);
       }
-      //filter subcategory separately, for Sort by dropdown
+      // Filter by subcategory
       if (selectedSubcategory) {
-        allProducts = allProducts.filter(p =>
-          p.subcategory === selectedSubcategory ||
-          p.subcategory?.id === selectedSubcategory ||
-          p.subcategory?._id === selectedSubcategory
-        );
+        allProducts = allProducts.filter(p => {
+          // subcategory can be an object {id, _id, name} or a string
+          if (typeof p.subcategory === 'object' && p.subcategory !== null) {
+            return (
+              p.subcategory.id === selectedSubcategory ||
+              p.subcategory._id === selectedSubcategory
+            );
+          }
+          // Or just a string
+          return p.subcategory === selectedSubcategory;
+        });
       }
       // Sort products 
       if (sort === "price") {
