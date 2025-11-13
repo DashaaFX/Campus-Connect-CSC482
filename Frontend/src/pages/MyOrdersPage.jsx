@@ -47,6 +47,7 @@ const MyOrdersPage = () => {
   React.useEffect(() => {
     async function fetchArchived() {
       try {
+        //new endpoint to get archived order IDs
         const res = await api.get(`${ORDER_API_ENDPOINT}/archive`);
         setArchivedOrderIds(res.data.archivedOrderIds || []);
       } catch {}
