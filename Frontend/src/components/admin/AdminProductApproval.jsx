@@ -67,8 +67,7 @@ const AdminProductApproval = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const product = res.data.product;
-      // Debug log to inspect shape for image fields
-      console.debug('[AdminProductApproval] Fetched product for dialog:', product);
+
       setViewedProduct(product);
       setCurrentImgIdx(0);
       setViewOpen(true);

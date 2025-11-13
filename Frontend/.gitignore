@@ -19,6 +19,8 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
 
 # Keep environment templates but ignore actual URLs
 # .env.development

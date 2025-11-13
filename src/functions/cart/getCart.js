@@ -75,10 +75,7 @@ export const handler = async (event) => {
               title: product.title || product.name || 'Unknown Product',
               price: parseFloat(product.price || 0),
               category: product.category || 'uncategorized',
-              images: Array.isArray(product.images) ? product.images : [],
-              // Ensure other important fields are present
-              title: product.name || 'Unknown Product',
-              images: product.images || []
+              images: Array.isArray(product.images) ? product.images : []
             };            
     
             
