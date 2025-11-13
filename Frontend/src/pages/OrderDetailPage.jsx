@@ -2,19 +2,19 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useOrderStore } from "@/store/useOrderStore";
 import { format } from "date-fns";
-import { ORDER_STATUS_COLORS } from "@/constants/order-status.jsx";
+import { ORDER_STATUS_COLORS, getOrderStatusBadge, getPaymentStatusBadge } from "@/constants/order-status.jsx";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
 import api from "@/utils/axios";
-import { PRODUCT_API_ENDPOINT } from "@/utils/data";
+import { PRODUCT_API_ENDPOINT, ORDER_API_ENDPOINT } from "@/utils/data";
 import { fetchDigitalDownloadUrl } from '@/utils/digitalDownload';
 import { toast } from 'sonner';
 
 const OrderDetailPage = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  const { orders, fetchOrders, loading, error } = useOrderStore();
+  const { orders, fetchOrders, loading, error, createCheckoutSession, redirecting, cancelOrder, refundOrder } = useOrderStore();
   const [order, setOrder] = useState(null);
   const [sellerEmails, setSellerEmails] = useState({});
   const [localLoading, setLocalLoading] = useState(true);
@@ -94,10 +94,28 @@ const OrderDetailPage = () => {
 
   return (
     <div className="max-w-2xl px-4 py-8 mx-auto">
-      <div className="mb-4">
+      <div className="flex gap-2 mb-4">
         <Button variant="outline" onClick={() => navigate(-1)}>
           ← Back
         </Button>
+        {['requested','approved'].includes(order.status) && (
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              const confirmed = window.confirm('Cancel this order? This cannot be undone.');
+              if (!confirmed) return;
+              try {
+                await cancelOrder(order._id || order.id);
+                toast.success('Order cancelled');
+                navigate(-1);
+              } catch (e) {
+                toast.error(e.response?.data?.message || 'Cancel failed');
+              }
+            }}
+          >
+            Cancel Order
+          </Button>
+        )}
       </div>
       <div className="p-6 bg-white border rounded-lg shadow-lg">
         <h1 className="mb-4 text-2xl font-bold">Order Details</h1>
@@ -105,68 +123,121 @@ const OrderDetailPage = () => {
           <span>Order ID: <Badge variant="secondary">{order._id || order.id}</Badge></span>
           <span>{order.createdAt ? format(new Date(order.createdAt), "PPpp") : ""}</span>
         </div>
-        <div className="mb-4">
-          <Badge className={`capitalize px-2 py-1 ${ORDER_STATUS_COLORS[order.status] || "bg-gray-200 text-gray-1000"}`}>
-            {order.status}
-          </Badge>
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {(() => {
+            const main = getOrderStatusBadge(order.status);
+            return (
+              <Badge className={`capitalize px-2 py-1 ${main.className}`}>
+                {main.text}
+              </Badge>
+            );
+          })()}
+          {(() => {
+            if (order.status === 'refunded') return null; // main badge already conveys
+            const p = getPaymentStatusBadge(order.paymentStatus);
+            if (!p) return null;
+            return (
+              <Badge className={`px-2 py-1 text-xs ${p.className}`}>
+                {p.label}
+              </Badge>
+            );
+          })()}
+          {/* Dispute status badge */}
+          {order.disputeStatus && (
+            <Badge variant="outline" className={`px-2 py-1 text-xs ${order.disputeStatus === 'open' ? 'bg-red-100 text-red-700 border-red-300' : order.disputeStatus === 'won' ? 'bg-green-100 text-green-700 border-green-300' : order.disputeStatus === 'lost' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+              Dispute: {order.disputeStatus.charAt(0).toUpperCase() + order.disputeStatus.slice(1)}
+            </Badge>
+          )}
         </div>
-        <div className="mb-4">
-          <strong>Total:</strong>
-          <Badge variant="outline" className="ml-2">${order.total ? Number(order.total).toFixed(2) : "0.00"}</Badge>
-        </div>
+        
         <div className="mb-6">
           <h2 className="mb-2 text-lg font-semibold">Items</h2>
           <div className="space-y-4">
-            {(order.items || []).map((item, idx) => {
+            {(order.products || order.items || []).map((item, idx) => {
               const productId = item.product?.id || item.product?._id || item.productId;
               const sellerEmail = sellerEmails[productId] || "Loading...";
               const isDigital = item.product?.isDigital;
-              const canDownload = isDigital && (['approved','completed'].includes(order.status));
+              const canDownload = isDigital && (["completed","paid"].includes(order.status)) && order.paymentStatus !== 'failed' && order.status !== 'refunded';
+              const productTitle = item.product?.title;
+              const productPrice = order.total;
               return (
                 <div key={idx} className="flex items-center gap-4 p-3 border rounded bg-gray-50">
                   {item.product?.images?.length > 0 && (
                     <img
                       src={item.product.images[0]}
-                      alt={item.product.title || item.product.name}
+                      alt={productTitle}
                       className="object-cover w-32 h-32 rounded"
                     />
                   )}
-                  <div>
-                    <div className="font-semibold">{item.product?.title || item.product?.name || "Product"}</div>
-                    <div className="text-sm text-gray-500">{item.product?.description}</div>
+                  <div> 
+                    <div className="font-semibold">{productTitle}</div>
+                    <div className="text-sm text-gray-500">{item.product?.description || item.description || ''}</div>
                     <div className="flex gap-4 mt-1 text-sm">
                       <Badge variant="secondary">Quantity: {item.quantity}</Badge>
-                      <Badge variant="secondary">Price: ${Number(item.product?.price || item.price || 0).toFixed(2)}</Badge>
+                      <Badge variant="secondary">Price: ${Number(productPrice).toFixed(2)}</Badge>
                     </div>
                     <div className="mt-1 text-sm">
                       <strong>Seller Email:</strong> <Badge variant="outline" className="text-md">{sellerEmail}</Badge>
                     </div>
                     {isDigital && (
-                      <div className="mt-3">
-                        {(order.status === 'approved' || order.status === 'completed') && (
-                          <Badge variant="outline" className="mb-2 text-xs text-green-700 border-green-300 bg-green-50">
-                            Approved (Download Ready)
+                      <div className="mt-3 space-y-2">
+                        {order.status === 'approved' && (
+                          <Badge variant="outline" className="text-xs text-amber-700 border-amber-300 bg-amber-50">
+                            Approved - Payment Required
                           </Badge>
                         )}
-                        <Button
-                          variant={canDownload ? 'default' : 'outline'}
-                          size="sm"
-                          disabled={!canDownload}
-                          onClick={async () => {
-                            try {
-                              const url = await fetchDigitalDownloadUrl(productId);
-                              if (!url) {
-                                toast.error('Download unavailable');
-                                return;
+                        <div className="flex gap-2">
+                          {(order.status === 'approved' || order.paymentStatus === 'failed') && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              disabled={redirecting}
+                              onClick={() => createCheckoutSession(order._id || order.id)}
+                            >
+                                {redirecting ? 'Redirecting...' : (order.paymentStatus === 'failed' ? 'Retry Payment' : 'Pay Now')}
+                            </Button>
+                          )}
+                          {isDigital && order.status === 'completed' && order.paymentStatus !== 'refunded' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                if (!window.confirm('Initiate full refund?')) return;
+                                try {
+                                  await refundOrder(order._id || order.id);
+                                  toast.success('Refund initiated');
+                                } catch (e) {
+                                  toast.error(e.response?.data?.message || 'Refund failed');
+                                }
+                              }}
+                            >
+                              Initiate Refund
+                            </Button>
+                          )}
+                          {order.status === 'refunded' && isDigital && (
+                            <Badge variant="outline" className="text-xs text-yellow-800 border-yellow-300 bg-yellow-50">Access Revoked (Refunded)</Badge>
+                          )}
+                          <Button
+                            variant={canDownload ? 'default' : 'outline'}
+                            size="sm"
+                            disabled={!canDownload}
+                            onClick={async () => {
+                              try {
+                                // Always request a fresh download link from backend
+                                const url = await fetchDigitalDownloadUrl(productId);
+                                if (!url) {
+                                  toast.error('Download unavailable');
+                                  return;
+                                }
+                                window.location.href = url;
+                              } catch (e) {
+                                toast.error(e.response?.data?.message || 'Download failed');
                               }
-                              window.location.href = url;
-                            } catch (e) {
-                              toast.error(e.response?.data?.message || 'Download failed');
-                            }
-                          }}
-                        >
-                          {canDownload ? 'Download File' : (order.status === 'approved' ? 'Preparing...' : 'Available After Completion')}
-                        </Button>
+                            }}
+                          >
+                            {canDownload ? 'Download File' : (order.status === 'approved' ? 'Awaiting Payment' : (order.paymentStatus === 'failed' ? 'Payment Failed' : (order.status === 'refunded' ? 'Refunded' : 'Available After Completion')))}
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -175,9 +246,53 @@ const OrderDetailPage = () => {
             })}
           </div>
         </div>
+        {Array.isArray(order.timeline) && order.timeline.length > 0 && (
+          <div className="mt-6">
+            <h2 className="mb-2 text-lg font-semibold">Activity</h2>
+            <ul className="space-y-2 text-sm">
+              {order.timeline.slice(-15).map((ev, i) => {
+                const label = translateTimelineEvent(ev);
+                return (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="px-2 py-0.5 text-[11px] rounded bg-gray-100 text-gray-700 font-medium">
+                      {new Date(ev.at).toLocaleString()}
+                    </span>
+                    <span>{label}</span>
+                  </li>
+                );
+              })}
+            </ul>
+            {order.suspiciousPayment && (
+              <div className="mt-3 text-xs font-semibold text-red-600">Payment flagged as suspicious amount mismatch.</div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+// Minimal translation for timeline events
+function translateTimelineEvent(ev) {
+  const type = ev.type;
+  switch (type) {
+    case 'requested': return 'Order requested';
+    case 'status_approved': return 'Seller approved order';
+    case 'status_rejected': return 'Seller rejected order';
+    case 'status_cancelled': return 'Buyer cancelled order';
+    case 'payment_initiated': return 'Payment initiated';
+    case 'payment_succeeded': return 'Payment succeeded';
+    case 'payment_failed': return 'Payment failed';
+    case 'refund_full': return 'Full refund processed';
+    case 'refund_full_initiated': return 'Full refund initiated';
+    case 'dispute_created': return 'Dispute opened';
+    case 'dispute_closed': return 'Dispute closed';
+    case 'dispute_funds_reinstated': return 'Dispute won (funds reinstated)';
+    case 'dispute_funds_withdrawn': return 'Dispute lost (funds withdrawn)';
+    default:
+      if (type?.startsWith('status_')) return `Status changed: ${type.replace('status_','')}`;
+      return type || 'Event';
+  }
+}
 
 export default OrderDetailPage;

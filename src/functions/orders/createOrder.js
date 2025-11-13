@@ -2,7 +2,7 @@ import { OrderModel } from '/opt/nodejs/models/Order.js';
 import { CartModel } from '/opt/nodejs/models/Cart.js';
 import { ProductModel } from '/opt/nodejs/models/Product.js';
 import { createSuccessResponse, createErrorResponse, parseJSONBody, validateRequiredFields } from '/opt/nodejs/utils/response.js';
-import { ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
+import { ORDER_STATUSES, OPEN_ORDER_STATUSES } from '/opt/nodejs/constants/orderStatus.js';
 
 export const handler = async (event) => {
   // Handle CORS preflight requests
@@ -42,13 +42,14 @@ export const handler = async (event) => {
       return createErrorResponse('Cart is empty', 400);
     }
 
-    // Group cart items by sellerId (derive when missing)
+  // Group cart items by sellerId (derive when missing)
     const productModel = new ProductModel();
     const items = cart.items;
 
     // Ensure each item has sellerId at item level and in product
     for (const it of items) {
       const existingSeller = it.sellerId || it.product?.sellerId || it.product?.userId;
+
       if (!existingSeller) {
         // Fallback: fetch product once to enrich (no extensive logging per instructions)
         try {
@@ -70,6 +71,8 @@ export const handler = async (event) => {
           it.product.sellerId = it.product.sellerId || existingSeller;
         }
       }
+      // Add per-product status field
+      it.status = ORDER_STATUSES.REQUESTED;
     }
 
     // Validate every item has a sellerId after enrichment
@@ -90,18 +93,50 @@ export const handler = async (event) => {
     const now = new Date().toISOString();
 
     for (const [sid, groupItems] of Object.entries(groups)) {
+      // Prevent duplicate open order per product for this buyer
+      const existingOrders = await orderModel.getByBuyer(userId);
+      const openProductIds = new Set();
+      for (const o of existingOrders || []) {
+        if (OPEN_ORDER_STATUSES.includes(o.status)) {
+          for (const it of o.items || []) {
+            const pid = it.productId || it.product?.id || it.product?._id;
+            if (pid) openProductIds.add(pid);
+          }
+        }
+      }
+      const duplicateItem = groupItems.find(it => {
+        const pid = it.productId || it.product?.id || it.product?._id;
+        return pid && openProductIds.has(pid);
+      });
+      if (duplicateItem) {
+        // Skip creating order for this seller group; continue other groups
+        console.error('Skipping duplicate open order creation for product', duplicateItem.productId);
+        continue;
+      }
       const total = groupItems.reduce((sum, it) => {
         const price = it.product?.price || it.price || 0;
         return sum + (price * it.quantity);
       }, 0);
+      // Build products array for per-product status
+      const products = groupItems.map(it => ({
+        productId: it.productId || it.product?.id || it.product?._id,
+        status: it.status || ORDER_STATUSES.REQUESTED,
+        quantity: it.quantity,
+        sellerId: it.sellerId,
+        // Add other fields as needed
+      }));
       const orderData = {
         userId,
         userEmail: email,
-        items: groupItems,
+        items: groupItems, // legacy
+        products, // per-product status
         total,
         sellerId: sid,
         shippingAddress: body.shippingAddress,
-        status: ORDER_STATUSES.PENDING,
+        status: ORDER_STATUSES.REQUESTED,
+        timeline: [
+          { at: now, type: 'requested', actor: userId }
+        ],
         createdAt: now,
         updatedAt: now
       };

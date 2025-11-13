@@ -83,7 +83,7 @@ export const handler = async (event) => {
 
     // Prepare product data (shared + digital optional fields)
     const productData = {
-      name: body.title, // Map title to name for database
+      title: body.title,
       description: body.description,
       price: price,
       stock: isDigital ? 1 : stock,
@@ -96,15 +96,17 @@ export const handler = async (event) => {
       sellerEmail: userEmail,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      status: 'active',
+      status: 'pending',
+      active: true,
       // Digital metadata
       isDigital,
       digitalFormat: isDigital ? digitalFormat : null,
-  documentKey: isDigital ? body.documentKey : null, // already validated to include private/
+      documentKey: isDigital ? body.documentKey : null, // already validated to include private/
       documentOriginalName: isDigital ? (body.documentOriginalName || body.originalName || body.title) : null,
-  previewImage: isDigital ? (previewImage || getFormatPlaceholder(digitalFormat)) : null,
-  digitalStatus: isDigital ? ((previewImage || getFormatPlaceholder(digitalFormat)) ? 'ready' : 'processing') : null,
-      fileSizeBytes: isDigital ? fileSizeBytes : null
+      previewImage: isDigital ? (previewImage || getFormatPlaceholder(digitalFormat)) : null,
+      digitalStatus: isDigital ? ((previewImage || getFormatPlaceholder(digitalFormat)) ? 'ready' : 'processing') : null,
+      fileSizeBytes: isDigital ? fileSizeBytes : null,
+      digitalAutoComplete: isDigital ? !!body.digitalAutoComplete : false
     };
     // Initialize digital download count
     if (isDigital) {

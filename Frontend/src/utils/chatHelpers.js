@@ -22,9 +22,7 @@ export function extractSellerId(productLike) {
   return (
     productLike.sellerId ||
     productLike.seller?.id ||
-    productLike.seller?._id ||
-    productLike.ownerId ||
-    productLike.owner?.id || null
+    productLike.seller?._id || null
   );
 }
 
@@ -35,27 +33,22 @@ export function extractSellerFirebaseUid(productLike) {
     productLike.sellerFirebaseUid ||
     productLike.seller?.firebaseUid ||
     productLike.sellerUid ||
-    productLike.ownerFirebaseUid ||
-    productLike.owner?.firebaseUid || null
+     null
   );
 }
 
 // Extract seller name/email
+//Removed unused parameters
 export function extractSellerMetadata(productLike) {
   if (!productLike) return { email: '', name: 'Seller' };
   const email = (
     productLike.sellerEmail ||
-    productLike.seller?.email ||
-    productLike.ownerEmail ||
-    productLike.owner?.email || ''
+    productLike.seller?.email ||''
   );
   const name = (
     productLike.sellerName ||
     productLike.seller?.fullname ||
     productLike.seller?.name ||
-    productLike.ownerName ||
-    productLike.owner?.fullname ||
-    productLike.owner?.name ||
     email || 'Seller'
   );
   return { email, name };

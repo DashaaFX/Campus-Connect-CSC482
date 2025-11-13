@@ -1,14 +1,18 @@
+  //Sales page where sellers can view and manage their listed products.
+  //Deleting products mark them as inactive and hide them from this view.
+  
   import React, { useEffect, useState } from 'react';
   import { useNavigate } from 'react-router-dom';
   import api from "@/utils/axios";
   import { PRODUCT_API_ENDPOINT } from '@/utils/data';
+  import { fetchDigitalDownloadUrl } from '@/utils/digitalDownload';
   import { getProductImageUrl } from '@/utils/productHelpers';
 
   import ProductSidebar from '../components/product/ProductSideBar';
   import { Button } from '@/components/ui/button';
   import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
   import { Badge } from '@/components/ui/badge';
-  import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+  import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog";
   import PdfIcon from '@/assets/Pdf.png';
   import { useAuthStore } from '@/store/useAuthStore';
   import { toast } from 'sonner';
@@ -68,11 +72,14 @@
       if ((user?._id || user?.id) && token) fetchMyProducts();
     }, [user, token]);
 
-    const filteredProducts = products.filter((product) => {
-      if (selectedCategory && product.category !== selectedCategory) return false;
-      if (selectedSubcategory && product.subcategory !== selectedSubcategory) return false;
-      return true;
-    });
+    const filteredProducts = products
+      // Exclude inactive/deleted products from seller view 
+      .filter(p => p.status !== 'inactive' && p.status !== 'deleted')
+      .filter((product) => {
+        if (selectedCategory && product.category !== selectedCategory) return false;
+        if (selectedSubcategory && product.subcategory !== selectedSubcategory) return false;
+        return true;
+      });
 
     const handleClearFilters = () => {
       setSelectedCategory(null);
@@ -90,9 +97,14 @@
         <div className="flex-1 p-6">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">My Product Listings</h1>
-            <Button onClick={() => navigate('/products/create')}>
-              Add New Product
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => navigate('/products/create')}>
+                Add New Product
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/seller/orders')}>
+                Incoming Orders
+              </Button>
+            </div>
           </div>
 
           {loading ? (
@@ -126,7 +138,7 @@
                       {product.images?.length > 0 ? (
                         <img
                           src={getProductImageUrl({images: product.images})}
-                          alt={product.title || product.name}
+                          alt={product.title}
                           className="object-cover w-16 h-16 rounded cursor-pointer hover:opacity-80"
                         />
                       ) : product.pdf?.length > 0 ? (
@@ -137,7 +149,7 @@
                       />
                       ) : (
                         <img
-                          src="/placeholder-image.jpg"
+                          src="/placeholder2.png"
                           alt="placeholder"
                           className="object-cover w-16 h-16 rounded cursor-pointer"
                         />
@@ -145,10 +157,20 @@
                     </DialogTrigger>
 
                     <DialogContent className="w-full max-w-3xl h-[80vh]">
+                      <DialogTitle className="mb-2 text-lg font-semibold">
+                        {product.title || 'Product Preview'}
+                      </DialogTitle>
+                      <DialogDescription className="mb-4 text-sm text-gray-500">
+                        {(product.description && product.description.length > 0)
+                          ? (product.description.length > 160
+                              ? product.description.slice(0, 160) + '…'
+                              : product.description)
+                          : 'Preview of your product media.'}
+                      </DialogDescription>
                       {product.images?.length > 0 ? (
                         <img
                           src={getProductImageUrl({images: product.images})}
-                          alt={product.title || product.name}
+                          alt={product.title}
                           className="object-contain w-full h-full rounded"
                         />
                       ) : product.pdf?.length > 0 ? (
@@ -163,7 +185,7 @@
                         />
                       ) : (
                         <img
-                          src="/placeholder-image.jpg"
+                          src="/placeholder2.png"
                           alt="placeholder"
                           className="object-contain w-full h-full rounded"
                         />
@@ -172,7 +194,7 @@
                   </Dialog>
 
                   <div>
-                    <div>{product.name}</div>
+                    <div>{product.title}</div>
                     <div className="text-sm text-gray-500">
                       {product.description?.slice(0, 20)}...
                     </div>
@@ -194,9 +216,17 @@
                         </TableCell>
                         <TableCell>{product.stock}</TableCell>
                         <TableCell>
-                          <Badge variant={product.stock > 0 ? 'default' : 'destructive'}>
-                            {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={product.stock > 0 ? 'default' : 'destructive'}>
+                              {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                            </Badge>
+                            {/* Approval status badge */}
+                            {product.status === 'pending' && <Badge variant="secondary">Pending</Badge>}
+                            {product.status === 'approved' && <Badge variant="success">Approved</Badge>}
+                            {product.status === 'rejected' && <Badge variant="destructive">Rejected</Badge>}
+                            {/* Inactive badge */}
+                            {product.active === false && <Badge variant="outline">Inactive</Badge>}
+                          </div>
                         </TableCell>
                         <TableCell className="flex flex-wrap gap-2">
                           <Button variant="outline" size="sm" onClick={() => navigate(`/products/${product._id || product.id}`)}>
@@ -208,6 +238,23 @@
                           <Button variant="outline" size="sm" onClick={() => navigate(`/admin/products/${product._id || product.id}/status`)}>
                             Status
                           </Button>
+                          {product.isDigital && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const url = await fetchDigitalDownloadUrl(product._id || product.id);
+                                  if (!url) { toast.error('Download unavailable'); return; }
+                                  window.open(url, '_blank');
+                                } catch (e) {
+                                  toast.error(e.response?.data?.message || 'Download failed');
+                                }
+                              }}
+                            >
+                              Download
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

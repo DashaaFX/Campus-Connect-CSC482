@@ -5,13 +5,26 @@ import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient } from '../utils/dynamodb.js';
 
 export class ProductModel extends BaseModel {
+  // Query products by status
+  async queryByStatus(status) {
+    const allProducts = await this.getAll();
+    return allProducts.filter(product => product.status === status);
+  }
+
+  // Update product status (preserves active/inactive logic)
+  async updateStatus(productId, status) {
+    const product = await this.getById(productId);
+    if (!product) throw new Error('Product not found');
+    // Only update status, preserve active field
+    return this.update(productId, { status });
+  }
   constructor() {
     super(process.env.PRODUCTS_TABLE);
   }
 
   async create(productData) {
     const searchTerms = this.generateSearchTerms(productData);
-    
+    // Only use 'title' for product naming
     const product = {
       ...productData,
       quantitySold: 0,
@@ -19,14 +32,15 @@ export class ProductModel extends BaseModel {
       status: productData.status || 'active',
       condition: productData.condition || 'new',
       images: productData.images || [],
-      // Digital product metadata (TODO: )
+      // Digital product metadata
       isDigital: !!productData.isDigital,
       digitalFormat: productData.digitalFormat || null,
       documentKey: productData.documentKey || null,
       documentOriginalName: productData.documentOriginalName || null,
       previewImage: productData.previewImage || null,
       digitalStatus: productData.isDigital ? (productData.digitalStatus || 'ready') : null,
-      fileSizeBytes: productData.fileSizeBytes || null
+      fileSizeBytes: productData.fileSizeBytes || null,
+      digitalAutoComplete: productData.isDigital ? !!productData.digitalAutoComplete : false
     };
 
     // Ensure images are properly formatted with CloudFront/S3 URLs
@@ -49,14 +63,13 @@ export class ProductModel extends BaseModel {
 
   generateSearchTerms(productData) {
     const searchableFields = [
-      productData.name || productData.title,
+      productData.title,
       productData.description,
       productData.category,
       productData.condition,
       productData.isDigital ? 'digital' : null,
       productData.digitalFormat || null
     ].filter(Boolean);
-    
     return searchableFields.join(' ').toLowerCase();
   }
   

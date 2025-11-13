@@ -2,16 +2,22 @@
 import { docClient } from '/opt/nodejs/utils/dynamodb.js';
 import { createSuccessResponse, createErrorResponse } from '/opt/nodejs/utils/response.js';
 import { PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
-
+import { UserModel } from '/opt/nodejs/models/User.js';
 const CATEGORIES_TABLE = process.env.CATEGORIES_TABLE || 'Categories';
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS'
+};
 
 export const handler = async (event) => {
   try {
-    // Check if user is admin (from JWT token)
-    const user = event.requestContext?.authorizer?.user;
-    if (!user || user.role !== 'Admin') {
-      return createErrorResponse('Admin access required', 403);
-    }
+    const userId = event.requestContext?.authorizer?.userId;
+    if (!userId) return { ...createErrorResponse('User authentication required', 401), headers: CORS_HEADERS };
+    const userModel = new UserModel();
+    const user = await userModel.getById(userId);
+    if (!user || user.role !== 'Admin') return { ...createErrorResponse('Admin access required', 403), headers: CORS_HEADERS };
 
     const { name, description } = JSON.parse(event.body);
 

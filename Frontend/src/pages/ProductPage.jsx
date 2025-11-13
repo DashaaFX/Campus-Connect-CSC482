@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import api from "@/utils/axios";
@@ -31,7 +31,41 @@ const PublicProductPage = () => {
   const [digitalFilter, setDigitalFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const PRODUCTS_PER_PAGE = 9;
+  const didReloadResetRef = useRef(false);
   useEffect(() => {
+    // reset all filters to defaults on refresh
+    let isReload = false;
+    try {
+      const navEntry = performance.getEntriesByType?.('navigation')?.[0];
+      if (navEntry?.type === 'reload') {
+        isReload = true;
+      } else if (performance.navigation && performance.navigation.type === performance.navigation.TYPE_RELOAD) {
+        isReload = true;
+      }
+    } catch (e) {
+      // treat as normal navigation
+    }
+
+    // Run the reset Only once
+    if (isReload && !didReloadResetRef.current) {
+      setSearch("");
+      setSelectedCategory("");
+      setSelectedSubcategory("");
+      setSort("");
+      setDigitalFilter('all');
+      setCurrentPage(1);
+      // Remove any query params 
+      if (location.search) {
+        navigate('/products', { replace: true });
+      }
+      didReloadResetRef.current = true;
+      return; // Skip hydrating from URL params
+    }
+
+    if (isReload && didReloadResetRef.current) {
+      return;
+    }
+
     const initialSearch = searchParams.get('search') || "";
     const initialCategory = searchParams.get('category') || "";
     const initialSubcategory = searchParams.get('subcategory') || "";
@@ -44,7 +78,7 @@ const PublicProductPage = () => {
     setSelectedSubcategory(initialSubcategory);
     setSort(initialSort);
     setDigitalFilter(initialDigital);
-  }, [location.search]);
+  }, [location.search, navigate, searchParams]);
 
   // Load categories
   useEffect(() => {
@@ -94,28 +128,62 @@ const PublicProductPage = () => {
   const fetchProducts = async () => {
     try {
       const params = new URLSearchParams();
-
-    if (search) params.append('search', search);
-    if (selectedCategory) params.append('category', selectedCategory);
-    //if (selectedSubcategory) params.append('subcategory', selectedSubcategory);
-    if (sort) params.append('sort', sort);
-    if (digitalFilter && digitalFilter !== 'all') params.append('digital', digitalFilter);
+      // Handle filters on the client side for better UX
+      if (sort) params.append('sort', sort);
+      if (digitalFilter && digitalFilter !== 'all') params.append('digital', digitalFilter);
 
       const res = await api.get(`${PRODUCT_API_ENDPOINT}?${params.toString()}`);
       let allProducts = res.data.products || [];
+      // Exclude deleted / inactive products
+      allProducts = allProducts.filter(p => p.status !== 'inactive' && p.status !== 'deleted');
       // Filter out products created by the logged-in user
       if (user && user.id) {
         allProducts = allProducts.filter(
           (p) => p.sellerId !== user.id && p.userId !== user.id
         );
       }
-      //filter subcategory separately, for Sort by dropdown
+      // Apply category filter 
+      if (selectedCategory) {
+        allProducts = allProducts.filter(p => p.category === selectedCategory);
+      }
+      
+      // Apply search filter
+      if (search) {
+        const searchLower = search.toLowerCase();
+        allProducts = allProducts.filter(p => {
+          // Use searchTerms field if available (contains title, description, category, etc.)
+          if (p.searchTerms) {
+            return p.searchTerms.toLowerCase().includes(searchLower);
+          }
+          // Fallback to individual fields
+          return (
+            p.title?.toLowerCase().includes(searchLower) ||
+            p.description?.toLowerCase().includes(searchLower) ||
+            p.category?.toLowerCase().includes(searchLower) ||
+            p.subcategory?.toLowerCase().includes(searchLower) ||
+            p.condition?.toLowerCase().includes(searchLower)
+          );
+        });
+      }
+      // Apply digital/physical filter on frontend
+      if (digitalFilter === 'true') {
+        allProducts = allProducts.filter(p => p.isDigital === true);
+      } else if (digitalFilter === 'false') {
+        allProducts = allProducts.filter(p => !p.isDigital);
+      }
+      // Filter by subcategory
       if (selectedSubcategory) {
-        allProducts = allProducts.filter(p =>
-          p.subcategory === selectedSubcategory ||
-          p.subcategory?.id === selectedSubcategory ||
-          p.subcategory?._id === selectedSubcategory
-        );
+        allProducts = allProducts.filter(p => {
+          // subcategory can be an object {id, _id, name} or a string
+          if (typeof p.subcategory === 'object' && p.subcategory !== null) {
+            return (
+              p.subcategory.id === selectedSubcategory ||
+              p.subcategory._id === selectedSubcategory
+            );
+          }
+          // Or just a string
+          return p.subcategory === selectedSubcategory;
+        });
       }
       // Sort products 
       if (sort === "price") {
@@ -136,7 +204,7 @@ const PublicProductPage = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [search, selectedCategory, selectedSubcategory, sort]);
+  }, [search, selectedCategory, selectedSubcategory, sort, digitalFilter]);
 
   //  When user changes filters, update URL
   const updateUrlParams = () => {

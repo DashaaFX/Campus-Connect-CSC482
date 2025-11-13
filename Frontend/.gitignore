@@ -13,11 +13,14 @@ node_modules
 dist
 dist-ssr
 *.local
+.github/
 
 # Environment files with sensitive data
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
 
 # Keep environment templates but ignore actual URLs
 # .env.development

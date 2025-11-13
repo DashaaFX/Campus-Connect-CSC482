@@ -12,6 +12,10 @@ export function ChatList({ users = [] }) {
   const conversations = useChatStore(s => s.conversations);
   const activeConversationId = useChatStore(s => s.activeConversationId);
   const chatError = useChatStore(s => s.error);
+  const isBlockedFn = useChatStore(s => s.isBlocked);
+  const isBlockedByPeerFn = useChatStore(s => s.isBlockedByPeer);
+  //select both arrays so we re-render immediately on changes (forward + reverse blocks)
+  const blockedFirebaseUids = useChatStore(s => s.blockedFirebaseUids);
   const currentUser = useAuthStore(state => state.user);
 
   useEffect(() => { initConversations(); }, [initConversations]);
@@ -66,8 +70,12 @@ export function ChatList({ users = [] }) {
             {conversations.map(c => {
               const isActive = c.conversationId === activeConversationId;
               const peer = userIndex.get(c.otherUserId) || peerCache[c.otherUserId];
-              const display = peer ? getUserDisplayName(peer) : c.otherUserId;
+              const display = peer ? getUserDisplayName(peer) : 'User';
               const unresolved = !peer;
+              //  trigger re-render when block/unblock occurs
+              void blockedFirebaseUids;
+              const blocked = isBlockedFn(c.otherUserId);
+              const blockedByPeer = isBlockedByPeerFn(c.otherUserId);
               return (
                 <button
                   key={c.conversationId}
@@ -80,7 +88,23 @@ export function ChatList({ users = [] }) {
                     {c.orderIds?.length > 0 && <span className="ml-1 text-[10px] text-gray-400">({c.orderIds.length} orders)</span>}
                     {c.lastMessage?.text && <span className="block mt-0.5 truncate text-[10px] text-gray-500">{c.lastMessage.text}</span>}
                   </span>
-                  {c.unread > 0 && <Badge variant="secondary" className="shrink-0">{c.unread}</Badge>}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {blocked && (
+                      <Badge
+                        variant="destructive"
+                        className="text-[9px] px-2 py-0.5 leading-none tracking-wide"
+                        title="You have blocked this user"
+                      >Blocked</Badge>
+                    )}
+                    {blockedByPeer && !blocked && (
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] px-2 py-0.5 leading-none tracking-wide border-yellow-400 text-yellow-600"
+                        title="This user has blocked you"
+                      >Blocked You</Badge>
+                    )}
+                    {c.unread > 0 && <Badge variant="secondary" className="shrink-0">{c.unread}</Badge>}
+                  </div>
                 </button>
               );
             })}

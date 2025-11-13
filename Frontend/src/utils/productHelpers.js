@@ -22,7 +22,7 @@ export const getProductPrice = (product, fallback = 0) => {
 
 
 export const getPlaceholderImage = () => {
-  return '/placeholder-image.svg';
+  return '/placeholder2.png';
 };
 
 export const getProductImageUrl = (product) => {

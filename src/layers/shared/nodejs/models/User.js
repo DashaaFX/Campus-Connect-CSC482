@@ -24,6 +24,19 @@ export class UserModel extends BaseModel {
       );
     }
     
+
+    // Stripe Connect fields for seller payouts
+    let stripeConnectFields = {
+      stripeOnboardingStatus: userData.stripeOnboardingStatus || 'pending', // pending, incomplete, complete, restricted
+      payoutsDeferred: userData.payoutsDeferred || false
+    };
+    if (typeof userData.stripeAccountId === 'string') {
+      const trimmedStripeAccountId = userData.stripeAccountId.trim();
+      if (trimmedStripeAccountId !== "") {
+        stripeConnectFields.stripeAccountId = trimmedStripeAccountId;
+      }
+    }
+
     const user = {
       ...otherData,
       password: hashedPassword,
@@ -32,7 +45,8 @@ export class UserModel extends BaseModel {
       profile: {
         ...(userData.profile || {}),
         profilePhoto: profilePicture 
-      }
+      },
+      ...stripeConnectFields
     };
 
     const createdUser = await super.create(user);
@@ -72,6 +86,28 @@ export class UserModel extends BaseModel {
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }
+
+    //TODO: Add GSI for stripeAccountId for better performance
+    async listByStripeAccountId(stripeAccountId) {
+      if (!stripeAccountId) return [];
+      const { QueryCommand } = await import('@aws-sdk/lib-dynamodb');
+      const { docClient } = await import('../utils/dynamodb.js');
+      const params = {
+        TableName: this.tableName,
+        IndexName: 'StripeAccountIdIndex',
+        KeyConditionExpression: 'stripeAccountId = :s',
+        ExpressionAttributeValues: { ':s': stripeAccountId }
+      };
+      try {
+        const result = await docClient.send(new QueryCommand(params));
+        return result.Items || [];
+      } catch (err) {
+        console.error('listByStripeAccountId query failed:', err.message);
+        // fallback to previous behavior (getAll) as a last resort
+        const all = await this.getAll();
+        return all.filter(u => u.stripeAccountId === stripeAccountId);
+      }
+    }
   
   async updateProfilePicture(userId, profilePictureUrl) {
     // Get the user first

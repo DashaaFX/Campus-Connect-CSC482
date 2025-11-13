@@ -147,10 +147,10 @@ const CartPage = () => {
       useCartStore.setState(state => ({
         items: state.items.filter(it => it.productId !== productId)
       }));
-      // Background re-sync (ignore errors)
+      // Re-fetch cart to sync
       setTimeout(() => {
         useCartStore.getState().fetchCart();
-      }, 150);
+      }, 200);
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to send request';
       toast.error(msg);

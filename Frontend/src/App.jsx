@@ -14,6 +14,7 @@ import Home from "./components/components_lite/Home";
 import Login from "./components/authentication/Login";
 import Register from "./components/authentication/Register";
 import ProfilePage from "./pages/ProfilePage";
+import ProfileOnboardingReturn from "./pages/ProfileOnboardingReturn";
 import PrivacyPolicy from "./components/components_lite/PrivacyPolicy";
 import TermsofService from "./components/components_lite/TermsofService";
 import Creator from "./components/creator/Creator";
@@ -27,9 +28,14 @@ import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import MyOrdersPage from "./pages/MyOrdersPage";
 import MySalesPage from "./pages/MySalesPage";
+import AdminProductApproval from "./components/admin/AdminProductApproval";
 import ProductStatus from "./components/product/ProductStatus";
 import OrderDetailPage from "./pages/OrderDetailPage";
+import OrderSuccessPage from "./pages/OrderSuccessPage";
+import PaymentFailedPage from "./pages/PaymentFailedPage";
 import ChatPage from './pages/ChatPage';
+import SellerOrdersPage from "./pages/SellerOrdersPage";
+import AllNotificationPage from "./pages/AllNotificationPage";
 
 const appRouter = createBrowserRouter([
   {
@@ -40,7 +46,8 @@ const appRouter = createBrowserRouter([
       { path: "home", element: <Home /> },
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
-      { path: "profile", element: <ProfilePage /> },
+  { path: "profile", element: <ProfilePage /> },
+  { path: "profile/onboarding-return", element: <ProfileOnboardingReturn /> },
       { path: "PrivacyPolicy", element: <PrivacyPolicy /> },
       { path: "TermsOfService", element: <TermsofService /> },
       { path: "creator", element: <Creator /> },
@@ -54,10 +61,21 @@ const appRouter = createBrowserRouter([
 
       
       { path: "my-orders", element: <MyOrdersPage /> },
-      { path: "order/:orderId", element: <OrderDetailPage /> }, 
-      { path: "my-sales", element: <MySalesPage /> },
+    { path: "order/:orderId", element: <OrderDetailPage /> }, 
+    { path: "orders/:orderId/success", element: <OrderSuccessPage /> },
+    { path: "orders/:orderId/failed", element: <PaymentFailedPage /> },
+    { path: "my-sales", element: <MySalesPage /> },
+    { path: "seller/orders", element: <SellerOrdersPage /> },
       { path: "products/create", element: <PostProduct /> },
       { path: "admin/products/:id", element: <EditProductForm /> },
+      {
+        path: "admin/products/approval",
+        element: (
+          <AdminRoute>
+            <AdminProductApproval />
+          </AdminRoute>
+        )
+      },
       { 
         path: "admin/categories", 
         element: (
@@ -68,7 +86,9 @@ const appRouter = createBrowserRouter([
       },
       //enable chat route if testing chat feature is enabled in env
       ...(import.meta.env.VITE_ENABLE_FIREBASE_CHAT === 'true' ? [{ path: 'chat', element: <ChatPage /> }] : []),
-     
+
+      // All notifications page
+      { path: 'notifications', element: <AllNotificationPage /> },
     ]
   }
 ]);

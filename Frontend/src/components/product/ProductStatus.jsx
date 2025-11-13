@@ -3,13 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams , useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { ORDER_STATUS_COLORS } from '@/constants/order-status';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { buildChatUrl, collectBuyerIds, fetchUsersIfNeeded, deriveBuyerPeer } from '@/utils/chatHelpers';
-// Import firebase directly from project root 
-import { db, auth } from '../../../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 const ProductStatus = () => {
@@ -41,37 +40,20 @@ const ProductStatus = () => {
       if (merged !== buyerUsers) setBuyerUsers(merged);
     })();
   }, [requests, currentUser, buyerUsers]);
-  
+  // Handle status updates, by loading state
+  const [updatingId, setUpdatingId] = useState(null);
   const handleStatusUpdate = async (orderId, status) => {
+    setUpdatingId(orderId + ':' + status);
     try {
       await updateOrderStatus(orderId, status);
-      toast.success(`Order ${status === 'approved' ? 'approved' : 'cancelled'} successfully!`);
-      if (status === 'approved') {
-        // Find the order we just updated to derive buyer peer
-        const updated = orders.find(o => (o._id === orderId || o.id === orderId));
-        const buyerId = updated?.userId;
-        if (buyerId && currentUser?.id && buyerId !== currentUser.id) {
-          // Generate deterministic thread id 
-            const threadId = [buyerId, currentUser.id].sort().join('_');
-            if (auth?.currentUser?.uid) {
-              try {
-                await addDoc(collection(db, 'threads', threadId, 'messages'), {
-                  type: 'system',
-                  text: 'Your order was approved. You can download your digital item now.',
-                  orderId,
-                  from: currentUser.id,
-                  to: buyerId,
-                  createdAt: serverTimestamp(),
-                  read: false
-                });
-              } catch (fireErr) {
-                console.error('Failed to send system chat message:', fireErr);
-              }
-            }
-        }
-      }
+      if (status === 'approved') toast.success('Order approved successfully!');
+      else if (status === 'cancelled') toast.success('Order cancelled successfully!');
+      else if (status === 'completed') toast.success('Order marked completed!');
+      else toast.success(`Order updated: ${status}`);
     } catch (err) {
-     toast.error(err?.response?.data?.message || 'Failed to update order status');
+      toast.error(err?.response?.data?.message || 'Failed to update order status');
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -101,12 +83,72 @@ const ProductStatus = () => {
                 <p><strong>User:</strong> {buyerName} {buyerEmail && (<span className="text-sm text-gray-500">({buyerEmail})</span>)}</p>
                 <p className="mt-1"><strong>Status:</strong> <span className={`px-2 py-0.5 rounded text-xs font-medium inline-block capitalize ${badgeClass}`}>{req.status}</span></p>
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {req.status === 'pending' && (
-                    <>
-                      <Button size="sm" onClick={() => handleStatusUpdate(req._id || req.id, 'approved')}>Approve</Button>
-                      <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(req._id || req.id, 'cancelled')}>Cancel</Button>
-                    </>
-                  )}
+                  {/* Shows Loading Spinner when Order status changes */}
+                  {req.status === 'requested' && (() => {
+                    const orderId = req._id || req.id;
+                    const loadingApproved = updatingId === orderId + ':approved';
+                    const loadingCancelled = updatingId === orderId + ':cancelled';
+                    return (
+                      <>
+                        <Button
+                          size="sm"
+                          disabled={loadingApproved || loadingCancelled}
+                          onClick={() => handleStatusUpdate(orderId, 'approved')}
+                        >
+                          {loadingApproved ? (
+                            <span className="flex items-center gap-2"><LoadingSpinner size="sm" className="w-4 h-4" /> Approving...</span>
+                          ) : 'Approve'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={loadingApproved || loadingCancelled}
+                          onClick={() => handleStatusUpdate(orderId, 'cancelled')}
+                        >
+                          {loadingCancelled ? (
+                            <span className="flex items-center gap-2"><LoadingSpinner size="sm" className="w-4 h-4" /> Cancelling...</span>
+                          ) : 'Cancel'}
+                        </Button>
+                      </>
+                    );
+                  })()}
+                  {req.status === 'approved' && (() => {
+                    const product = req.items?.[0]?.product;
+                    if (product?.isDigital) return null;
+                    const orderId = req._id || req.id;
+                    const loadingThis = updatingId === orderId + ':completed';
+                    return (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm" disabled={loadingThis}>
+                            {loadingThis ? (
+                              <span className="flex items-center gap-2"><LoadingSpinner size="sm" className="w-4 h-4" /> Completing...</span>
+                            ) : 'Mark Order Complete'}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-sm" aria-describedby={undefined}>
+                          <DialogHeader>
+                            <DialogTitle>Mark order complete?</DialogTitle>
+                            <DialogDescription>
+                              Finalize the physical order and notify the buyer. Ensure delivery or pickup is confirmed before proceeding.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter className="flex justify-end gap-2 mt-2">
+                            <DialogClose asChild>
+                              <Button variant="outline" type="button">Cancel</Button>
+                            </DialogClose>
+                            <Button
+                              type="button"
+                              disabled={loadingThis}
+                              onClick={() => handleStatusUpdate(orderId, 'completed')}
+                            >
+                              {loadingThis ? <span className="flex items-center gap-2"><LoadingSpinner size="sm" className="w-4 h-4" /> Saving</span> : 'Confirm Complete'}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    );
+                  })()}
                   <Button
                     size="sm"
                     variant={chatDisabled ? 'outline' : 'default'}

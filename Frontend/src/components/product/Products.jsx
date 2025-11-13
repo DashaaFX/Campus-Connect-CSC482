@@ -135,7 +135,7 @@ const Products = () => {
           </div>
 
           <div className="flex-1">
-            <h1 className="mb-4 text-3xl font-bold">{product.name}</h1>
+            <h1 className="mb-4 text-3xl font-bold">{product.title}</h1>
             {isDigital && (
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <span className="inline-block px-2 py-0.5 text-xs bg-indigo-100 text-indigo-800 rounded font-medium">Digital</span>

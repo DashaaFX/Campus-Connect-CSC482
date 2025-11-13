@@ -24,6 +24,17 @@ export function directConversationId(userIdA, userIdB) {
   return [userIdA, userIdB].sort().join('_');
 }
 
+// Parse 2 user IDs from direct conversation ID, smaller ID is 'a', larger is 'b'
+export function parseDirectConversationId(conversationId) {
+  if (!conversationId || typeof conversationId !== 'string') return { a: null, b: null };
+  const parts = conversationId.split('_');
+  if (parts.length !== 2) return { a: null, b: null };
+  const [p1, p2] = parts;
+  if (!p1 || !p2) return { a: null, b: null };
+  const ordered = [p1, p2].sort();
+  return { a: ordered[0], b: ordered[1] };
+}
+
 //Check for existing conversation between two users, if not found create a new one
 export async function ensureDirectConversation({ currentUser, otherUser, orderContext }) {
   if (!currentUser?.id || !otherUser?.id) throw new Error('Missing user ids');
@@ -53,14 +64,22 @@ export async function ensureDirectConversation({ currentUser, otherUser, orderCo
       const data = existingSnap.data();
       const pfus = data.participantFirebaseUids;
       if (Array.isArray(pfus) && pfus.includes(currentFirebaseUid) && pfus.includes(otherFirebaseUid)) {
+        // Merge order context fields if provided
+        const updates = {};
         if (orderContext?.orderId && (!Array.isArray(data.orderIds) || !data.orderIds.includes(orderContext.orderId))) {
+          updates.orderIds = Array.isArray(data.orderIds) ? [...data.orderIds, orderContext.orderId] : [orderContext.orderId];
+        }
+        if (orderContext?.productTitle && !data.primaryProductTitle) {
+          updates.primaryProductTitle = orderContext.productTitle;
+        }
+        if (orderContext?.productId && !data.primaryProductId) {
+          updates.primaryProductId = orderContext.productId;
+        }
+        if (Object.keys(updates).length) {
           try {
-            await updateDoc(ref, {
-              orderIds: Array.isArray(data.orderIds) ? [...data.orderIds, orderContext.orderId] : [orderContext.orderId],
-              updatedAt: serverTimestamp()
-            });
+            await updateDoc(ref, { ...updates, updatedAt: serverTimestamp() });
           } catch (e) {
-            console.error('[chat] appendOrderIdExisting:updateDoc failed', e.code, e.message);
+            console.error('[chat] mergeOrderContextExisting:updateDoc failed', e.code, e.message);
           }
         }
         return convoId;
@@ -91,7 +110,9 @@ export async function ensureDirectConversation({ currentUser, otherUser, orderCo
       updatedAt: serverTimestamp(),
       lastMessage: null,
       lastReadAt: { [currentUser.id]: serverTimestamp(), [otherUser.id]: null },
-      orderIds: orderContext?.orderId ? [orderContext.orderId] : []
+      orderIds: orderContext?.orderId ? [orderContext.orderId] : [],
+      ...(orderContext?.productTitle ? { primaryProductTitle: orderContext.productTitle } : {}),
+      ...(orderContext?.productId ? { primaryProductId: orderContext.productId } : {}),
     };
   })();
 
@@ -108,15 +129,18 @@ export async function ensureDirectConversation({ currentUser, otherUser, orderCo
   return convoId;
 }
 
-// Send a message 
+// Send a message, now includes rate limiting and length checks
 export async function sendMessage({ conversationId, senderAppUserId, senderFirebaseUid, text, orderContext, otherUserId }) {
   if (!text || !text.trim()) return;
+  const body = text.trim();
+  if (body.length > 2000) throw new Error('Message too long (max 2000 chars)');
+  
   const messagesCol = collection(db, ROOT_COLLECTION, conversationId, 'messages');
   const createdAt = serverTimestamp();
   const messagePayload = {
     senderId: senderAppUserId,
     senderFirebaseUid,
-    text: text.trim(),
+    text: body,
     createdAt,
   };
   if (orderContext?.orderId) messagePayload.orderId = orderContext.orderId;
@@ -130,26 +154,72 @@ export async function sendMessage({ conversationId, senderAppUserId, senderFireb
       updatedAt: createdAt,
     });
   } catch (e) {
-    console.debug('lastMessage update skipped:', e.message);
+    console.warn('[chat] lastMessage update failed', e.code, e.message);
   }
   return res.id;
 }
 
-// Listen to messages from oldest first
-export function subscribeToMessages(conversationId, callback, { pageSize = 50 } = {}) {
+// Append a system message when meeting location or datetime is finalized
+export async function appendSystemEvent({ conversationId, type, payload = {}, actorAppUserId, text }) {
+  if (!conversationId || !type) return;
+  const messagesCol = collection(db, ROOT_COLLECTION, conversationId, 'messages');
+  const createdAt = serverTimestamp();
+  const autoText = (() => {
+    if (text) return text;
+    switch (type) {
+      case 'location-finalized': return `Meeting location confirmed: ${payload?.location || ''}`.trim();
+      case 'datetime-finalized': return `Meeting date & time confirmed: ${payload?.dateTime ? payload.dateTime : ''}`.trim();
+      default: return `[${type}]`;
+    }
+  })();
+  const senderFirebaseUid = auth.currentUser?.uid || null; // ensure rule compatibility for system messages
+  const docData = {
+    type: 'system',
+    eventType: type,
+    payload,
+    createdAt,
+    actorId: actorAppUserId || null,
+    senderId: actorAppUserId || null,
+    text: autoText,
+    senderFirebaseUid, // add sender ID 
+  };
+  const res = await addDoc(messagesCol, docData);
+  try {
+    await updateDoc(doc(db, ROOT_COLLECTION, conversationId), {
+      lastMessage: { text: autoText, senderId: actorAppUserId || null, createdAt },
+      updatedAt: createdAt,
+    });
+  } catch (e) {
+  // lastMessage update skipped (rules / permission)
+  }
+  return res.id;
+}
+
+// Subscribe to messages including newest ones even when count reaches pageSize.
+export function subscribeToMessages(conversationId, callback, { pageSize = 100 } = {}) {
+  const sessionUid = auth.currentUser?.uid;
   const q = query(
     collection(db, ROOT_COLLECTION, conversationId, 'messages'),
-    orderBy('createdAt', 'asc'),
+    orderBy('createdAt', 'desc'),
     limit(pageSize)
   );
   return onSnapshot(
     q,
     (snapshot) => {
-      const messages = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const raw = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const messages = raw.sort((a,b) => {
+        const ta = a.createdAt?.seconds || a.createdAt?.toMillis?.() || 0;
+        const tb = b.createdAt?.seconds || b.createdAt?.toMillis?.() || 0;
+        return ta - tb;
+      });
       callback(messages);
     },
     (error) => {
-      console.error('[chat] subscribe error:', error.code, error.message);
+      const currentUid = auth.currentUser?.uid;
+      const userLoggedOut = !auth.currentUser;
+      const uidChanged = currentUid && sessionUid && currentUid !== sessionUid;
+      if ((userLoggedOut || uidChanged) && error.code === 'permission-denied') return;
+      console.error('[chat] subscribe error (messages)', error.code, error.message);
     }
   );
 }

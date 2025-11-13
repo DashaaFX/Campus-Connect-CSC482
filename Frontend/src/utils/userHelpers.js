@@ -39,6 +39,7 @@ export const getUserDisplayName = (user) => {
     const local = user.email.split('@')[0];
     if (local) return local;
   }
-  return user.id || '';
+  // hide user id 
+  return 'User';
 };
 
