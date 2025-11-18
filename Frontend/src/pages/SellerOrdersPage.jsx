@@ -8,6 +8,7 @@ import { PRODUCT_API_ENDPOINT, ORDER_API_ENDPOINT } from '@/utils/data';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/useChatStore';
+import { buildChatUrl } from '@/utils/chatHelpers';
 //now includes pagination feature
 const SellerOrdersPage = () => {
   const currentUser = useAuthStore(s => s.user);
@@ -275,19 +276,22 @@ const SellerOrdersPage = () => {
                       );
                     })()}
                   {(() => {
-                    const buyerId = order.buyerId || order.userId || order.buyerEmail || order.userEmail;
-                    const disabled = !buyerId;
+                    const buyerEmail = order.buyerEmail || order.userEmail;
+                    const buyerId = order.buyerId || order.userId;
+                    // Derive peer from buyer user data
+                    const peer = buyerId && buyerEmail ? { id: buyerId, email: buyerEmail, firebaseUid: order.buyerFirebaseUid } : null;
+                    const chatDisabled = !peer || !peer.firebaseUid;
                     const unread = buyerId ? unreadByUser[buyerId] : 0;
                     return (
                       <div className="relative inline-block">
                         <Button
                           size="sm"
-                          variant={disabled ? 'outline' : 'default'}
-                          disabled={disabled}
-                          title={disabled ? 'Chat not available yet (buyer info missing)' : unread > 0 ? 'Unread messages' : 'Chat with buyer'}
+                          variant={chatDisabled ? 'outline' : 'default'}
+                          disabled={chatDisabled}
+                          title={chatDisabled ? 'Chat not available yet (buyer not ready or firebase UID missing)' : unread > 0 ? 'Unread messages' : 'Chat with buyer'}
                           onClick={() => {
-                            if (!buyerId) return;
-                            const url = `/chat?buyer=${encodeURIComponent(buyerId)}`;
+                            if (!peer || !peer.firebaseUid) return;
+                            const url = buildChatUrl(peer);
                             navigate(url);
                           }}
                         >Chat</Button>
