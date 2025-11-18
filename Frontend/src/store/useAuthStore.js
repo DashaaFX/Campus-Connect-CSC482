@@ -41,6 +41,7 @@ function normalizeUser(raw, authUid) {
   return user;
 }
 
+//Creates firebase account with email and passwords, if not exists
 async function firebasePasswordSignInOrCreate(authInstance, email, password) {
   const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import('firebase/auth');
   try {
@@ -52,6 +53,7 @@ async function firebasePasswordSignInOrCreate(authInstance, email, password) {
   }
 }
 
+//Eagerly link Firebase UID to DynamoDB
 async function eagerFirebaseLink({ user, email, password, authInstance, apiInstance, updateUser }) {
   console.log('[eagerFirebaseLink] Starting. User has firebaseUid?', !!user.firebaseUid, 'Auth current user?', !!authInstance.currentUser);
   // Always try to link - don't trust localStorage firebaseUid
