@@ -90,6 +90,12 @@ const SellerOrdersPage = () => {
   useEffect(() => {
     // Fetch all orders for products owned by current seller
     const fetchOrders = async () => {
+      // Don't fetch if user is not logged in
+      if (!currentUser) {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const res = await api.get(`${ORDER_API_ENDPOINT}/seller-orders`); // Correct backend route
