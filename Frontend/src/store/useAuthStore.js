@@ -53,20 +53,19 @@ async function firebasePasswordSignInOrCreate(authInstance, email, password) {
 }
 
 async function eagerFirebaseLink({ user, email, password, authInstance, apiInstance, updateUser }) {
-  if (user.firebaseUid && authInstance.currentUser) return;
+  console.log('[eagerFirebaseLink] Starting. User has firebaseUid?', !!user.firebaseUid, 'Auth current user?', !!authInstance.currentUser);
+  // Always try to link - don't trust localStorage firebaseUid
   try {
     await firebasePasswordSignInOrCreate(authInstance, email, password);
     const idToken = await authInstance.currentUser.getIdToken();
-    console.log('[eagerFirebaseLink] Got Firebase ID token, attempting link...');
+    console.log('[eagerFirebaseLink] Got Firebase ID token, calling /auth/firebase/link...');
     try { await apiInstance.post('/auth/firebase/verify', { token: idToken }); } catch {/* ignore */}
-    if (!user.firebaseUid) {
-      console.log('[eagerFirebaseLink] Calling /auth/firebase/link...');
-      const linkRes = await apiInstance.post('/auth/firebase/link', { token: idToken });
-      console.log('[eagerFirebaseLink] Link response:', linkRes.data);
-      if (linkRes.data?.user) updateUser(linkRes.data.user);
-    } else {
-      console.log('[eagerFirebaseLink] User already has firebaseUid, skipping link');
-    }
+    
+    // Always call link endpoint - backend will check if already linked
+    console.log('[eagerFirebaseLink] Calling /auth/firebase/link...');
+    const linkRes = await apiInstance.post('/auth/firebase/link', { token: idToken });
+    console.log('[eagerFirebaseLink] Link response:', linkRes.data);
+    if (linkRes.data?.user) updateUser(linkRes.data.user);
   } catch (err) {
     console.error('[eagerFirebaseLink] Error:', err);
   }
