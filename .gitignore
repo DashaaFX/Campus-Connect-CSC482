@@ -21,7 +21,6 @@ Frontend/.env.local
 Frontend/.env.development.local
 Frontend/.env.test.local
 Frontend/.env.production.local
-.github/
 
 # IDE
 .vscode/

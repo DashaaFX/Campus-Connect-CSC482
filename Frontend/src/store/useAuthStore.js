@@ -41,6 +41,7 @@ function normalizeUser(raw, authUid) {
   return user;
 }
 
+//Creates firebase account with email and passwords, if not exists
 async function firebasePasswordSignInOrCreate(authInstance, email, password) {
   const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import('firebase/auth');
   try {
@@ -52,17 +53,24 @@ async function firebasePasswordSignInOrCreate(authInstance, email, password) {
   }
 }
 
+//Eagerly link Firebase UID to DynamoDB
 async function eagerFirebaseLink({ user, email, password, authInstance, apiInstance, updateUser }) {
-  if (user.firebaseUid && authInstance.currentUser) return;
+  console.log('[eagerFirebaseLink] Starting. User has firebaseUid?', !!user.firebaseUid, 'Auth current user?', !!authInstance.currentUser);
+  // Always try to link - don't trust localStorage firebaseUid
   try {
     await firebasePasswordSignInOrCreate(authInstance, email, password);
     const idToken = await authInstance.currentUser.getIdToken();
+    console.log('[eagerFirebaseLink] Got Firebase ID token, calling /auth/firebase/link...');
     try { await apiInstance.post('/auth/firebase/verify', { token: idToken }); } catch {/* ignore */}
-    if (!user.firebaseUid) {
-      const linkRes = await apiInstance.post('/auth/firebase/link', { token: idToken });
-      if (linkRes.data?.user) updateUser(linkRes.data.user);
-    }
-  } catch {/* ignore */}
+    
+    // Always call link endpoint - backend will check if already linked
+    console.log('[eagerFirebaseLink] Calling /auth/firebase/link...');
+    const linkRes = await apiInstance.post('/auth/firebase/link', { token: idToken });
+    console.log('[eagerFirebaseLink] Link response:', linkRes.data);
+    if (linkRes.data?.user) updateUser(linkRes.data.user);
+  } catch (err) {
+    console.error('[eagerFirebaseLink] Error:', err);
+  }
 }
 
 export const useAuthStore = create(persist((set, get) => ({

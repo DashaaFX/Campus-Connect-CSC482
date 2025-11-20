@@ -46,7 +46,6 @@ export const handler = async (event) => {
   }
 };
 
-//function to clean duplicate categories
 async function cleanCategoriesDuplicates() {
   // Get all categories
   const scanParams = {
@@ -89,7 +88,6 @@ async function cleanCategoriesDuplicates() {
   return duplicatesRemoved;
 }
 
-//clean duplicate subcategories
 async function cleanSubcategoriesDuplicates() {
   // Get all subcategories
   const scanParams = {

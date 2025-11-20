@@ -8,6 +8,8 @@ import { PRODUCT_API_ENDPOINT, ORDER_API_ENDPOINT } from '@/utils/data';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/useChatStore';
+import { buildChatUrl, collectBuyerIds, fetchUsersIfNeeded, deriveBuyerPeer } from '@/utils/chatHelpers';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 //now includes pagination feature
 const SellerOrdersPage = () => {
   const currentUser = useAuthStore(s => s.user);
@@ -15,6 +17,8 @@ const SellerOrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('active');
   const [archivedOrderIds, setArchivedOrderIds] = useState([]);
+  const [buyerUsers, setBuyerUsers] = useState({});
+  const [updatingId, setUpdatingId] = useState(null);
   // Pagination state
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -49,6 +53,17 @@ const SellerOrdersPage = () => {
   };
   const [productDetails, setProductDetails] = useState({});
   const navigate = useNavigate();
+
+  // Fetch buyer users for chat functionality
+  useEffect(() => {
+    const ids = collectBuyerIds(orders, currentUser);
+    if (!ids.length) return;
+    (async () => {
+      const merged = await fetchUsersIfNeeded(ids, buyerUsers);
+      if (merged !== buyerUsers) setBuyerUsers(merged);
+    })();
+  }, [orders, currentUser, buyerUsers]);
+
   // Fetch missing product details for items with only productId
   useEffect(() => {
     const missingIds = [];
@@ -75,6 +90,12 @@ const SellerOrdersPage = () => {
   useEffect(() => {
     // Fetch all orders for products owned by current seller
     const fetchOrders = async () => {
+      // Don't fetch if user is not logged in
+      if (!currentUser) {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const res = await api.get(`${ORDER_API_ENDPOINT}/seller-orders`); // Correct backend route
@@ -221,30 +242,54 @@ const SellerOrdersPage = () => {
                         size="sm"
                         variant="default"
                         className="text-green-700 bg-green-100 border-green-200 hover:bg-green-200"
+                        disabled={updatingId === (order.id || order._id) + ':approved'}
                         onClick={async () => {
+                          const orderId = order.id || order._id;
+                          setUpdatingId(orderId + ':approved');
                           try {
-                            await api.put(`${ORDER_API_ENDPOINT}/${order.id || order._id}/status`, {
+                            await api.put(`${ORDER_API_ENDPOINT}/${orderId}/status`, {
                               status: 'approved'
                             });
+                            toast.success('Order approved successfully!');
                             const res = await api.get(`${ORDER_API_ENDPOINT}/seller-orders`);
                             setOrders(res.data.orders || []);
-                          } catch (e) {}
+                          } catch (e) {
+                            toast.error(e.response?.data?.message || 'Failed to approve order');
+                          } finally {
+                            setUpdatingId(null);
+                          }
                         }}
-                      >Approve Order</Button>
+                      >
+                        {updatingId === (order.id || order._id) + ':approved' ? (
+                          <span className="flex items-center gap-2"><LoadingSpinner size="sm" className="w-4 h-4" /> Approving...</span>
+                        ) : 'Approve Order'}
+                      </Button>
                       <Button
                         size="sm"
                         variant="destructive"
                         className="text-red-700 bg-red-100 border-red-200 hover:bg-red-200"
+                        disabled={updatingId === (order.id || order._id) + ':rejected'}
                         onClick={async () => {
+                          const orderId = order.id || order._id;
+                          setUpdatingId(orderId + ':rejected');
                           try {
-                            await api.put(`${ORDER_API_ENDPOINT}/${order.id || order._id}/status`, {
+                            await api.put(`${ORDER_API_ENDPOINT}/${orderId}/status`, {
                               status: 'rejected'
                             });
+                            toast.success('Order rejected successfully!');
                             const res = await api.get(`${ORDER_API_ENDPOINT}/seller-orders`);
                             setOrders(res.data.orders || []);
-                          } catch (e) {}
+                          } catch (e) {
+                            toast.error(e.response?.data?.message || 'Failed to reject order');
+                          } finally {
+                            setUpdatingId(null);
+                          }
                         }}
-                      >Reject Order</Button>
+                      >
+                        {updatingId === (order.id || order._id) + ':rejected' ? (
+                          <span className="flex items-center gap-2"><LoadingSpinner size="sm" className="w-4 h-4" /> Rejecting...</span>
+                        ) : 'Reject Order'}
+                      </Button>
                     </>
                   )}
                     {/* Refund button for eligible digital/completed orders */}
@@ -275,19 +320,21 @@ const SellerOrdersPage = () => {
                       );
                     })()}
                   {(() => {
-                    const buyerId = order.buyerId || order.userId || order.buyerEmail || order.userEmail;
-                    const disabled = !buyerId;
+                    const buyerId = order.buyerId || order.userId;
+                    // Use deriveBuyerPeer helper for consistent peer derivation
+                    const peer = deriveBuyerPeer(order, currentUser, buyerUsers);
+                    const chatDisabled = !peer;
                     const unread = buyerId ? unreadByUser[buyerId] : 0;
                     return (
                       <div className="relative inline-block">
                         <Button
                           size="sm"
-                          variant={disabled ? 'outline' : 'default'}
-                          disabled={disabled}
-                          title={disabled ? 'Chat not available yet (buyer info missing)' : unread > 0 ? 'Unread messages' : 'Chat with buyer'}
+                          variant={chatDisabled ? 'outline' : 'default'}
+                          disabled={chatDisabled}
+                          title={chatDisabled ? 'Chat not available yet (buyer not ready or firebase UID missing)' : unread > 0 ? 'Unread messages' : 'Chat with buyer'}
                           onClick={() => {
-                            if (!buyerId) return;
-                            const url = `/chat?buyer=${encodeURIComponent(buyerId)}`;
+                            if (!peer) return;
+                            const url = buildChatUrl(peer);
                             navigate(url);
                           }}
                         >Chat</Button>

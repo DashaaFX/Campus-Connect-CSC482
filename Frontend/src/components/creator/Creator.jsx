@@ -45,7 +45,7 @@ const Creator = () => {
               <p className="mb-2"><strong>Education:</strong> Bachelor of Science from Adelphi University</p>
               <p className="mb-2"><strong>Specialization:</strong> Backend, Frontend, Software Engineer</p>
               <p className="mb-2"><strong>Experience:</strong> 1 year in Full-Stack Software Engineering</p>
-              <p className="mb-2"><strong>Contributions:</strong> Backend</p>
+              <p className="mb-2"><strong>Contributions:</strong> Full Stack</p>
               <p><strong>Contact:</strong> baljaa367@gmail.com</p>
             </div>
           </div>
