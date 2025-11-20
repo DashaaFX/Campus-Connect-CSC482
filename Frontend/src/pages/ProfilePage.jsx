@@ -9,7 +9,7 @@ import api from '@/utils/axios';
 import { SELLERS_API_ENDPOINT } from '@/utils/data';
 
 const ProfilePage = () => {
-  const { user, token, loading } = useAuthStore();
+  const { user, token, loading, setUser } = useAuthStore();
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
 
@@ -19,6 +19,7 @@ const ProfilePage = () => {
       navigate('/login');
     }
   }, [token, loading, navigate]);
+
 
   if (loading) {
     return (
@@ -101,7 +102,23 @@ const ProfilePage = () => {
                           onClick={async () => {
                             try {
                               const res = await getSellerOnboardingLink();
-                              window.open(res.data.onboardingUrl, '_blank');
+                              const win = window.open(res.data.onboardingUrl, '_blank');
+                              const pollInterval = setInterval(async () => {
+                                if (win.closed) {
+                                  clearInterval(pollInterval);
+                                  try {
+                                    await api.post(`${SELLERS_API_ENDPOINT}/check-onboarding-status`);
+                                    if (user?.id) {
+                                      const updatedUser = await api.get(`/auth/user/${user.id}`);
+                                      if (updatedUser?.data?.user) {
+                                        setUser(updatedUser.data.user);
+                                      }
+                                    }
+                                  } catch (e) {
+                                    alert('Failed to refresh onboarding status: ' + (e?.response?.data?.message || e.message));
+                                  }
+                                }
+                              }, 1000);
                             } catch (e) {
                               alert('Failed to get onboarding link: ' + (e?.response?.data?.message || e.message));
                             }
@@ -115,8 +132,12 @@ const ProfilePage = () => {
                           onClick={async () => {
                             try {
                               await api.post(`${SELLERS_API_ENDPOINT}/check-onboarding-status`);
-                              // Optionally, update user state here if you have a setter
-                              window.location.reload(); // Reload to reflect updated status
+                              if (user?.id) {
+                                const updatedUser = await api.get(`/auth/user/${user.id}`);
+                                if (updatedUser?.data?.user) {
+                                  setUser(updatedUser.data.user);
+                                }
+                              }
                             } catch (e) {
                               alert('Failed to check onboarding status: ' + (e?.response?.data?.message || e.message));
                             }
