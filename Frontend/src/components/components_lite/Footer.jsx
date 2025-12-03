@@ -9,8 +9,8 @@ const creators = [
   },
   {
     name: "Baljinnyam Puntsagnorov",
-    github: "https://github.com/Baljinnyam23",
-    linkedin: "https://linkedin.com/in/your-linkedin-baljinnyam",
+    github: "https://github.com/Baljinnyam-P",
+    linkedin: "https://www.linkedin.com/in/baljinnyam-puntsagnorov/",
   },
 ];
 
