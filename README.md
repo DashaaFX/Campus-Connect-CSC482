@@ -89,8 +89,9 @@ Campus Connect is a modern, full-stack serverless marketplace for digital and ph
 
 ## Contact
 
-- **Author:** Baljinnyam Puntsagnorov, Dashnyam Puntsagnorov
-- **Email:** baljaa367@gmail.com, dadhaap@gmail.com
+- **Author:** Dashnyam Puntsagnorov, Baljinnyam Puntsagnorov
+- **Email:** dadhaap@gmail.com, baljaa367@gmail.com
+- **LinkedIn:** [https://www.linkedin.com/in/dashnyam-puntsagnorov-a5647b267/](https://www.linkedin.com/in/dashnyam-puntsagnorov-a5647b267/)
 - **LinkedIn:** [https://www.linkedin.com/in/baljinnyam-puntsagnorov/](https://www.linkedin.com/in/baljinnyam-puntsagnorov/)
 
 ---
