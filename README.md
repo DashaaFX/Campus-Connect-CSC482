@@ -37,6 +37,18 @@ Campus Connect is a modern, full-stack serverless marketplace for digital and ph
 - **Payments:** Stripe Checkout and PaymentIntent, with webhook for real-time updates and refund handling.
 - **Security:** Entitlement checks, JWT authentication, CORS, and IAM policies for robust access control.
 
+## Sequence Diagrams 
+
+1. Product Creation (Store in AWS S3 Bucket, Served via CloudFront CDN. Private digital Assets stored in private/ Cloudfront folder.
+<img width="776" height="680" alt="image" src="https://github.com/user-attachments/assets/5d142c5b-0134-42f0-9f32-fae1435d0834" />
+
+2. Stripe Checkout + Payment + Digital File Download Access
+
+https://drive.google.com/file/d/1_Cdjz67e_87vZbT25MB-YVqzH4hInsfe/view?usp=sharing
+
+3. Authentication (Custom Authorizer + AWS Secrets Manager + API Gateway)
+
+https://drive.google.com/file/d/1tnMzKaN1KZtTr2I6i4s6oOiAVUWBHu3F/view
 ---
 
 ## Setup & Deployment
